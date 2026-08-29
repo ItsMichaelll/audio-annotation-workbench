@@ -11,7 +11,7 @@
 
 ## Transport controls
 
-The transport bar is ordered as Play/Pause; separator; Fit, zoom out, zoom in, and Reset V-Scale; separator; Loop and Delete; separator; Spectrogram and Spectrum Analyzer. The analysis-view buttons use the active accent background when enabled and the normal transport-control background when disabled. Their panel-local close buttons provide the same hide action.
+The transport bar is ordered as Play/Pause; separator; Fit, zoom out, zoom in, and Reset V-Scale; separator; Loop and Delete; separator; Spectrogram, Spectrum Analyzer, and Meter. The analysis-view buttons use the active accent background when enabled and the normal transport-control background when disabled. Their view-local close buttons provide the same hide action.
 
 Loop and Delete are disabled when no region is selected. Reset V-Scale restores `1.00`. Undo and redo remain available through `Ctrl+Z`, `Ctrl+Y`, and `Ctrl+Shift+Z`; they are not transport buttons.
 
@@ -44,8 +44,12 @@ Loop is scoped to the selected region. Selecting a different region enables loop
 
 ## Analysis panels
 
-Spectrum visibility is independent of Spectrogram visibility. Their toggle buttons follow Loop and Delete in the transport bar, and each panel has its own top-right close button. Below the waveform, the fixed order is minimap, reserved minimap scrollbar, spectrogram, then spectrum analyzer. Disabled analysis panels are removed from layout. Enabling Spectrum Analyzer creates the Web Audio graph after that user interaction. Freeze stops display sampling and drawing without changing transport. Pausing preserves the latest frame. Peak Hold is enabled by default, holds maxima for 400 ms, and then decays at 12 dB per second so recent narrow resonances remain readable without becoming stale. Fast (`0.35`), Balanced (`0.72`), and Smooth (`0.88`) alter only `AnalyserNode.smoothingTimeConstant`; they do not alter the audible signal.
+Spectrum, Spectrogram, and Meter visibility are independent. Their toggle buttons follow Loop and Delete in the transport bar, and each view has its own top-right close button. Below the waveform, the fixed order is minimap, reserved minimap scrollbar, spectrogram, then spectrum analyzer. Meter occupies a fixed rail to the right of that stack, never inside a horizontally scrolling viewport. Disabled views are removed from layout. Enabling Spectrum Analyzer or Meter creates the shared Web Audio graph after that user interaction. Freeze stops spectrum sampling and drawing without changing transport. Pausing preserves the latest analysis frame. Peak Hold is enabled by default, holds maxima for 400 ms, and then decays at 12 dB per second so recent narrow resonances remain readable without becoming stale. Fast (`0.35`), Balanced (`0.72`), and Smooth (`0.88`) alter only `AnalyserNode.smoothingTimeConstant`; they do not alter the audible signal.
 
 The hover cursor uses the same logarithmic frequency and linear decibel mapping as the plotted trace. Hiding the panel removes it from layout and cancels its animation callback. Loading a different file resets all analyzer display and control state.
 
 The spectrogram uses the same full-content pixel width and horizontal scroll offset as the primary waveform. Zoom, minimap navigation, scrollbar movement, and drag panning therefore keep each spectrogram column aligned with the same audio time shown directly above it. Its logarithmic frequency labels remain fixed at the left edge while the time content scrolls beneath them, and labels above the decoded Nyquist frequency are omitted.
+
+Meter live values update at 10 Hz during playback and retain their last values while paused. Momentary uses 400 ms; Short-term uses three seconds. The live true-peak readout is explicitly a maximum since the live processor started. File and Selection statistics use deterministic offline rendering and therefore never inherit seeks, loops, or playback duration. Selecting or resizing a region schedules a new Selection analysis and superseded results are ignored. A missing selection, scopes too short for Short-term/LRA, digital silence, and failed analysis each have distinct unavailable states.
+
+The optional target bracket is a local visual reference. It is disabled by default, requires a target from -70 to 0 LUFS and a positive tolerance no greater than 30 LU, and never changes playback or creates an annotation.

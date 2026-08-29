@@ -49,6 +49,7 @@ export function App() {
   const [loopEnabled, setLoopEnabled] = useState(false)
   const [spectrumEnabled, setSpectrumEnabled] = useState(false)
   const [spectrogramEnabled, setSpectrogramEnabled] = useState(false)
+  const [meterEnabled, setMeterEnabled] = useState(false)
   const [shortcutsCollapsed, setShortcutsCollapsed] = useState(false)
 
   const selectedRegion = useMemo(
@@ -133,6 +134,7 @@ export function App() {
     setLoopEnabled(false)
     setSpectrumEnabled(false)
     setSpectrogramEnabled(false)
+    setMeterEnabled(false)
     setDuration(0)
     setCurrentTime(0)
     setZoom(0)
@@ -271,6 +273,7 @@ export function App() {
         loopEnabled={loopEnabled}
         spectrogramEnabled={spectrogramEnabled}
         spectrumEnabled={spectrumEnabled}
+        meterEnabled={meterEnabled}
         hasSelection={selectedRegion !== null}
         verticalScale={verticalScale}
         onPlayPause={() => waveformRef.current?.playPause()}
@@ -285,6 +288,11 @@ export function App() {
           const enabled = !spectrumEnabled
           setSpectrumEnabled(enabled)
           if (enabled) waveformRef.current?.activateSpectrum()
+        }}
+        onToggleMeter={() => {
+          const enabled = !meterEnabled
+          setMeterEnabled(enabled)
+          if (enabled) waveformRef.current?.activateMeter()
         }}
       />
 
@@ -343,6 +351,7 @@ export function App() {
                 regions={regions}
                 selectedRegionId={selectedRegionId}
                 loopEnabled={loopEnabled}
+                meterEnabled={meterEnabled}
                 spectrumEnabled={spectrumEnabled}
                 spectrogramEnabled={spectrogramEnabled}
                 isPlaying={isPlaying}
@@ -369,6 +378,7 @@ export function App() {
                 onClearRegionSelection={clearRegionSelection}
                 onHideSpectrogram={() => setSpectrogramEnabled(false)}
                 onHideSpectrum={() => setSpectrumEnabled(false)}
+                onHideMeter={() => setMeterEnabled(false)}
               />
             </div>
           )}

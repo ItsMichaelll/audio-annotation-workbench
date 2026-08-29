@@ -18,8 +18,9 @@ import ZoomPlugin from 'wavesurfer.js/dist/plugins/zoom.esm.js'
 import type { RegionMetadata } from '../../domain/region'
 import { normalizeRegion, translateRegion } from '../../domain/region'
 import { clampTime, formatTime } from '../../domain/transport'
+import { useAnalysisAudio } from '../analysis/useAnalysisAudio'
+import { LoudnessMeter } from '../loudness/LoudnessMeter'
 import { SpectrumAnalyzer } from '../spectrum/SpectrumAnalyzer'
-import { useAudioAnalyzer } from '../spectrum/useAudioAnalyzer'
 import { scrollWidthsMatch } from './scrollSync'
 import {
   logarithmicFrequencyY,
@@ -53,6 +54,7 @@ function formatFrequencyLabel(frequency: number): string {
 }
 
 export interface WaveformEditorHandle {
+  activateMeter(): void
   activateSpectrum(): void
   fit(): void
   playPause(): void
@@ -67,6 +69,7 @@ interface WaveformEditorProps {
   regions: readonly RegionMetadata[]
   selectedRegionId: string | null
   loopEnabled: boolean
+  meterEnabled: boolean
   spectrumEnabled: boolean
   spectrogramEnabled: boolean
   isPlaying: boolean
@@ -84,6 +87,7 @@ interface WaveformEditorProps {
   onClearRegionSelection(): void
   onHideSpectrogram(): void
   onHideSpectrum(): void
+  onHideMeter(): void
 }
 
 interface CallbackBundle {
@@ -129,6 +133,7 @@ export const WaveformEditor = forwardRef<
     regions,
     selectedRegionId,
     loopEnabled,
+    meterEnabled,
     spectrumEnabled,
     spectrogramEnabled,
     isPlaying,
@@ -146,6 +151,7 @@ export const WaveformEditor = forwardRef<
     onClearRegionSelection,
     onHideSpectrogram,
     onHideSpectrum,
+    onHideMeter,
   },
   forwardedRef,
 ) {
@@ -161,6 +167,7 @@ export const WaveformEditor = forwardRef<
   const selectedRegionIdRef = useRef(selectedRegionId)
   const loopEnabledRef = useRef(loopEnabled)
   const spectrumEnabledRef = useRef(spectrumEnabled)
+  const meterEnabledRef = useRef(meterEnabled)
   const verticalScaleRef = useRef(1)
   const pendingPlaybackRegionIdRef = useRef<string | null>(null)
   const restorePlaybackAfterEmptyClickRef = useRef(false)
@@ -183,12 +190,16 @@ export const WaveformEditor = forwardRef<
   const [mediaElement, setMediaElement] = useState<HTMLMediaElement | null>(
     null,
   )
+  const [decodedAudio, setDecodedAudio] = useState<AudioBuffer | null>(null)
 
-  const audioAnalyzer = useAudioAnalyzer({
+  const audioAnalyzer = useAnalysisAudio({
     mediaElement,
+    meterEnabled,
+    isPlaying,
     onError: (message) => callbacksRef.current.onError(message),
   })
-  const activateAudioAnalyzer = audioAnalyzer.activate
+  const activateAudioAnalyzer = audioAnalyzer.activateSpectrum
+  const activateLoudnessMeter = audioAnalyzer.activateMeter
   const spectrogramAxisLabels = useMemo(
     () => [
       spectrogramMaxFrequency,
@@ -216,6 +227,7 @@ export const WaveformEditor = forwardRef<
   selectedRegionIdRef.current = selectedRegionId
   loopEnabledRef.current = loopEnabled
   spectrumEnabledRef.current = spectrumEnabled
+  meterEnabledRef.current = meterEnabled
 
   const reportPlaybackError = (error: unknown) => {
     callbacksRef.current.onError(`Playback failed: ${errorMessage(error)}`)
@@ -224,6 +236,9 @@ export const WaveformEditor = forwardRef<
   useImperativeHandle(
     forwardedRef,
     () => ({
+      activateMeter() {
+        void activateLoudnessMeter()
+      },
       activateSpectrum() {
         void activateAudioAnalyzer()
       },
@@ -243,8 +258,9 @@ export const WaveformEditor = forwardRef<
         const wavesurfer = wavesurferRef.current
         if (!wavesurfer) return
         restorePlaybackAfterEmptyClickRef.current = false
-        if (!wavesurfer.isPlaying() && spectrumEnabledRef.current) {
-          void activateAudioAnalyzer()
+        if (!wavesurfer.isPlaying()) {
+          if (spectrumEnabledRef.current) void activateAudioAnalyzer()
+          if (meterEnabledRef.current) void activateLoudnessMeter()
         }
         if (!wavesurfer.isPlaying() && pendingPlaybackRegionIdRef.current) {
           const pendingRegion = regionsPluginRef.current
@@ -307,7 +323,7 @@ export const WaveformEditor = forwardRef<
         wavesurfer.setScroll(nextScroll)
       },
     }),
-    [activateAudioAnalyzer],
+    [activateAudioAnalyzer, activateLoudnessMeter],
   )
 
   useEffect(() => {
@@ -422,6 +438,7 @@ export const WaveformEditor = forwardRef<
       }
       callbacksRef.current.onReady(duration)
       callbacksRef.current.onTimeChange(0)
+      setDecodedAudio(wavesurfer.getDecodedData())
       callbacksRef.current.onZoomChange(fittedZoom)
       const sampleRate = wavesurfer.getDecodedData()?.sampleRate
       if (sampleRate && sampleRate > 0) {
@@ -451,6 +468,7 @@ export const WaveformEditor = forwardRef<
     const unsubscribePlay = wavesurfer.on('play', () => {
       restorePlaybackAfterEmptyClickRef.current = false
       if (spectrumEnabledRef.current) void activateAudioAnalyzer()
+      if (meterEnabledRef.current) void activateLoudnessMeter()
       callbacksRef.current.onPlaybackChange(true)
     })
     const unsubscribePause = wavesurfer.on('pause', () => {
@@ -580,6 +598,7 @@ export const WaveformEditor = forwardRef<
         selectRegion(region.id)
         pendingPlaybackRegionIdRef.current = null
         if (spectrumEnabledRef.current) void activateAudioAnalyzer()
+        if (meterEnabledRef.current) void activateLoudnessMeter()
         void wavesurfer
           .play(region.start, region.end)
           .catch(reportPlaybackError)
@@ -1056,12 +1075,13 @@ export const WaveformEditor = forwardRef<
       setMediaElement((current) =>
         current === wavesurferMediaElement ? null : current,
       )
+      setDecodedAudio(null)
       wavesurfer.destroy()
       if (wavesurferRef.current === wavesurfer) wavesurferRef.current = null
       if (regionsPluginRef.current === regionsPlugin)
         regionsPluginRef.current = null
     }
-  }, [activateAudioAnalyzer, audioUrl])
+  }, [activateAudioAnalyzer, activateLoudnessMeter, audioUrl])
 
   useEffect(() => {
     const wavesurfer = wavesurferRef.current
@@ -1180,78 +1200,92 @@ export const WaveformEditor = forwardRef<
     }
   }, [instanceVersion, spectrogramEnabled])
 
+  const selectedRegion =
+    regions.find((region) => region.id === selectedRegionId) ?? null
+
   return (
-    <div className="waveform-stack">
-      <div
-        className="waveform-surface"
-        ref={waveformElementRef}
-        aria-label="Audio waveform. Drag empty space to create a region."
-      />
-      <div className="waveform-minimap" ref={minimapElementRef} />
-      <div
-        className="waveform-scrollbar is-inactive"
-        ref={scrollbarElementRef}
-        role="region"
-        aria-label="Scroll waveform horizontally"
-        aria-disabled="true"
-        tabIndex={-1}
-      >
+    <div className={`analysis-workspace${meterEnabled ? ' has-meter' : ''}`}>
+      <div className="waveform-stack">
         <div
-          className="waveform-scrollbar__track"
-          ref={scrollbarTrackElementRef}
-          aria-hidden="true"
+          className="waveform-surface"
+          ref={waveformElementRef}
+          aria-label="Audio waveform. Drag empty space to create a region."
         />
-      </div>
-      {spectrogramEnabled && (
-        <section className="spectrogram-panel" aria-label="Spectrogram">
-          <header className="spectrogram-panel__header">
-            <h2>Spectrogram</h2>
-            <button
-              type="button"
-              onClick={onHideSpectrogram}
-              aria-label="Hide spectrogram"
-              title="Hide spectrogram"
-            >
-              ×
-            </button>
-          </header>
-          <div className="spectrogram-display">
-            <div
-              className="spectrogram-viewport"
-              ref={spectrogramViewportElementRef}
-            >
+        <div className="waveform-minimap" ref={minimapElementRef} />
+        <div
+          className="waveform-scrollbar is-inactive"
+          ref={scrollbarElementRef}
+          role="region"
+          aria-label="Scroll waveform horizontally"
+          aria-disabled="true"
+          tabIndex={-1}
+        >
+          <div
+            className="waveform-scrollbar__track"
+            ref={scrollbarTrackElementRef}
+            aria-hidden="true"
+          />
+        </div>
+        {spectrogramEnabled && (
+          <section className="spectrogram-panel" aria-label="Spectrogram">
+            <header className="spectrogram-panel__header">
+              <h2>Spectrogram</h2>
+              <button
+                type="button"
+                onClick={onHideSpectrogram}
+                aria-label="Hide spectrogram"
+                title="Hide spectrogram"
+              >
+                ×
+              </button>
+            </header>
+            <div className="spectrogram-display">
               <div
-                className="spectrogram-surface"
-                ref={spectrogramElementRef}
-              />
+                className="spectrogram-viewport"
+                ref={spectrogramViewportElementRef}
+              >
+                <div
+                  className="spectrogram-surface"
+                  ref={spectrogramElementRef}
+                />
+              </div>
+              <div className="spectrogram-axis" aria-hidden="true">
+                {spectrogramAxisLabels.map((frequency) => {
+                  const position = logarithmicFrequencyY(
+                    frequency,
+                    spectrogramMaxFrequency,
+                  )
+                  const top = Math.min(Math.max(position * 100, 6.7), 93.3)
+                  return (
+                    <span key={frequency} style={{ top: `${top}%` }}>
+                      {formatFrequencyLabel(frequency)}
+                      <small>{frequency >= 1_000 ? 'kHz' : 'Hz'}</small>
+                    </span>
+                  )
+                })}
+              </div>
             </div>
-            <div className="spectrogram-axis" aria-hidden="true">
-              {spectrogramAxisLabels.map((frequency) => {
-                const position = logarithmicFrequencyY(
-                  frequency,
-                  spectrogramMaxFrequency,
-                )
-                const top = Math.min(Math.max(position * 100, 6.7), 93.3)
-                return (
-                  <span key={frequency} style={{ top: `${top}%` }}>
-                    {formatFrequencyLabel(frequency)}
-                    <small>{frequency >= 1_000 ? 'kHz' : 'Hz'}</small>
-                  </span>
-                )
-              })}
-            </div>
-          </div>
-        </section>
-      )}
-      {spectrumEnabled && (
-        <SpectrumAnalyzer
-          analyserNode={audioAnalyzer.analyserNode}
-          analyzerError={audioAnalyzer.error}
-          fftSize={audioAnalyzer.fftSize}
-          isPlaying={isPlaying}
-          sampleRate={audioAnalyzer.sampleRate}
-          onResponseChange={audioAnalyzer.setResponse}
-          onClose={onHideSpectrum}
+          </section>
+        )}
+        {spectrumEnabled && (
+          <SpectrumAnalyzer
+            analyserNode={audioAnalyzer.analyserNode}
+            analyzerError={audioAnalyzer.error}
+            fftSize={audioAnalyzer.fftSize}
+            isPlaying={isPlaying}
+            sampleRate={audioAnalyzer.sampleRate}
+            onResponseChange={audioAnalyzer.setSpectrumResponse}
+            onClose={onHideSpectrum}
+          />
+        )}
+      </div>
+      {meterEnabled && (
+        <LoudnessMeter
+          audioBuffer={decodedAudio}
+          live={audioAnalyzer.loudnessSnapshot}
+          selectedRegion={selectedRegion}
+          error={audioAnalyzer.error}
+          onClose={onHideMeter}
         />
       )}
     </div>

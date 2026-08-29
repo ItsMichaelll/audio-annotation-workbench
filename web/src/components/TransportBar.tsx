@@ -4,6 +4,7 @@ interface TransportBarProps {
   loopEnabled: boolean
   spectrogramEnabled: boolean
   spectrumEnabled: boolean
+  meterEnabled: boolean
   hasSelection: boolean
   verticalScale: number
   onPlayPause(): void
@@ -15,6 +16,7 @@ interface TransportBarProps {
   onDelete(): void
   onToggleSpectrogram(): void
   onToggleSpectrum(): void
+  onToggleMeter(): void
 }
 
 export function TransportBar({
@@ -23,6 +25,7 @@ export function TransportBar({
   loopEnabled,
   spectrogramEnabled,
   spectrumEnabled,
+  meterEnabled,
   hasSelection,
   verticalScale,
   onPlayPause,
@@ -34,6 +37,7 @@ export function TransportBar({
   onDelete,
   onToggleSpectrogram,
   onToggleSpectrum,
+  onToggleMeter,
 }: TransportBarProps) {
   return (
     <nav className="transport" aria-label="Transport and editing controls">
@@ -121,6 +125,16 @@ export function TransportBar({
         title="Show or hide the spectrum analyzer"
       >
         Spectrum Analyzer
+      </button>
+      <button
+        type="button"
+        className={`transport__view-toggle${meterEnabled ? ' is-active' : ''}`}
+        aria-pressed={meterEnabled}
+        onClick={onToggleMeter}
+        disabled={!isLoaded}
+        title="Show or hide the loudness and true-peak meter"
+      >
+        Meter
       </button>
     </nav>
   )

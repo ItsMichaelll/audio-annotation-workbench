@@ -329,6 +329,283 @@ button:disabled {
   padding: 24px 18px 18px;
 }
 
+.analysis-workspace {
+  display: grid;
+  min-width: 0;
+  min-height: 100%;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.analysis-workspace.has-meter {
+  grid-template-columns: minmax(0, 1fr) 230px;
+}
+
+.loudness-meter {
+  position: sticky;
+  top: 0;
+  right: 0;
+  align-self: start;
+  min-height: 100%;
+  border-left: 1px solid var(--border-strong);
+  background: #101315;
+  color: #d5dcde;
+  font-size: 10px;
+}
+
+.loudness-meter__header {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 7px 6px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.loudness-meter__header h2 {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.loudness-meter__header span {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.loudness-meter__header button {
+  min-width: 26px;
+  min-height: 26px;
+  padding: 0;
+  font-size: 16px;
+}
+
+.loudness-meter__scope {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 4px;
+  padding: 7px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.loudness-meter__scope button {
+  min-height: 25px;
+  padding: 0 7px;
+  font-size: 9px;
+}
+
+.loudness-meter__scope button.is-active {
+  border-color: rgb(var(--accent-rgb) / 55%);
+  background: rgb(var(--accent-rgb) / 14%);
+  color: #dceaff;
+}
+
+.loudness-meter__live {
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  gap: 9px;
+  padding: 12px 8px 9px;
+}
+
+.loudness-meter__scale {
+  position: relative;
+  height: 238px;
+}
+
+.loudness-meter__scale > span {
+  position: absolute;
+  left: 0;
+  width: 24px;
+  color: #727d83;
+  font-family: Consolas, 'SFMono-Regular', monospace;
+  font-size: 8px;
+  text-align: right;
+  transform: translateY(50%);
+}
+
+.loudness-meter__track {
+  position: absolute;
+  inset: 0 0 0 30px;
+  overflow: hidden;
+  border: 1px solid #31383c;
+  background: #0b0d0e;
+}
+
+.loudness-meter__bar {
+  position: absolute;
+  right: 7px;
+  bottom: 0;
+  left: 7px;
+  background: var(--accent);
+  transition: height 90ms linear;
+}
+
+.loudness-meter__short-marker,
+.loudness-meter__hold-marker {
+  position: absolute;
+  z-index: 3;
+  right: 2px;
+  left: 2px;
+  height: 2px;
+  background: var(--status);
+}
+
+.loudness-meter__hold-marker {
+  height: 1px;
+  background: var(--warning);
+}
+
+.loudness-meter__target-bracket {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  width: 7px;
+  border-top: 1px solid var(--warning);
+  border-right: 2px solid var(--warning);
+  border-bottom: 1px solid var(--warning);
+}
+
+.loudness-meter__readouts {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+}
+
+.loudness-meter__readouts output {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #242a2d;
+}
+
+.loudness-meter__readouts span {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.loudness-meter__readouts strong {
+  color: #ecf2f4;
+  font-family: Consolas, 'SFMono-Regular', monospace;
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.loudness-meter__readouts small,
+.loudness-meter__statistics small {
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.loudness-meter__readouts .is-over strong {
+  color: var(--danger);
+}
+
+.loudness-meter__notice,
+.loudness-meter__analysis-state {
+  margin: 0;
+  padding: 7px 9px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.loudness-meter .is-error {
+  color: color-mix(in srgb, var(--danger) 55%, white);
+}
+
+.loudness-meter__target {
+  padding: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.loudness-meter__target > label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.loudness-meter__target input[type='checkbox'] {
+  accent-color: var(--accent);
+}
+
+.loudness-meter__target > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  margin-top: 7px;
+}
+
+.loudness-meter__target div label {
+  color: var(--muted);
+}
+
+.loudness-meter__target input[type='number'] {
+  width: 48px;
+  min-height: 24px;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  background: var(--panel-raised);
+  color: var(--text);
+  font-family: Consolas, 'SFMono-Regular', monospace;
+  font-size: 9px;
+}
+
+.loudness-meter__target p {
+  margin: 5px 0 0;
+  color: var(--danger);
+}
+
+.loudness-meter__statistics {
+  border-top: 1px solid var(--border);
+}
+
+.loudness-meter__statistics > button {
+  display: flex;
+  width: 100%;
+  min-height: 31px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 0;
+  background: var(--panel);
+  color: #ccd4d7;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.loudness-meter__statistics dl {
+  margin: 0;
+  padding: 4px 9px 9px;
+}
+
+.loudness-meter__statistics dl div {
+  display: flex;
+  min-height: 22px;
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 1px solid #22282b;
+}
+
+.loudness-meter__statistics dt {
+  color: var(--muted);
+}
+
+.loudness-meter__statistics dd {
+  margin: 0;
+  font-family: Consolas, 'SFMono-Regular', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
 .waveform-surface {
   border: 1px solid #252b2e;
   background: #111416;
