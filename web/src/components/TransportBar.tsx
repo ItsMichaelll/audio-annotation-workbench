@@ -2,9 +2,9 @@ interface TransportBarProps {
   isLoaded: boolean
   isPlaying: boolean
   loopEnabled: boolean
+  spectrogramEnabled: boolean
+  spectrumEnabled: boolean
   hasSelection: boolean
-  canUndo: boolean
-  canRedo: boolean
   verticalScale: number
   onPlayPause(): void
   onFit(): void
@@ -13,17 +13,17 @@ interface TransportBarProps {
   onResetVerticalScale(): void
   onToggleLoop(): void
   onDelete(): void
-  onUndo(): void
-  onRedo(): void
+  onToggleSpectrogram(): void
+  onToggleSpectrum(): void
 }
 
 export function TransportBar({
   isLoaded,
   isPlaying,
   loopEnabled,
+  spectrogramEnabled,
+  spectrumEnabled,
   hasSelection,
-  canUndo,
-  canRedo,
   verticalScale,
   onPlayPause,
   onFit,
@@ -32,8 +32,8 @@ export function TransportBar({
   onResetVerticalScale,
   onToggleLoop,
   onDelete,
-  onUndo,
-  onRedo,
+  onToggleSpectrogram,
+  onToggleSpectrum,
 }: TransportBarProps) {
   return (
     <nav className="transport" aria-label="Transport and editing controls">
@@ -80,7 +80,7 @@ export function TransportBar({
         disabled={!isLoaded || Math.abs(verticalScale - 1) < 0.001}
         title="Reset vertical scale to 1×"
       >
-        V Reset
+        Reset V-Scale
       </button>
       <span className="transport__divider" aria-hidden="true" />
       <button
@@ -101,22 +101,26 @@ export function TransportBar({
       >
         Delete
       </button>
-      <span className="transport__spacer" />
+      <span className="transport__divider" aria-hidden="true" />
       <button
         type="button"
-        onClick={onUndo}
-        disabled={!canUndo}
-        title="Undo (Ctrl+Z)"
+        className={`transport__view-toggle${spectrogramEnabled ? ' is-active' : ''}`}
+        aria-pressed={spectrogramEnabled}
+        onClick={onToggleSpectrogram}
+        disabled={!isLoaded}
+        title="Show or hide the spectrogram"
       >
-        Undo
+        Spectrogram
       </button>
       <button
         type="button"
-        onClick={onRedo}
-        disabled={!canRedo}
-        title="Redo (Ctrl+Y or Ctrl+Shift+Z)"
+        className={`transport__view-toggle${spectrumEnabled ? ' is-active' : ''}`}
+        aria-pressed={spectrumEnabled}
+        onClick={onToggleSpectrum}
+        disabled={!isLoaded}
+        title="Show or hide the spectrum analyzer"
       >
-        Redo
+        Spectrum Analyzer
       </button>
     </nav>
   )

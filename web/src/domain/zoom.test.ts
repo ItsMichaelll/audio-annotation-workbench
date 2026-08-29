@@ -49,6 +49,20 @@ describe('zoom calculations', () => {
     expect((nextScroll + 300) / 40).toBe((400 + 300) / 20)
   })
 
+  it('preserves the cursor anchor while zooming near the file end', () => {
+    const nextScroll = cursorCenteredScroll({
+      currentZoom: 20,
+      currentScroll: 1000,
+      pointerX: 900,
+      nextZoom: 40,
+      viewportWidth: 1000,
+      duration: 100,
+    })
+
+    expect(nextScroll).toBe(2900)
+    expect((nextScroll + 900) / 40).toBe(95)
+  })
+
   it('clamps cursor-centered scroll at file edges', () => {
     expect(
       cursorCenteredScroll({

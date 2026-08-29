@@ -47,10 +47,9 @@ export function App() {
   const [regions, setRegions] = useState<RegionMetadata[]>([])
   const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null)
   const [loopEnabled, setLoopEnabled] = useState(false)
+  const [spectrumEnabled, setSpectrumEnabled] = useState(false)
   const [spectrogramEnabled, setSpectrogramEnabled] = useState(false)
   const [shortcutsCollapsed, setShortcutsCollapsed] = useState(false)
-  const [canUndo, setCanUndo] = useState(false)
-  const [canRedo, setCanRedo] = useState(false)
 
   const selectedRegion = useMemo(
     () => regions.find((region) => region.id === selectedRegionId) ?? null,
@@ -62,8 +61,6 @@ export function App() {
     (state: HistoryState<RegionMetadata[]>) => {
       regionsRef.current = state.present
       setRegions(state.present)
-      setCanUndo(state.canUndo)
-      setCanRedo(state.canRedo)
       if (
         selectedRegionId !== null &&
         !state.present.some((region) => region.id === selectedRegionId)
@@ -134,6 +131,7 @@ export function App() {
     applyHistoryState(historyRef.current.reset([]))
     setSelectedRegionId(null)
     setLoopEnabled(false)
+    setSpectrumEnabled(false)
     setSpectrogramEnabled(false)
     setDuration(0)
     setCurrentTime(0)
@@ -240,15 +238,6 @@ export function App() {
           <span className="privacy-note">
             Files stay on this device · Never uploaded
           </span>
-          <label className="toggle-control">
-            <input
-              type="checkbox"
-              checked={spectrogramEnabled}
-              disabled={!isLoaded}
-              onChange={(event) => setSpectrogramEnabled(event.target.checked)}
-            />
-            <span>Spectrogram</span>
-          </label>
           <input
             ref={fileInputRef}
             className="visually-hidden"
@@ -280,9 +269,9 @@ export function App() {
         isLoaded={isLoaded}
         isPlaying={isPlaying}
         loopEnabled={loopEnabled}
+        spectrogramEnabled={spectrogramEnabled}
+        spectrumEnabled={spectrumEnabled}
         hasSelection={selectedRegion !== null}
-        canUndo={canUndo}
-        canRedo={canRedo}
         verticalScale={verticalScale}
         onPlayPause={() => waveformRef.current?.playPause()}
         onFit={() => waveformRef.current?.fit()}
@@ -291,8 +280,12 @@ export function App() {
         onResetVerticalScale={() => waveformRef.current?.resetVerticalScale()}
         onToggleLoop={() => setLoopEnabled((enabled) => !enabled)}
         onDelete={deleteSelectedRegion}
-        onUndo={undo}
-        onRedo={redo}
+        onToggleSpectrogram={() => setSpectrogramEnabled((enabled) => !enabled)}
+        onToggleSpectrum={() => {
+          const enabled = !spectrumEnabled
+          setSpectrumEnabled(enabled)
+          if (enabled) waveformRef.current?.activateSpectrum()
+        }}
       />
 
       <main className="workspace">
@@ -350,7 +343,9 @@ export function App() {
                 regions={regions}
                 selectedRegionId={selectedRegionId}
                 loopEnabled={loopEnabled}
+                spectrumEnabled={spectrumEnabled}
                 spectrogramEnabled={spectrogramEnabled}
+                isPlaying={isPlaying}
                 onLoading={() => setLoadStatus('loading')}
                 onReady={(audioDuration) => {
                   setDuration(audioDuration)
@@ -372,6 +367,8 @@ export function App() {
                 onRegionCommit={handleRegionCommit}
                 onRegionSelect={handleRegionSelect}
                 onClearRegionSelection={clearRegionSelection}
+                onHideSpectrogram={() => setSpectrogramEnabled(false)}
+                onHideSpectrum={() => setSpectrumEnabled(false)}
               />
             </div>
           )}

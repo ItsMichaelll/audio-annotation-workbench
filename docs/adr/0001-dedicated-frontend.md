@@ -18,4 +18,3 @@ Label Studio is a broad data-labeling platform whose application structure, term
 ## Consequences
 
 The workbench can shape its interaction model directly and remain a small standalone public project. It must implement its own future configuration, persistence, import/export, and collaboration boundaries; those are intentionally deferred until navigation ergonomics are validated.
-

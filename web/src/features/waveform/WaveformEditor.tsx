@@ -2,6 +2,7 @@ import {
   forwardRef,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState,
 } from 'react'
@@ -17,6 +18,13 @@ import ZoomPlugin from 'wavesurfer.js/dist/plugins/zoom.esm.js'
 import type { RegionMetadata } from '../../domain/region'
 import { normalizeRegion, translateRegion } from '../../domain/region'
 import { clampTime, formatTime } from '../../domain/transport'
+import { SpectrumAnalyzer } from '../spectrum/SpectrumAnalyzer'
+import { useAudioAnalyzer } from '../spectrum/useAudioAnalyzer'
+import { scrollWidthsMatch } from './scrollSync'
+import {
+  logarithmicFrequencyY,
+  spectrogramViewportGeometry,
+} from './spectrogramSync'
 import {
   cursorCenteredScroll,
   fitZoom,
@@ -30,8 +38,22 @@ const REGION_COLOR = 'rgba(70, 144, 255, 0.28)'
 const SELECTED_REGION_COLOR = 'rgba(70, 144, 255, 0.42)'
 const WARNING_COLOR = '#ffa500'
 const REGION_WHEEL_NUDGE_RATIO = 0.1
+const SPECTROGRAM_FREQUENCY_LABELS = [
+  20_000, 10_000, 5_000, 2_000, 1_000, 500, 200, 100, 50, 20,
+] as const
+
+function formatFrequencyLabel(frequency: number): string {
+  if (frequency >= 1_000) {
+    const kilohertz = frequency / 1_000
+    return Number.isInteger(kilohertz)
+      ? kilohertz.toFixed(0)
+      : kilohertz.toFixed(1)
+  }
+  return Math.round(frequency).toString()
+}
 
 export interface WaveformEditorHandle {
+  activateSpectrum(): void
   fit(): void
   playPause(): void
   resetVerticalScale(): void
@@ -45,7 +67,9 @@ interface WaveformEditorProps {
   regions: readonly RegionMetadata[]
   selectedRegionId: string | null
   loopEnabled: boolean
+  spectrumEnabled: boolean
   spectrogramEnabled: boolean
+  isPlaying: boolean
   onLoading(): void
   onReady(duration: number): void
   onError(message: string): void
@@ -58,6 +82,8 @@ interface WaveformEditorProps {
   onRegionCommit(region: RegionMetadata): void
   onRegionSelect(regionId: string): void
   onClearRegionSelection(): void
+  onHideSpectrogram(): void
+  onHideSpectrum(): void
 }
 
 interface CallbackBundle {
@@ -103,7 +129,9 @@ export const WaveformEditor = forwardRef<
     regions,
     selectedRegionId,
     loopEnabled,
+    spectrumEnabled,
     spectrogramEnabled,
+    isPlaying,
     onLoading,
     onReady,
     onError,
@@ -116,11 +144,15 @@ export const WaveformEditor = forwardRef<
     onRegionCommit,
     onRegionSelect,
     onClearRegionSelection,
+    onHideSpectrogram,
+    onHideSpectrum,
   },
   forwardedRef,
 ) {
   const waveformElementRef = useRef<HTMLDivElement>(null)
+  const spectrogramViewportElementRef = useRef<HTMLDivElement>(null)
   const spectrogramElementRef = useRef<HTMLDivElement>(null)
+  const minimapElementRef = useRef<HTMLDivElement>(null)
   const scrollbarElementRef = useRef<HTMLDivElement>(null)
   const scrollbarTrackElementRef = useRef<HTMLDivElement>(null)
   const wavesurferRef = useRef<WaveSurfer | null>(null)
@@ -128,8 +160,10 @@ export const WaveformEditor = forwardRef<
   const synchronizationRef = useRef(false)
   const selectedRegionIdRef = useRef(selectedRegionId)
   const loopEnabledRef = useRef(loopEnabled)
+  const spectrumEnabledRef = useRef(spectrumEnabled)
   const verticalScaleRef = useRef(1)
   const pendingPlaybackRegionIdRef = useRef<string | null>(null)
+  const restorePlaybackAfterEmptyClickRef = useRef(false)
   const callbacksRef = useRef<CallbackBundle>({
     onLoading,
     onReady,
@@ -145,6 +179,25 @@ export const WaveformEditor = forwardRef<
     onClearRegionSelection,
   })
   const [instanceVersion, setInstanceVersion] = useState(0)
+  const [spectrogramMaxFrequency, setSpectrogramMaxFrequency] = useState(24_000)
+  const [mediaElement, setMediaElement] = useState<HTMLMediaElement | null>(
+    null,
+  )
+
+  const audioAnalyzer = useAudioAnalyzer({
+    mediaElement,
+    onError: (message) => callbacksRef.current.onError(message),
+  })
+  const activateAudioAnalyzer = audioAnalyzer.activate
+  const spectrogramAxisLabels = useMemo(
+    () => [
+      spectrogramMaxFrequency,
+      ...SPECTROGRAM_FREQUENCY_LABELS.filter(
+        (frequency) => frequency < spectrogramMaxFrequency * 0.9,
+      ),
+    ],
+    [spectrogramMaxFrequency],
+  )
 
   callbacksRef.current = {
     onLoading,
@@ -162,6 +215,7 @@ export const WaveformEditor = forwardRef<
   }
   selectedRegionIdRef.current = selectedRegionId
   loopEnabledRef.current = loopEnabled
+  spectrumEnabledRef.current = spectrumEnabled
 
   const reportPlaybackError = (error: unknown) => {
     callbacksRef.current.onError(`Playback failed: ${errorMessage(error)}`)
@@ -170,6 +224,9 @@ export const WaveformEditor = forwardRef<
   useImperativeHandle(
     forwardedRef,
     () => ({
+      activateSpectrum() {
+        void activateAudioAnalyzer()
+      },
       fit() {
         const wavesurfer = wavesurferRef.current
         if (!wavesurfer) return
@@ -185,6 +242,10 @@ export const WaveformEditor = forwardRef<
       playPause() {
         const wavesurfer = wavesurferRef.current
         if (!wavesurfer) return
+        restorePlaybackAfterEmptyClickRef.current = false
+        if (!wavesurfer.isPlaying() && spectrumEnabledRef.current) {
+          void activateAudioAnalyzer()
+        }
         if (!wavesurfer.isPlaying() && pendingPlaybackRegionIdRef.current) {
           const pendingRegion = regionsPluginRef.current
             ?.getRegions()
@@ -246,21 +307,24 @@ export const WaveformEditor = forwardRef<
         wavesurfer.setScroll(nextScroll)
       },
     }),
-    [],
+    [activateAudioAnalyzer],
   )
 
   useEffect(() => {
     const container = waveformElementRef.current
-    if (!container) return
+    const minimapContainer = minimapElementRef.current
+    if (!container || !minimapContainer) return
 
     verticalScaleRef.current = 1
     pendingPlaybackRegionIdRef.current = null
+    restorePlaybackAfterEmptyClickRef.current = false
     callbacksRef.current.onVerticalScaleChange(1)
     let disposed = false
     let loadErrorReported = false
     let loopRestartQueued = false
     const regionsPlugin = RegionsPlugin.create()
     const minimapPlugin = MinimapPlugin.create({
+      container: minimapContainer,
       height: 52,
       waveColor: '#606b72',
       progressColor: '#9ba7ad',
@@ -314,6 +378,8 @@ export const WaveformEditor = forwardRef<
 
     wavesurferRef.current = wavesurfer
     regionsPluginRef.current = regionsPlugin
+    const wavesurferMediaElement = wavesurfer.getMediaElement()
+    setMediaElement(wavesurferMediaElement)
     callbacksRef.current.onLoading()
 
     const reportLoadError = (error: unknown) => {
@@ -357,6 +423,10 @@ export const WaveformEditor = forwardRef<
       callbacksRef.current.onReady(duration)
       callbacksRef.current.onTimeChange(0)
       callbacksRef.current.onZoomChange(fittedZoom)
+      const sampleRate = wavesurfer.getDecodedData()?.sampleRate
+      if (sampleRate && sampleRate > 0) {
+        setSpectrogramMaxFrequency(sampleRate / 2)
+      }
       setInstanceVersion((version) => version + 1)
     })
     const unsubscribeError = wavesurfer.on('error', reportLoadError)
@@ -370,14 +440,24 @@ export const WaveformEditor = forwardRef<
       const selected = regionsPlugin
         .getRegions()
         .find((region) => region.id === selectedId)
-      if (selected && time >= selected.end - 0.004) {
+      if (
+        selected &&
+        time >= selected.end - 0.004 &&
+        time - selected.end < 0.05
+      ) {
         wavesurfer.setTime(selected.start)
       }
     })
     const unsubscribePlay = wavesurfer.on('play', () => {
+      restorePlaybackAfterEmptyClickRef.current = false
+      if (spectrumEnabledRef.current) void activateAudioAnalyzer()
       callbacksRef.current.onPlaybackChange(true)
     })
     const unsubscribePause = wavesurfer.on('pause', () => {
+      if (restorePlaybackAfterEmptyClickRef.current) {
+        void wavesurfer.play().catch(reportPlaybackError)
+        return
+      }
       callbacksRef.current.onPlaybackChange(false)
       const selectedId = selectedRegionIdRef.current
       const selected = regionsPlugin
@@ -411,8 +491,21 @@ export const WaveformEditor = forwardRef<
     const unsubscribeInteraction = wavesurfer.on('interaction', (time) => {
       callbacksRef.current.onTimeChange(time)
     })
-    const unsubscribeWaveformClick = wavesurfer.on('click', () => {
+    const seekAfterClearingSelection = (relativeX: number) => {
+      const shouldContinue =
+        restorePlaybackAfterEmptyClickRef.current || wavesurfer.isPlaying()
       clearRegionSelection()
+      const duration = wavesurfer.getDuration()
+      if (duration > 0) {
+        wavesurfer.setTime(clampTime(relativeX * duration, duration))
+      }
+      restorePlaybackAfterEmptyClickRef.current = shouldContinue
+      if (shouldContinue) {
+        void wavesurfer.play().catch(reportPlaybackError)
+      }
+    }
+    const unsubscribeWaveformClick = wavesurfer.on('click', (relativeX) => {
+      seekAfterClearingSelection(relativeX)
     })
     const unsubscribeZoom = wavesurfer.on('zoom', (zoom) => {
       callbacksRef.current.onZoomChange(zoom)
@@ -486,6 +579,7 @@ export const WaveformEditor = forwardRef<
         event.stopPropagation()
         selectRegion(region.id)
         pendingPlaybackRegionIdRef.current = null
+        if (spectrumEnabledRef.current) void activateAudioAnalyzer()
         void wavesurfer
           .play(region.start, region.end)
           .catch(reportPlaybackError)
@@ -526,8 +620,11 @@ export const WaveformEditor = forwardRef<
     const syncScrollbar = () => {
       if (!scrollContainer || !scrollbar || !scrollbarTrack) return
       scrollbarTrack.style.width = `${scrollContainer.scrollWidth}px`
-      scrollbar.hidden =
-        scrollContainer.scrollWidth <= scrollContainer.clientWidth + 1
+      const canScroll =
+        scrollContainer.scrollWidth > scrollContainer.clientWidth + 1
+      scrollbar.classList.toggle('is-inactive', !canScroll)
+      scrollbar.setAttribute('aria-disabled', String(!canScroll))
+      scrollbar.tabIndex = canScroll ? 0 : -1
       if (Math.abs(scrollbar.scrollLeft - scrollContainer.scrollLeft) > 0.5) {
         scrollbar.scrollLeft = scrollContainer.scrollLeft
       }
@@ -537,12 +634,24 @@ export const WaveformEditor = forwardRef<
       scrollbarFrame = requestAnimationFrame(syncScrollbar)
     }
     const handleMainScroll = () => {
-      if (scrollbar) scrollbar.scrollLeft = scrollContainer?.scrollLeft ?? 0
+      if (!scrollContainer || !scrollbar) return
+      if (
+        !scrollWidthsMatch(scrollContainer.scrollWidth, scrollbar.scrollWidth)
+      ) {
+        scheduleScrollbarSync()
+        return
+      }
+      scrollbar.scrollLeft = scrollContainer.scrollLeft
     }
     const handleScrollbarScroll = () => {
-      if (scrollContainer && scrollbar) {
-        scrollContainer.scrollLeft = scrollbar.scrollLeft
+      if (!scrollContainer || !scrollbar) return
+      if (
+        !scrollWidthsMatch(scrollContainer.scrollWidth, scrollbar.scrollWidth)
+      ) {
+        scheduleScrollbarSync()
+        return
       }
+      scrollContainer.scrollLeft = scrollbar.scrollLeft
     }
     const handleMinimapWheel = (event: WheelEvent) => {
       if (!minimapElement || !scrollContainer) return
@@ -573,6 +682,18 @@ export const WaveformEditor = forwardRef<
           cancelable: true,
         }),
       )
+    }
+    const rememberPlayingOnPointerDown = (event: PointerEvent) => {
+      if (event.button !== 0) return
+      const eventPath = event.composedPath()
+      const clickedRegion = regionsPlugin
+        .getRegions()
+        .some(
+          (region) =>
+            region.element !== null && eventPath.includes(region.element),
+        )
+      restorePlaybackAfterEmptyClickRef.current =
+        !clickedRegion && wavesurfer.isPlaying()
     }
     const handleMinimapPointerDown = (event: PointerEvent) => {
       if (
@@ -642,19 +763,19 @@ export const WaveformEditor = forwardRef<
       suppressMinimapClick = false
     }
     const connectMinimapNavigation = () => {
-      const wavesurferHost = container.firstElementChild
       const nextMinimapElement =
-        wavesurferHost instanceof HTMLElement
-          ? (wavesurferHost.shadowRoot?.querySelector<HTMLElement>(
-              '[part~="minimap"]',
-            ) ?? null)
-          : null
+        minimapContainer.querySelector<HTMLElement>('[part~="minimap"]')
       if (!nextMinimapElement || nextMinimapElement === minimapElement) return
       minimapElement = nextMinimapElement
       minimapElement.addEventListener('wheel', handleMinimapWheel, {
         capture: true,
         passive: false,
       })
+      minimapElement.addEventListener(
+        'pointerdown',
+        rememberPlayingOnPointerDown,
+        true,
+      )
       minimapElement.addEventListener(
         'pointerdown',
         handleMinimapPointerDown,
@@ -701,7 +822,43 @@ export const WaveformEditor = forwardRef<
         callbacksRef.current.onVerticalScaleChange(verticalScaleRef.current)
         return
       }
-      if (!event.shiftKey) return
+      if (!event.shiftKey) {
+        if (
+          !scrollContainer ||
+          Math.abs(event.deltaX) >= Math.abs(event.deltaY)
+        ) {
+          return
+        }
+
+        const duration = wavesurfer.getDuration()
+        const viewportWidth = scrollContainer.clientWidth
+        const currentZoom =
+          wavesurfer.options.minPxPerSec > 0
+            ? wavesurfer.options.minPxPerSec
+            : scrollContainer.scrollWidth / Math.max(duration, 1)
+        const currentScroll = scrollContainer.scrollLeft
+        const pointerX =
+          event.clientX - scrollContainer.getBoundingClientRect().left
+
+        queueMicrotask(() => {
+          if (disposed || duration <= 0) return
+          const nextZoom =
+            wavesurfer.options.minPxPerSec > 0
+              ? wavesurfer.options.minPxPerSec
+              : scrollContainer.scrollWidth / duration
+          wavesurfer.setScroll(
+            cursorCenteredScroll({
+              currentZoom,
+              currentScroll,
+              pointerX,
+              nextZoom,
+              viewportWidth,
+              duration,
+            }),
+          )
+        })
+        return
+      }
       event.preventDefault()
       event.stopImmediatePropagation()
       if (!scrollContainer) return
@@ -798,6 +955,11 @@ export const WaveformEditor = forwardRef<
       capture: true,
       passive: false,
     })
+    scrollContainer?.addEventListener(
+      'pointerdown',
+      rememberPlayingOnPointerDown,
+      true,
+    )
     scrollContainer?.addEventListener('pointerdown', handlePointerDown, true)
     scrollContainer?.addEventListener('pointermove', handlePointerMove, true)
     scrollContainer?.addEventListener('pointerup', finishPan, true)
@@ -814,8 +976,8 @@ export const WaveformEditor = forwardRef<
       connectMinimapNavigation()
       scheduleScrollbarSync()
     })
-    const unsubscribeMinimapClick = minimapPlugin.on('click', () => {
-      clearRegionSelection()
+    const unsubscribeMinimapClick = minimapPlugin.on('click', (relativeX) => {
+      seekAfterClearingSelection(relativeX)
     })
     scheduleScrollbarSync()
 
@@ -851,6 +1013,11 @@ export const WaveformEditor = forwardRef<
       scrollContainer?.removeEventListener('wheel', handleWheel, true)
       scrollContainer?.removeEventListener(
         'pointerdown',
+        rememberPlayingOnPointerDown,
+        true,
+      )
+      scrollContainer?.removeEventListener(
+        'pointerdown',
         handlePointerDown,
         true,
       )
@@ -864,6 +1031,11 @@ export const WaveformEditor = forwardRef<
       scrollContainer?.removeEventListener('scroll', handleMainScroll)
       scrollbar?.removeEventListener('scroll', handleScrollbarScroll)
       minimapElement?.removeEventListener('wheel', handleMinimapWheel, true)
+      minimapElement?.removeEventListener(
+        'pointerdown',
+        rememberPlayingOnPointerDown,
+        true,
+      )
       minimapElement?.removeEventListener(
         'pointerdown',
         handleMinimapPointerDown,
@@ -881,12 +1053,15 @@ export const WaveformEditor = forwardRef<
         true,
       )
       minimapElement?.removeEventListener('click', handleMinimapClick, true)
+      setMediaElement((current) =>
+        current === wavesurferMediaElement ? null : current,
+      )
       wavesurfer.destroy()
       if (wavesurferRef.current === wavesurfer) wavesurferRef.current = null
       if (regionsPluginRef.current === regionsPlugin)
         regionsPluginRef.current = null
     }
-  }, [audioUrl])
+  }, [activateAudioAnalyzer, audioUrl])
 
   useEffect(() => {
     const wavesurfer = wavesurferRef.current
@@ -934,20 +1109,43 @@ export const WaveformEditor = forwardRef<
   useEffect(() => {
     const wavesurfer = wavesurferRef.current
     const container = spectrogramElementRef.current
+    const viewport = spectrogramViewportElementRef.current
     if (
       !spectrogramEnabled ||
       !wavesurfer ||
       !container ||
+      !viewport ||
       instanceVersion === 0
     ) {
       return
     }
 
+    const scrollContainer = wavesurfer.getWrapper().parentElement
+    if (!scrollContainer) return
+
+    let synchronizationFrame = 0
+    const synchronizeSpectrogram = () => {
+      const geometry = spectrogramViewportGeometry(
+        scrollContainer.scrollWidth,
+        scrollContainer.clientWidth,
+        scrollContainer.scrollLeft,
+      )
+      container.style.width = `${geometry.contentWidth}px`
+      if (Math.abs(viewport.scrollLeft - geometry.scrollLeft) > 0.5) {
+        viewport.scrollLeft = geometry.scrollLeft
+      }
+    }
+    const scheduleSynchronization = () => {
+      cancelAnimationFrame(synchronizationFrame)
+      synchronizationFrame = requestAnimationFrame(synchronizeSpectrogram)
+    }
+
+    synchronizeSpectrogram()
     const plugin = wavesurfer.registerPlugin(
       WindowedSpectrogramPlugin.create({
         container,
         height: 150,
-        labels: true,
+        labels: false,
         fftSamples: 1024,
         scale: 'logarithmic',
         colorMap: 'igray',
@@ -963,9 +1161,19 @@ export const WaveformEditor = forwardRef<
         `Spectrogram unavailable: ${errorMessage(error)}`,
       )
     })
+    const unsubscribeReady = plugin.on('ready', scheduleSynchronization)
+    const unsubscribeScroll = wavesurfer.on('scroll', scheduleSynchronization)
+    const unsubscribeRedraw = wavesurfer.on('redraw', scheduleSynchronization)
+    const unsubscribeResize = wavesurfer.on('resize', scheduleSynchronization)
+    scheduleSynchronization()
 
     return () => {
       unsubscribeError()
+      unsubscribeReady()
+      unsubscribeScroll()
+      unsubscribeRedraw()
+      unsubscribeResize()
+      cancelAnimationFrame(synchronizationFrame)
       if (wavesurfer.getActivePlugins().includes(plugin)) {
         wavesurfer.unregisterPlugin(plugin)
       }
@@ -979,13 +1187,14 @@ export const WaveformEditor = forwardRef<
         ref={waveformElementRef}
         aria-label="Audio waveform. Drag empty space to create a region."
       />
+      <div className="waveform-minimap" ref={minimapElementRef} />
       <div
-        className="waveform-scrollbar"
+        className="waveform-scrollbar is-inactive"
         ref={scrollbarElementRef}
         role="region"
         aria-label="Scroll waveform horizontally"
-        tabIndex={0}
-        hidden
+        aria-disabled="true"
+        tabIndex={-1}
       >
         <div
           className="waveform-scrollbar__track"
@@ -993,15 +1202,58 @@ export const WaveformEditor = forwardRef<
           aria-hidden="true"
         />
       </div>
-      <div
-        className={
-          spectrogramEnabled
-            ? 'spectrogram-surface is-visible'
-            : 'spectrogram-surface'
-        }
-        ref={spectrogramElementRef}
-        aria-hidden={!spectrogramEnabled}
-      />
+      {spectrogramEnabled && (
+        <section className="spectrogram-panel" aria-label="Spectrogram">
+          <header className="spectrogram-panel__header">
+            <h2>Spectrogram</h2>
+            <button
+              type="button"
+              onClick={onHideSpectrogram}
+              aria-label="Hide spectrogram"
+              title="Hide spectrogram"
+            >
+              ×
+            </button>
+          </header>
+          <div className="spectrogram-display">
+            <div
+              className="spectrogram-viewport"
+              ref={spectrogramViewportElementRef}
+            >
+              <div
+                className="spectrogram-surface"
+                ref={spectrogramElementRef}
+              />
+            </div>
+            <div className="spectrogram-axis" aria-hidden="true">
+              {spectrogramAxisLabels.map((frequency) => {
+                const position = logarithmicFrequencyY(
+                  frequency,
+                  spectrogramMaxFrequency,
+                )
+                const top = Math.min(Math.max(position * 100, 6.7), 93.3)
+                return (
+                  <span key={frequency} style={{ top: `${top}%` }}>
+                    {formatFrequencyLabel(frequency)}
+                    <small>{frequency >= 1_000 ? 'kHz' : 'Hz'}</small>
+                  </span>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+      {spectrumEnabled && (
+        <SpectrumAnalyzer
+          analyserNode={audioAnalyzer.analyserNode}
+          analyzerError={audioAnalyzer.error}
+          fftSize={audioAnalyzer.fftSize}
+          isPlaying={isPlaying}
+          sampleRate={audioAnalyzer.sampleRate}
+          onResponseChange={audioAnalyzer.setResponse}
+          onClose={onHideSpectrum}
+        />
+      )}
     </div>
   )
 })
