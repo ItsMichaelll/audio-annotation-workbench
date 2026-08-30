@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router'
 import { ShortcutPanel } from './components/ShortcutPanel'
 import { StatusReadout } from './components/StatusReadout'
 import { TransportBar } from './components/TransportBar'
@@ -26,7 +27,7 @@ const EMPTY_STATE_WAVE_HEIGHTS = [
   34, 28, 15, 5,
 ]
 
-export function App() {
+export function StandaloneEditor() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const waveformRef = useRef<WaveformEditorHandle>(null)
   const activeObjectUrlRef = useRef<string | null>(null)
@@ -227,7 +228,11 @@ export function App() {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <div className="brand">
+        <Link
+          className="brand brand--link"
+          to="/"
+          aria-label="Projects dashboard"
+        >
           <span className="brand__mark" aria-hidden="true">
             AAW
           </span>
@@ -235,11 +240,9 @@ export function App() {
             <h1>Audio Annotation Workbench</h1>
             <p>A minimalistic audio annotation tool</p>
           </div>
-        </div>
+        </Link>
         <div className="header-actions">
-          <span className="privacy-note">
-            Files stay on this device · Never uploaded
-          </span>
+          <span className="privacy-note">Data stays in this browser</span>
           <input
             ref={fileInputRef}
             className="visually-hidden"
@@ -252,7 +255,7 @@ export function App() {
             type="button"
             onClick={() => fileInputRef.current?.click()}
           >
-            {audioUrl ? 'Load another file' : 'Load audio file'}
+            {audioUrl ? 'Upload new file' : 'Upload audio file'}
           </button>
         </div>
       </header>
@@ -325,16 +328,16 @@ export function App() {
                   />
                 ))}
               </div>
-              <h2>Load a local audio file to begin</h2>
+              <h2>Upload an audio file to begin</h2>
               <p>
-                Supported formats: WAV, FLAC, MP3, AAC, AIF, AIFF, OGG, OGA,
-                OPUS, WEBM.
+                Supported formats: AAC, AIF, AIFF, FLAC, M4A, MP3, OGA, OGG,
+                OPUS, WAV, WAVE, WEBM
               </p>
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
               >
-                Select audio file
+                Upload audio file
               </button>
             </div>
           ) : (

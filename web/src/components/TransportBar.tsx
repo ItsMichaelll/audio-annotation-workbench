@@ -48,7 +48,28 @@ export function TransportBar({
         disabled={!isLoaded}
         title="Play or pause (Space)"
       >
-        <span aria-hidden="true">{isPlaying ? 'Ⅱ' : '▶'}</span>
+        {isPlaying ? (
+          <svg
+            aria-hidden="true"
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+          >
+            <rect x="14" y="3" width="5" height="18" rx="1" />
+            <rect x="5" y="3" width="5" height="18" rx="1" />
+          </svg>
+        ) : (
+          <svg
+            aria-hidden="true"
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+          >
+            <path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z" />
+          </svg>
+        )}
         {isPlaying ? 'Pause' : 'Play'}
       </button>
       <span className="transport__divider" aria-hidden="true" />

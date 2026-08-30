@@ -1,5 +1,9 @@
 # Interaction model
 
+These controls apply to the transitional standalone editor at `/editor`. The
+dashboard and project screens use conventional links, forms, and browser history.
+Project tasks are not connected to the editor in the current milestone.
+
 ## Principles
 
 1. Navigation gestures take priority when their modifier or mouse button is active.

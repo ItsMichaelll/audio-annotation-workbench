@@ -17,6 +17,7 @@
   --border-strong: #3a4348;
   --text: #edf1f2;
   --muted: #8d979e;
+  --text-inverted: #07111f;
   --accent: #4690ff;
   --accent-rgb: 70 144 255;
   --accent-dim: #2f70cf;
@@ -45,15 +46,18 @@ body {
 }
 
 button,
-input {
+input,
+textarea {
   font: inherit;
 }
 
 button {
   min-height: 30px;
+  padding: 0 12px;
   border: 1px solid rgb(255 255 255 / 10%);
   border-radius: 4px;
   background: rgb(255 255 255 / 4%);
+  font-size: 12px;
   color: var(--text);
   cursor: pointer;
   transition:
@@ -64,13 +68,7 @@ button {
 }
 
 button:hover:not(:disabled) {
-  border-color: rgb(var(--accent-rgb) / 38%);
-  background: color-mix(in srgb, var(--accent) 7%, var(--panel-raised));
-}
-
-button:active:not(:disabled) {
-  border-color: rgb(var(--accent-rgb) / 50%);
-  background: color-mix(in srgb, var(--accent) 12%, var(--panel-raised));
+  background: rgb(255 255 255 / 10%);
 }
 
 button:focus-visible {
@@ -81,9 +79,15 @@ button:focus-visible {
     0 0 0 3px var(--accent);
 }
 
-input:focus-visible {
+input:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+a {
+  color: inherit;
 }
 
 button:disabled {
@@ -182,21 +186,23 @@ button:disabled {
 }
 
 .load-button {
-  padding: 0 13px;
-  border-color: rgb(var(--accent-rgb) / 38%);
-  background: rgb(var(--accent-rgb) / 12%);
-  color: color-mix(in srgb, var(--accent) 22%, white);
-  box-shadow: inset 0 1px rgb(255 255 255 / 5%);
+  padding: 0 12px;
+  border-color: transparent;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--text-inverted);
+  box-shadow: none;
+  font-weight: 600;
 }
 
 .load-button:hover:not(:disabled) {
-  border-color: rgb(var(--accent-rgb) / 62%);
-  background: rgb(var(--accent-rgb) / 18%);
+  border-color: transparent;
+  background: color-mix(in srgb, var(--accent) 78%, white);
 }
 
 .load-button:active:not(:disabled) {
-  border-color: rgb(var(--accent-rgb) / 72%);
-  background: rgb(var(--accent-rgb) / 24%);
+  border-color: transparent;
+  background: color-mix(in srgb, var(--accent) 88%, black);
 }
 
 .toggle-control {
@@ -278,9 +284,8 @@ button:disabled {
   gap: 7px;
 }
 
-.transport__primary span {
+.transport__primary svg {
   color: var(--accent);
-  font-size: 12px;
 }
 
 .transport button.is-active {
@@ -292,7 +297,8 @@ button:disabled {
 .transport button.transport__view-toggle.is-active {
   border-color: var(--accent);
   background: var(--accent);
-  color: #07111f;
+  color: var(--text-inverted);
+  font-weight: 500;
 }
 
 .transport__divider {
@@ -375,10 +381,11 @@ button:disabled {
 }
 
 .loudness-meter__header button {
-  min-width: 26px;
-  min-height: 26px;
-  padding: 0;
-  font-size: 16px;
+  min-width: 25px;
+  min-height: 25px;
+  padding: 2px 6px;
+  font-size: 14px;
+  line-height: 1;
 }
 
 .loudness-meter__scope {
@@ -400,7 +407,7 @@ button:disabled {
 .loudness-meter__scope button.is-active {
   border-color: rgb(var(--accent-rgb) / 55%);
   background: rgb(var(--accent-rgb) / 14%);
-  color: #dceaff;
+  color: color-mix(in srgb, var(--accent) 25%, white);
 }
 
 .loudness-meter__live {
@@ -462,9 +469,9 @@ button:disabled {
   position: absolute;
   z-index: 2;
   right: 0;
-  width: 7px;
+  width: 4px;
   border-top: 1px solid var(--warning);
-  border-right: 2px solid var(--warning);
+  border-right: 1px solid var(--warning);
   border-bottom: 1px solid var(--warning);
 }
 
@@ -684,6 +691,7 @@ button:disabled {
 
 .spectrum-analyzer__controls .spectrum-analyzer__close {
   min-width: 25px;
+  min-height: 25px;
   padding: 2px 6px;
   font-size: 14px;
   line-height: 1;
@@ -692,7 +700,7 @@ button:disabled {
 .spectrum-analyzer__controls button.is-active {
   border-color: rgb(var(--accent-rgb) / 55%);
   background: rgb(var(--accent-rgb) / 13%);
-  color: #dceaff;
+  color: color-mix(in srgb, var(--accent) 25%, white);
 }
 
 .spectrum-analyzer__controls label {
@@ -1008,7 +1016,21 @@ button:disabled {
 }
 
 .empty-state button {
-  padding: 0 14px;
+  border-color: transparent;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--text-inverted);
+  font-weight: 600;
+}
+
+.empty-state button:hover:not(:disabled) {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--accent) 78%, white);
+}
+
+.empty-state button:active:not(:disabled) {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--accent) 88%, black);
 }
 
 .editor-footer {
