@@ -18,12 +18,13 @@ editing, and transitional standalone-editor routes. The URL owns navigation
 state, so direct navigation and browser history use normal web semantics.
 
 Use IndexedDB as the structured project database. Database
-`audio-annotation-workbench`, schema version 1, owns four object stores:
+`audio-annotation-workbench`, schema version 2, owns four object stores:
 
 - `projects`, indexed by status and update time
 - `taxonomyVersions`, indexed by project and project-local version
 - `instructions`, uniquely indexed by project
-- `tasks`, indexed by project, project/status, and project/update time
+- `tasks`, indexed by project, project/status, project/update time, and safe
+  project-relative source path (the additive version-2 migration)
 
 The typed repository owns all database access. Multi-record integrity changes
 use explicit transactions: project creation writes its initial taxonomy and
@@ -37,7 +38,9 @@ upgrades are ordered by the previous database version in the `upgrade` callback.
 Future schema changes must preserve old records through an additive or explicitly
 transforming migration before the database version is increased.
 
-Store only structured project data. Do not store audio in IndexedDB or OPFS. A
+Store only structured project data. Do not store audio in IndexedDB or OPFS.
+Import planning persists no audio bytes, object URLs, or absolute paths; browser
+fallback file selections are session-only and can be relinked later. A
 media-source adapter boundary represents file handles, permissions, missing or
 moved files, external references, and future desktop or companion-service
 adapters without changing project or task logic.

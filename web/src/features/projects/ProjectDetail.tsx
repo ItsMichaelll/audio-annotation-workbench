@@ -2,10 +2,16 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { editProjectPath } from '../../routes'
 import { permanentlyDeleteProject, updateProjectStatus } from './projectActions'
+import {
+  deleteProjectTasks,
+  importProjectTasks,
+  setTaskStatus,
+} from './projectActions'
 import { formatTimestamp } from './format'
 import { MarkdownInstructions } from './MarkdownInstructions'
 import { PageNotice, ProjectLayout, ProjectPageState } from './ProjectLayout'
 import { useProject } from './projectHooks'
+import { TaskImport } from './TaskImport'
 
 function messageFrom(error: unknown): string {
   return error instanceof Error ? error.message : 'The operation failed.'
@@ -19,6 +25,10 @@ export function ProjectDetail() {
   const [acting, setActing] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [confirmation, setConfirmation] = useState('')
+  const [selectedTasks, setSelectedTasks] = useState<string[]>([])
+  const [query, setQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [page, setPage] = useState(0)
 
   if (state.loading) {
     return (
@@ -54,7 +64,32 @@ export function ProjectDetail() {
     taxonomyVersions,
     instructions,
     progress,
+    tasks,
   } = state.data
+
+  const visibleTasks = tasks
+    .filter(
+      (task) =>
+        (statusFilter === 'all' || task.status === statusFilter) &&
+        [task.displayName, task.externalId, task.relativePath].some((value) =>
+          value?.toLowerCase().includes(query.toLowerCase()),
+        ),
+    )
+    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+  const pageTasks = visibleTasks.slice(page * 25, page * 25 + 25)
+  const taskAction = async (action: () => Promise<unknown>) => {
+    setActing(true)
+    setActionError(null)
+    try {
+      await action()
+      setSelectedTasks([])
+      state.refresh()
+    } catch (error) {
+      setActionError(messageFrom(error))
+    } finally {
+      setActing(false)
+    }
+  }
 
   const toggleArchive = async () => {
     setActing(true)
@@ -158,14 +193,173 @@ export function ProjectDetail() {
               </div>
               <span className="count-badge">{progress.total}</span>
             </div>
-            <div className="task-empty-state">
-              <h3>No tasks imported</h3>
-              <p>
-                Task ingestion is the next milestone. It will add direct file,
-                directory, and manifest import with duplicate and missing-file
-                checks.
-              </p>
-            </div>
+            <p className="task-progress-summary">
+              {progress.submitted} submitted of {progress.total} tasks ·{' '}
+              {progress.unstarted} unstarted · {progress.blocked} blocked
+            </p>
+            <TaskImport
+              existing={tasks}
+              onReady={(candidates) =>
+                void taskAction(() =>
+                  importProjectTasks(project.id, candidates),
+                )
+              }
+            />
+            {tasks.length === 0 ? (
+              <div className="task-empty-state">
+                <h3>No tasks imported</h3>
+                <p>
+                  Add audio files or a JSON/JSONL manifest. Manifest-only tasks
+                  remain unresolved until linked.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div
+                  className="task-controls"
+                  aria-label="Task filters and bulk actions"
+                >
+                  <div className="task-controls__filters">
+                    <input
+                      aria-label="Search tasks"
+                      value={query}
+                      placeholder="Search name, ID, or path"
+                      onChange={(event) => {
+                        setQuery(event.target.value)
+                        setPage(0)
+                      }}
+                    />
+                    <select
+                      aria-label="Filter task status"
+                      value={statusFilter}
+                      onChange={(event) => {
+                        setStatusFilter(event.target.value)
+                        setPage(0)
+                      }}
+                    >
+                      <option value="all">All statuses</option>
+                      {[
+                        'unstarted',
+                        'draft',
+                        'submitted',
+                        'skipped',
+                        'blocked',
+                        'reopened',
+                      ].map((status) => (
+                        <option value={status} key={status}>
+                          {status}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="task-controls__actions">
+                    <button
+                      type="button"
+                      disabled={!selectedTasks.length || acting}
+                      onClick={() =>
+                        void taskAction(() =>
+                          setTaskStatus(project.id, selectedTasks, 'skipped'),
+                        )
+                      }
+                    >
+                      Skip selected
+                    </button>
+                    <button
+                      type="button"
+                      className="danger-button"
+                      disabled={!selectedTasks.length || acting}
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            `Delete ${selectedTasks.length} task(s)?`,
+                          )
+                        )
+                          void taskAction(() =>
+                            deleteProjectTasks(project.id, selectedTasks),
+                          )
+                      }}
+                    >
+                      Delete selected
+                    </button>
+                  </div>
+                </div>
+                <div
+                  className="task-table"
+                  role="table"
+                  aria-label="Project tasks"
+                >
+                  <div
+                    className="task-table__row task-table__header"
+                    role="row"
+                  >
+                    <span />
+                    <span>Name / source</span>
+                    <span>External ID</span>
+                    <span>Status</span>
+                    <span>Availability</span>
+                    <span>Updated</span>
+                  </div>
+                  {pageTasks.map((task) => {
+                    const name =
+                      task.displayName ?? task.primaryMedia.displayName
+                    return (
+                      <div className="task-table__row" role="row" key={task.id}>
+                        <span>
+                          <input
+                            aria-label={`Select ${name}`}
+                            type="checkbox"
+                            checked={selectedTasks.includes(task.id)}
+                            onChange={() =>
+                              setSelectedTasks((ids) =>
+                                ids.includes(task.id)
+                                  ? ids.filter((id) => id !== task.id)
+                                  : [...ids, task.id],
+                              )
+                            }
+                          />
+                        </span>
+                        <span>
+                          <strong>{name}</strong>
+                          <small>
+                            {task.relativePath ?? task.primaryMedia.displayName}
+                          </small>
+                        </span>
+                        <span>{task.externalId ?? '—'}</span>
+                        <span>{task.status}</span>
+                        <span>
+                          {task.primaryMedia.kind === 'unresolved'
+                            ? 'Missing/unresolved'
+                            : task.primaryMedia.kind === 'external-reference'
+                              ? 'Session-only'
+                              : 'Available'}
+                        </span>
+                        <span>{formatTimestamp(task.updatedAt)}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+                <div className="task-pagination">
+                  <button
+                    type="button"
+                    disabled={page === 0}
+                    onClick={() => setPage((value) => value - 1)}
+                  >
+                    Previous
+                  </button>
+                  <span>
+                    {page + 1} /{' '}
+                    {Math.max(1, Math.ceil(visibleTasks.length / 25))}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={(page + 1) * 25 >= visibleTasks.length}
+                    onClick={() => setPage((value) => value + 1)}
+                  >
+                    Next
+                  </button>
+                </div>
+              </>
+            )}
           </section>
 
           <section className="detail-section">

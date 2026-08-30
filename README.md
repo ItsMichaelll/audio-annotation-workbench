@@ -18,7 +18,7 @@ existing audio workbench:
 - Project creation, detail, editing, restoration, and deliberate deletion
 - Required JSON or YAML taxonomies with immutable local version history
 - Optional Markdown instructions with safe rendering
-- Task and media-source foundation types for the next milestone
+- Task ingestion, import preview, task management, and relinking foundations
 - Browser storage durability reporting
 - A transitional standalone editor at `/editor`
 
@@ -33,8 +33,8 @@ The standalone editor retains its existing functionality:
 - Standards-oriented loudness and true-peak metering
 - File and selected-region loudness analysis through a shared Web Audio graph
 
-Project task ingestion and project-based labeling are intentionally not included
-in this milestone. New projects therefore show zero tasks.
+Project-based labeling remains intentionally deferred. Projects can now be
+created empty or with preflighted tasks, then managed from project detail.
 
 ## Application structure
 
@@ -67,7 +67,7 @@ production static hosting must serve `index.html` for these application paths.
 
 ## Persistence and data ownership
 
-IndexedDB database `audio-annotation-workbench` is currently schema version 1.
+IndexedDB database `audio-annotation-workbench` is currently schema version 2.
 It contains:
 
 | Store | Responsibility |
@@ -132,6 +132,14 @@ external tabs receive `noopener noreferrer`.
 Audio `File` objects and object URLs remain local to the browser and are revoked
 when replaced or unmounted. Audio is not written to IndexedDB or OPFS. Project
 creation does not request filesystem permissions.
+
+Task imports accept browser-selected audio files and JSON/JSONL manifests. A
+manifest is either `{ "tasks": [...] }`, an array, or JSONL; each task requires
+a safe relative `audio` path and may provide `id`, `name`, and simple metadata.
+Absolute and parent-traversal paths are rejected. Manifest-only tasks remain
+unresolved until relinked. Fallback file selections are session-only and can
+require relinking after browser restart; neither audio bytes nor absolute paths
+are persisted.
 
 Task types represent a primary media reference separately from project metadata.
 The media-source adapter contract covers browser capability detection, permission
@@ -214,10 +222,10 @@ measurement details.
 - Optional safely rendered Markdown instructions
 - Task, progress, and media-source foundations
 
-### 2. Task ingestion and management — next
+### 2. Task ingestion and management — implemented
 
 - Direct audio-file and dataset-directory selection
-- JSON, JSONL, and CSV manifest import
+- JSON and JSONL manifest import (CSV deferred)
 - Stable task IDs and metadata
 - Duplicate, missing-file, and conflict detection with import preview
 - Task table, filters, sorting, status counts, and navigation

@@ -7,7 +7,7 @@ import type {
 } from '../domain/models'
 
 export const DATABASE_NAME = 'audio-annotation-workbench'
-export const DATABASE_VERSION = 1
+export const DATABASE_VERSION = 2
 
 export interface WorkbenchDatabase extends DBSchema {
   projects: {
@@ -38,6 +38,7 @@ export interface WorkbenchDatabase extends DBSchema {
       'by-project': string
       'by-project-status': [string, TaskRecord['status']]
       'by-project-updated-at': [string, string]
+      'by-project-relative-path': [string, string]
     }
   }
 }
@@ -55,7 +56,7 @@ export async function openWorkbenchDatabase(
 
   try {
     return await openDB<WorkbenchDatabase>(name, DATABASE_VERSION, {
-      upgrade(database, oldVersion) {
+      upgrade(database, oldVersion, _newVersion, transaction) {
         if (oldVersion < 1) {
           const projects = database.createObjectStore('projects', {
             keyPath: 'id',
@@ -78,6 +79,14 @@ export async function openWorkbenchDatabase(
           tasks.createIndex('by-project', 'projectId')
           tasks.createIndex('by-project-status', ['projectId', 'status'])
           tasks.createIndex('by-project-updated-at', ['projectId', 'updatedAt'])
+        }
+        if (oldVersion < 2) {
+          transaction
+            .objectStore('tasks')
+            .createIndex('by-project-relative-path', [
+              'projectId',
+              'relativePath',
+            ])
         }
       },
     })

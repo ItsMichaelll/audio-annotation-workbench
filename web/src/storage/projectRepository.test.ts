@@ -45,7 +45,7 @@ describe('IndexedDB project repository', () => {
 
   afterEach(() => database.close())
 
-  it('initializes schema version 1 with all foundation stores and indexes', () => {
+  it('initializes the migrated schema with task source indexes', () => {
     expect(database.version).toBe(DATABASE_VERSION)
     expect(Array.from(database.objectStoreNames)).toEqual([
       'instructions',
@@ -56,6 +56,7 @@ describe('IndexedDB project repository', () => {
     const transaction = database.transaction('tasks')
     expect(Array.from(transaction.store.indexNames)).toEqual([
       'by-project',
+      'by-project-relative-path',
       'by-project-status',
       'by-project-updated-at',
     ])
@@ -231,7 +232,7 @@ describe('IndexedDB project repository', () => {
       name: 'Progress',
       taxonomy: taxonomy(),
     })
-    const records: TaskRecord[] = ['submitted', 'in-progress'].map(
+    const records: TaskRecord[] = ['submitted', 'draft'].map(
       (status, index) => ({
         id: `task-${index}`,
         schemaVersion: TASK_SCHEMA_VERSION,
