@@ -51,7 +51,7 @@ export interface ProjectInstructions {
 
 export const TASK_STATUSES = [
   'unstarted',
-  'in-progress',
+  'draft',
   'submitted',
   'skipped',
   'blocked',
@@ -69,6 +69,7 @@ export type MediaSourceReference =
       displayName: string
       relativePath?: string
       permission: MediaPermissionState
+      handle?: FileSystemFileHandle
     }
   | {
       kind: 'external-reference'
@@ -87,6 +88,9 @@ export interface TaskRecord {
   schemaVersion: typeof TASK_SCHEMA_VERSION
   projectId: string
   status: TaskStatus
+  externalId?: string
+  displayName?: string
+  relativePath?: string
   primaryMedia: MediaSourceReference
   metadata: Record<string, unknown>
   createdAt: string
@@ -113,4 +117,5 @@ export interface ProjectSummary {
 export interface ProjectAggregate extends ProjectSummary {
   taxonomyVersions: TaxonomyVersion[]
   instructions: ProjectInstructions | null
+  tasks: TaskRecord[]
 }

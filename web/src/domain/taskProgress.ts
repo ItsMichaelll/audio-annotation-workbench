@@ -17,7 +17,7 @@ export function deriveTaskProgress(tasks: readonly TaskRecord[]): TaskProgress {
       case 'unstarted':
         progress.unstarted += 1
         break
-      case 'in-progress':
+      case 'draft':
         progress.inProgress += 1
         break
       case 'submitted':

@@ -35,7 +35,7 @@ must route application paths to `index.html`.
 
 ## IndexedDB ownership
 
-Database `audio-annotation-workbench`, version 1, contains `projects`,
+Database `audio-annotation-workbench`, version 2, contains `projects`,
 `taxonomyVersions`, `instructions`, and `tasks`. Database access is confined to
 `storage/`; React components do not open stores or transactions.
 
@@ -45,7 +45,8 @@ Version 1 creates:
 - projects by stable UUID, with status and update-time indexes
 - immutable taxonomy versions by UUID, project, and project-local version
 - one optional instruction record per project
-- task records by UUID, project, project/status, and project/update time
+- task records by UUID, project, project/status, project/update time, and
+  project-relative source path (added by the forward version-2 migration)
 
 All record models carry centralized schema versions independently from the
 IndexedDB schema version. Database versions describe physical storage changes;
@@ -87,9 +88,12 @@ the stored source.
 
 ## Task and media-source foundation
 
-Task records already define stable UUIDs, project ownership, schema version,
-status, primary media reference, metadata, and ISO timestamps. The task store is
-empty until ingestion is implemented.
+Task ingestion parses JSON/JSONL manifests and browser-selected audio file
+lists without reading audio bytes. Pure normalization and import planning detect
+unsafe paths, duplicates, conflicts, and unresolved sources before atomic task
+writes. Task media references preserve only a safe relative identity and, where
+available, browser file handles; fallback selections are session-only. Relinking
+requires a matching relative identity unless a replacement is explicitly allowed.
 
 Media references describe file-handle, external, and unresolved states without
 storing audio bytes. The adapter contract separates capability detection,

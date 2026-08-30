@@ -11,6 +11,8 @@ import {
 import { projectPath } from '../../routes'
 import { createProject } from './projectActions'
 import { PageNotice, ProjectLayout } from './ProjectLayout'
+import { TaskImport } from './TaskImport'
+import type { ImportCandidate } from '../../domain/taskIngestion'
 
 function messageFrom(error: unknown): string {
   return error instanceof Error
@@ -35,6 +37,7 @@ export function ProjectCreate() {
   )
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [tasks, setTasks] = useState<ImportCandidate[]>([])
 
   const selectTaxonomy = async (file: File | undefined) => {
     setTaxonomy(null)
@@ -77,6 +80,7 @@ export function ProjectCreate() {
         taxonomy,
         ...(description.trim() ? { description } : {}),
         ...(instructions ? { instructions } : {}),
+        ...(tasks.length ? { tasks } : {}),
       }
       const project = await createProject(input)
       navigate(projectPath(project.id), { replace: true })
@@ -107,8 +111,7 @@ export function ProjectCreate() {
             <p className="eyebrow">Project foundation</p>
             <h1>Create project</h1>
             <p>
-              Define the project and its initial taxonomy. Audio task import is
-              the next milestone.
+              Define the project and taxonomy, then optionally preflight tasks.
             </p>
           </div>
         </div>
@@ -147,6 +150,27 @@ export function ProjectCreate() {
                 maxLength={2000}
               />
             </label>
+          </section>
+
+          <section className="form-section">
+            <div className="form-section__heading">
+              <span>04</span>
+              <div>
+                <h2>Initial tasks</h2>
+                <p>
+                  Optional. Review the preview before task records are written.
+                </p>
+              </div>
+            </div>
+            <TaskImport onReady={setTasks} />
+            {tasks.length > 0 && (
+              <div className="file-selection">
+                <strong>{tasks.length} tasks ready for creation</strong>
+                <button type="button" onClick={() => setTasks([])}>
+                  Clear
+                </button>
+              </div>
+            )}
           </section>
 
           <section className="form-section">

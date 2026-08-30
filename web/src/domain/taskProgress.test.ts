@@ -23,7 +23,7 @@ describe('task progress', () => {
   it('derives status counts and completed work', () => {
     const progress = deriveTaskProgress([
       task('unstarted'),
-      task('in-progress'),
+      task('draft'),
       task('submitted'),
       task('skipped'),
       task('blocked'),

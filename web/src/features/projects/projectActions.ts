@@ -1,4 +1,5 @@
 import type { ProjectStatus } from '../../domain/models'
+import type { ImportCandidate } from '../../domain/taskIngestion'
 import type {
   PreparedInstructions,
   PreparedTaxonomy,
@@ -10,6 +11,7 @@ export interface ProjectFormValues {
   description?: string
   taxonomy: PreparedTaxonomy
   instructions?: PreparedInstructions
+  tasks?: ImportCandidate[]
 }
 
 export async function createProject(values: ProjectFormValues) {
@@ -58,4 +60,28 @@ export async function clearProjectInstructions(projectId: string) {
 
 export async function permanentlyDeleteProject(projectId: string) {
   return (await getProjectRepository()).deleteProject(projectId)
+}
+
+export async function importProjectTasks(
+  projectId: string,
+  tasks: ImportCandidate[],
+) {
+  return (await getProjectRepository()).importTasks(projectId, tasks)
+}
+
+export async function setTaskStatus(
+  projectId: string,
+  taskIds: string[],
+  status:
+    'unstarted' | 'draft' | 'submitted' | 'skipped' | 'blocked' | 'reopened',
+) {
+  return (await getProjectRepository()).updateTaskStatus(
+    projectId,
+    taskIds,
+    status,
+  )
+}
+
+export async function deleteProjectTasks(projectId: string, taskIds: string[]) {
+  return (await getProjectRepository()).deleteTasks(projectId, taskIds)
 }

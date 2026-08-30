@@ -12,6 +12,11 @@ import {
   type TaxonomyVersion,
 } from '../domain/models'
 import { deriveTaskProgress } from '../domain/taskProgress'
+import {
+  canTransitionTask,
+  taskFromCandidate,
+  type ImportCandidate,
+} from '../domain/taskIngestion'
 import type { PreparedInstructions, PreparedTaxonomy } from '../domain/uploads'
 import {
   openWorkbenchDatabase,
@@ -24,6 +29,7 @@ export interface CreateProjectInput {
   description?: string
   taxonomy: PreparedTaxonomy
   instructions?: PreparedInstructions
+  tasks?: ImportCandidate[]
 }
 
 export interface UpdateProjectInput {
@@ -52,6 +58,23 @@ export interface ProjectRepository {
   ): Promise<ProjectInstructions>
   removeInstructions(projectId: string): Promise<Project>
   deleteProject(projectId: string): Promise<void>
+  listTasks(projectId: string): Promise<TaskRecord[]>
+  importTasks(
+    projectId: string,
+    candidates: ImportCandidate[],
+  ): Promise<TaskRecord[]>
+  updateTaskStatus(
+    projectId: string,
+    taskIds: string[],
+    status: TaskRecord['status'],
+  ): Promise<void>
+  deleteTasks(projectId: string, taskIds: string[]): Promise<void>
+  relinkTask(
+    projectId: string,
+    taskId: string,
+    source: TaskRecord['primaryMedia'],
+    replacement?: boolean,
+  ): Promise<void>
 }
 
 interface RepositoryDependencies {
@@ -131,7 +154,7 @@ export class IndexedDbProjectRepository implements ProjectRepository {
       timestamp,
     )
     const transaction = this.database.transaction(
-      ['projects', 'taxonomyVersions', 'instructions'],
+      ['projects', 'taxonomyVersions', 'instructions', 'tasks'],
       'readwrite',
     )
     try {
@@ -147,6 +170,11 @@ export class IndexedDbProjectRepository implements ProjectRepository {
           createdAt: timestamp,
           updatedAt: timestamp,
         })
+      }
+      for (const candidate of input.tasks ?? []) {
+        await transaction
+          .objectStore('tasks')
+          .add(taskFromCandidate(projectId, candidate, this.uuid(), timestamp))
       }
       this.beforeCreateCommit?.()
       await transaction.done
@@ -198,6 +226,7 @@ export class IndexedDbProjectRepository implements ProjectRepository {
         (left, right) => right.version - left.version,
       ),
       instructions,
+      tasks,
       progress: deriveTaskProgress(tasks),
     }
   }
@@ -400,6 +429,112 @@ export class IndexedDbProjectRepository implements ProjectRepository {
         },
       )
     }
+  }
+
+  async listTasks(projectId: string): Promise<TaskRecord[]> {
+    return this.database.getAllFromIndex('tasks', 'by-project', projectId)
+  }
+
+  async importTasks(
+    projectId: string,
+    candidates: ImportCandidate[],
+  ): Promise<TaskRecord[]> {
+    const transaction = this.database.transaction(
+      ['projects', 'tasks'],
+      'readwrite',
+    )
+    try {
+      const project = await transaction.objectStore('projects').get(projectId)
+      if (!project) throw new Error('Project not found.')
+      const timestamp = this.now()
+      const records = candidates.map((candidate) =>
+        taskFromCandidate(projectId, candidate, this.uuid(), timestamp),
+      )
+      for (const record of records)
+        await transaction.objectStore('tasks').add(record)
+      await transaction
+        .objectStore('projects')
+        .put({ ...project, updatedAt: timestamp })
+      await transaction.done
+      return records
+    } catch (error) {
+      try {
+        transaction.abort()
+      } catch {
+        /* already aborted */
+      }
+      await transaction.done.catch(() => undefined)
+      throw new Error('Task import failed; no tasks were saved.', {
+        cause: error,
+      })
+    }
+  }
+
+  async updateTaskStatus(
+    projectId: string,
+    taskIds: string[],
+    status: TaskRecord['status'],
+  ): Promise<void> {
+    const transaction = this.database.transaction(
+      ['projects', 'tasks'],
+      'readwrite',
+    )
+    const store = transaction.objectStore('tasks')
+    const timestamp = this.now()
+    for (const id of taskIds) {
+      const task = await store.get(id)
+      if (!task || task.projectId !== projectId)
+        throw new Error('Task not found.')
+      if (!canTransitionTask(task.status, status))
+        throw new Error(`Cannot change ${task.status} to ${status}.`)
+      await store.put({ ...task, status, updatedAt: timestamp })
+    }
+    const project = await transaction.objectStore('projects').get(projectId)
+    if (project)
+      await transaction
+        .objectStore('projects')
+        .put({ ...project, updatedAt: timestamp })
+    await transaction.done
+  }
+
+  async deleteTasks(projectId: string, taskIds: string[]): Promise<void> {
+    const transaction = this.database.transaction(
+      ['projects', 'tasks'],
+      'readwrite',
+    )
+    for (const id of taskIds) {
+      const task = await transaction.objectStore('tasks').get(id)
+      if (!task || task.projectId !== projectId)
+        throw new Error('Task not found.')
+      await transaction.objectStore('tasks').delete(id)
+    }
+    const project = await transaction.objectStore('projects').get(projectId)
+    if (project)
+      await transaction
+        .objectStore('projects')
+        .put({ ...project, updatedAt: this.now() })
+    await transaction.done
+  }
+
+  async relinkTask(
+    projectId: string,
+    taskId: string,
+    source: TaskRecord['primaryMedia'],
+    replacement = false,
+  ): Promise<void> {
+    const task = await this.database.get('tasks', taskId)
+    if (!task || task.projectId !== projectId)
+      throw new Error('Task not found.')
+    const path = source.kind === 'file-handle' ? source.relativePath : undefined
+    if (!replacement && task.relativePath && path && task.relativePath !== path)
+      throw new Error(
+        'Selected source does not match this task. Confirm a replacement to continue.',
+      )
+    await this.database.put('tasks', {
+      ...task,
+      primaryMedia: source,
+      updatedAt: this.now(),
+    })
   }
 
   private async requireProject(id: string): Promise<Project> {
