@@ -1,83 +1,136 @@
 # Frontend architecture
 
-Audio Annotation Workbench is a browser-only React application. A selected audio file becomes an object URL and is decoded and played locally by WaveSurfer. No file contents, annotations, filenames, or usage data are sent over a network.
+Audio Annotation Workbench is a browser-only React application with two current
+product layers: durable project management and the transitional standalone audio
+editor. No project or audio data is sent over a network.
 
-## Boundaries
+## Application boundaries
 
-- `features/waveform/` owns WaveSurfer creation, official plugin registration, pointer gestures, waveform/spectrogram viewport synchronization, and teardown.
-- `features/analysis/` owns the guarded shared Web Audio graph and its single media-element source.
-- `features/spectrum/` owns analyzer configuration, pure spectrum math, peak-hold state, and Canvas 2D rendering.
-- `features/loudness/` owns live worklet snapshots, deterministic offline scope analysis, pure loudness semantics, and the meter rail.
-- `domain/` contains framework-independent time, zoom, keyboard, region, and history logic.
-- React state is the source of truth for serializable region metadata. WaveSurfer region instances are a rendering and interaction layer.
-- The application shell owns file selection, object URL lifetime, top-level analysis-view visibility, status readouts, transport controls, and shortcut help.
+- `domain/` contains versioned project, taxonomy, instructions, task, and media
+  reference types plus framework-independent calculations and validation.
+- `storage/` owns the IndexedDB schema, upgrades, repository, transactions, and
+  browser storage durability checks.
+- `features/projects/` owns project queries, actions, and routed screens.
+- `features/waveform/` owns WaveSurfer lifecycle, official plugins, pointer
+  gestures, waveform/spectrogram viewport synchronization, and teardown.
+- `features/analysis/` owns the guarded shared Web Audio graph and its single
+  media-element source.
+- `features/spectrum/` and `features/loudness/` own observational analysis.
+- `App.tsx` remains the standalone editor shell. `RouterApplication.tsx` owns
+  URL routing and mounts it only at `/editor`.
 
-This keeps WaveSurfer integration in a focused feature boundary and prevents per-frame analysis data or plugin objects from becoming application state.
+Persistent domain state, URL state, form state, and ephemeral waveform state do
+not share one global store. Focused hooks load repository data and guard against
+stale async updates. Forms prepare and validate files before repository writes.
 
-## Workspace layout
+## Routing
 
-The transport bar sits above the primary waveform and timeline. Its control groups are:
+React Router provides `/`, `/projects`, `/projects/new`, project detail and edit
+paths, and `/editor`. Navigation uses links and route parameters rather than
+component-local page state. Unknown routes and missing IndexedDB projects render
+distinct states. Browser back and forward navigation follows URL history.
 
-1. Play or Pause
-2. Fit, zoom out, zoom in, and Reset V-Scale
-3. Loop and Delete
-4. Spectrogram, Spectrum Analyzer, and Meter visibility
+Development routing uses Vite's application fallback. A production static host
+must route application paths to `index.html`.
 
-Separators divide those groups. The analysis buttons are active-state toggles, and each analysis panel also owns a close button.
+## IndexedDB ownership
 
-Below the primary waveform and timeline, the fixed order is:
+Database `audio-annotation-workbench`, version 1, contains `projects`,
+`taxonomyVersions`, `instructions`, and `tasks`. Database access is confined to
+`storage/`; React components do not open stores or transactions.
 
-1. Minimap
-2. Reserved minimap scrollbar row
-3. Spectrogram, when enabled
-4. Spectrum Analyzer, when enabled
+The database upgrade callback applies migrations in ascending version order.
+Version 1 creates:
 
-The scrollbar row remains allocated even when the full file fits. This prevents the panels below it from shifting vertically when zoom creates or removes horizontal overflow.
+- projects by stable UUID, with status and update-time indexes
+- immutable taxonomy versions by UUID, project, and project-local version
+- one optional instruction record per project
+- task records by UUID, project, project/status, and project/update time
 
-The editor surface also reserves a stable vertical scrollbar gutter. Its content width therefore remains fixed when analysis panels add enough height to require vertical scrolling.
+All record models carry centralized schema versions independently from the
+IndexedDB schema version. Database versions describe physical storage changes;
+record schema versions describe serialized domain shapes.
 
-When enabled, the loudness meter occupies a 230 px right-side grid rail beside the complete analysis stack. It is outside every horizontally moving viewport, so opening it changes the available waveform width without covering content and horizontal navigation never moves the meter.
+Operations that must preserve cross-store integrity are transactional:
 
-## Region synchronization
+- project + initial taxonomy + optional instructions creation
+- taxonomy version creation + active project reference update
+- instruction replacement/removal + project reference update
+- project + associated taxonomy, instructions, and task deletion
 
-Creation, deletion, movement, resizing, and nudging produce complete immutable region snapshots. A history controller stores those snapshots, which avoids duplicate undo entries during continuous drag updates. WaveSurfer emits live `update` events for display, followed by one `update-end` event that commits the completed edit.
+Creation aborts without partial records. Deletion uses project-scoped indexes and
+never performs filesystem operations.
 
-Stable IDs are created with `crypto.randomUUID()` at region creation time. The metadata shape intentionally includes a label-free `data` object so later configurable taxonomy fields can be added without coupling them to WaveSurfer objects.
+## Project and taxonomy model
 
-## Navigation model
+A project UUID is independent from its mutable display name. Projects record
+active/archive state, active taxonomy version, optional instructions reference,
+and ISO 8601 created/updated timestamps.
 
-Time zoom is expressed as WaveSurfer's minimum pixels per second. Fit mode derives that value from viewport width and duration. Wheel zoom captures the time beneath the pointer, applies the new zoom, and restores the scroll position needed to keep that time beneath the pointer. Keyboard zoom anchors at the playhead when it is visible and otherwise at viewport center. Alt + wheel adjusts WaveSurfer's independent vertical amplitude scale without changing time zoom or audio gain.
+Taxonomy versions preserve the source filename, JSON/YAML format, original text,
+parsed object, extracted `name` and `schema_version` metadata, SHA-256 content
+hash, local version number, and created timestamp. Updating a taxonomy appends a
+record and changes the active reference; it never rewrites history. A matching
+project content hash suppresses duplicate versions.
 
-Native horizontal scroll is used for panning. Pointer capture provides middle-button and Alt+left drag panning without relying on WaveSurfer internals. Shift+wheel is reserved for clamped region nudging and is not a pan gesture.
+Detailed label semantics are deferred until annotation integration. This avoids
+locking the persistence format to an unvalidated taxonomy contract.
 
-The minimap maps pointer positions into full-file time. Its wheel gesture drives the same main-waveform zoom path, and minimap dragging or the reserved horizontal scrollbar updates the primary viewport. The external scrollbar exchanges positions with the waveform only after their track widths match, preventing stale pre-zoom geometry from clamping and feeding an incorrect position back into the waveform. Clicking empty waveform or minimap space clears region selection and seeks without unintentionally stopping active playback.
+## Markdown security
 
-## Spectrogram synchronization
+Instruction uploads accept `.md` files up to 512 KB and preserve raw Markdown.
+`react-markdown` creates React elements without enabling raw HTML parsing. The
+renderer uses an explicit element allowlist, excludes images and executable
+embeds, filters link protocols, and adds `noopener noreferrer` to links opened in
+new tabs. A rendering error boundary shows an explicit failure without changing
+the stored source.
 
-The spectrogram uses WaveSurfer's official Spectrogram plugin in a dedicated viewport. The plugin renders content for the complete audio duration; application code then synchronizes that content's width and horizontal translation with the primary waveform's scroll geometry.
+## Task and media-source foundation
 
-The pure helpers in `features/waveform/spectrogramSync.ts` clamp content width and scroll offsets and implement logarithmic frequency-to-Y mapping. The waveform refreshes spectrogram geometry on plugin readiness, WaveSurfer redraw and scroll events, zoom changes, and viewport resize. Frequency labels are rendered outside the moving content and omit values above the decoded audio's Nyquist frequency.
+Task records already define stable UUIDs, project ownership, schema version,
+status, primary media reference, metadata, and ISO timestamps. The task store is
+empty until ingestion is implemented.
 
-## Shared analysis audio lifecycle
+Media references describe file-handle, external, and unresolved states without
+storing audio bytes. The adapter contract separates capability detection,
+permission query/request, and file resolution. Future browser handle, fallback,
+companion-service, or desktop adapters can implement this contract without
+changing tasks or projects.
 
-The waveform component creates one WaveSurfer instance per mounted editor, registers plugins and DOM listeners, and returns a cleanup function that removes listeners and destroys the instance. It exposes WaveSurfer's media element to the analyzer through the documented `getMediaElement()` API. Object URLs are owned and revoked by the application shell.
+Project creation does not request filesystem access. Audio is never copied to
+IndexedDB or OPFS.
 
-The shared analysis controller lazily creates one `AudioContext` and exactly one `MediaElementAudioSourceNode` for WaveSurfer's public media element after a user interaction. The only audible route is `media source -> destination`. Independent branches connect the source to the spectrum `AnalyserNode` and loudness `AudioWorkletNode`; both terminate at one zero-gain analysis bus before the destination. The zero-gain branches keep processors active but cannot add to, filter, or otherwise alter the audible route. A guard prevents repeated `createMediaElementSource()` calls for the same element.
+## Waveform and analysis ownership
 
-The loudness worklet loads only when Meter is requested. Closing Meter disconnects that tap and stops the 10 Hz React snapshot interval; Spectrum remains independent. Reopening it reconnects the existing node without creating another media source. On permanent WaveSurfer disposal, all graph nodes and message ports disconnect and the context closes. New files receive a new media element and graph. This ownership covers file replacement and React Strict Mode remounts without duplicate routing.
+The standalone editor owns selected `File` objects and revocable object URLs.
+WaveSurfer region instances remain a rendering layer; serializable region
+metadata and snapshot history stay separate.
 
-## Loudness measurement lifecycle
+The waveform creates one WaveSurfer instance and uses official Timeline,
+Minimap, Regions, Zoom, Hover, and Spectrogram plugins. Pure synchronization
+modules coordinate scrolling and spectrogram geometry. The existing keyboard and
+pointer precedence is documented in `interaction-model.md`.
 
-Live metering uses `loudness-worklet` in the shared real-time graph. DSP runs sample-accurately in an `AudioWorkletProcessor`; the main thread copies one compact metric snapshot every 100 ms only while Meter is visible and playback is active. The processor applies K-weighting, channel-energy summation, 400 ms Momentary and three-second Short-term windows, two-stage Integrated gating, LRA gating/percentiles, and oversampled true-peak detection. No FFT polling is used for loudness.
+One guarded `MediaElementAudioSourceNode` supplies a direct audible route and
+zero-gain spectrum/loudness taps. Loudness worklet processing and deterministic
+offline file/selection rendering remain observational and never modify playback.
 
-File and Selection summaries use a separate `OfflineAudioContext` fed from WaveSurfer's decoded `AudioBuffer`. The source starts at explicit sample-frame bounds and is unrelated to the live media-element route. Region-boundary changes are debounced; a monotonically increasing generation ignores superseded results. An offline render already in progress cannot be force-cancelled through current browser APIs, but stale data never reaches the UI. This avoids transferring or permanently duplicating decoded PCM while keeping rendering outside the real-time playback graph.
+## Browser limitations
 
-PSR is maximum true peak minus maximum Short-term loudness. PLR is maximum true peak minus Integrated loudness. LRA is shown only when a scope is at least three seconds and the processor returns a finite gated range. Mono and stereo are supported; aggregate analysis rejects larger channel layouts rather than applying unverified channel assignments.
+- IndexedDB is browser-profile storage and can be unavailable, blocked, cleared,
+  or evicted.
+- Durable storage requests are browser decisions, not backup guarantees.
+- File System Access API capability and persistent handle permissions vary by
+  browser.
+- Codec, Web Audio, worker, and offline rendering support remain browser and
+  operating-system dependent.
+- Large decoded audio and offline analysis can consume substantial memory even
+  though source audio is not persisted.
 
-The spectrum canvas owns one visible animation loop. FFT and display buffers are typed arrays reused across frames, while `ResizeObserver` keeps the backing canvas aligned with CSS size and device pixel ratio. React state controls only panel settings; per-frame FFT data never enters React state. Freeze preserves the current frame without affecting playback, and paused playback retains the most recent analyzed frame. These ownership rules make file replacement and React Strict Mode remounts safe.
+## Validation
 
-## Automated validation
-
-The current suite has 53 Vitest tests across 12 files. It covers transport clamping and increments, keyboard commands, fit and pointer-centered zoom math, region normalization and undo/redo, logarithmic spectrum mapping and aggregation, peak-hold timing, response configuration, media-source reuse guards, loudness conversion/gating/ratios, scope and target validation, EBU window lengths, scrollbar geometry synchronization, and spectrogram geometry synchronization.
-
-`pnpm validate` runs formatting checks, ESLint, strict TypeScript checking, the Vitest suite, and the Vite production build.
+`pnpm validate` runs Prettier checking, ESLint, strict TypeScript, Vitest, and the
+Vite production build. Tests cover the IndexedDB schema and transactions, project
+lifecycle, taxonomy parsing/hashing/versioning, instruction security and
+lifecycle, progress derivation, routes, and the existing editor domain and
+analysis behavior.
