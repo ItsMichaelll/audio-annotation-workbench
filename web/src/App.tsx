@@ -6,6 +6,7 @@ import { TransportBar } from './components/TransportBar'
 import { SnapshotHistory, type HistoryState } from './domain/history'
 import { isEditableTarget, keyboardCommand } from './domain/keyboard'
 import {
+  adjacentRegion,
   regionSnapshotsEqual,
   removeRegion,
   type RegionMetadata,
@@ -58,6 +59,19 @@ export function StandaloneEditor() {
     [regions, selectedRegionId],
   )
   const isLoaded = loadStatus === 'ready'
+  const previousRegion = adjacentRegion(regions, selectedRegionId, 'previous')
+  const nextRegion = adjacentRegion(regions, selectedRegionId, 'next')
+
+  const navigateRegion = useCallback(
+    (direction: 'previous' | 'next') => {
+      const destination = adjacentRegion(regions, selectedRegionId, direction)
+      if (!destination) return
+      setSelectedRegionId(destination.id)
+      setLoopEnabled(true)
+      waveformRef.current?.revealRegion(destination.start, destination.end)
+    },
+    [regions, selectedRegionId],
+  )
 
   const applyHistoryState = useCallback(
     (state: HistoryState<RegionMetadata[]>) => {
@@ -179,7 +193,12 @@ export function StandaloneEditor() {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (isEditableTarget(event.target)) return
       const command = keyboardCommand(event)
-      if (!command) return
+      if (
+        !command ||
+        command.type === 'submit-next' ||
+        command.type === 'skip-next'
+      )
+        return
 
       event.preventDefault()
       switch (command.type) {
@@ -218,12 +237,23 @@ export function StandaloneEditor() {
         case 'redo':
           redo()
           break
+        case 'navigate-region':
+          if (isLoaded) navigateRegion(command.direction)
+          break
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [deleteSelectedRegion, duration, isLoaded, redo, selectedRegionId, undo])
+  }, [
+    deleteSelectedRegion,
+    duration,
+    isLoaded,
+    navigateRegion,
+    redo,
+    selectedRegionId,
+    undo,
+  ])
 
   return (
     <div className="app-shell">
@@ -278,6 +308,8 @@ export function StandaloneEditor() {
         spectrumEnabled={spectrumEnabled}
         meterEnabled={meterEnabled}
         hasSelection={selectedRegion !== null}
+        canPreviousRegion={previousRegion !== null}
+        canNextRegion={nextRegion !== null}
         verticalScale={verticalScale}
         onPlayPause={() => waveformRef.current?.playPause()}
         onFit={() => waveformRef.current?.fit()}
@@ -286,6 +318,8 @@ export function StandaloneEditor() {
         onResetVerticalScale={() => waveformRef.current?.resetVerticalScale()}
         onToggleLoop={() => setLoopEnabled((enabled) => !enabled)}
         onDelete={deleteSelectedRegion}
+        onPreviousRegion={() => navigateRegion('previous')}
+        onNextRegion={() => navigateRegion('next')}
         onToggleSpectrogram={() => setSpectrogramEnabled((enabled) => !enabled)}
         onToggleSpectrum={() => {
           const enabled = !spectrumEnabled

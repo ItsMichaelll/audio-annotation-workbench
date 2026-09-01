@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { CustomSelectField } from '../../components/CustomSelect'
 import {
   DECIBEL_GRID,
   DEFAULT_SPECTRUM_RESPONSE,
@@ -494,23 +495,18 @@ export function SpectrumAnalyzer({
           >
             Peak Hold
           </button>
-          <label>
-            <span>Response</span>
-            <select
-              value={response}
-              onChange={(event) => {
-                if (isSpectrumResponse(event.target.value)) {
-                  setResponse(event.target.value)
-                }
-              }}
-            >
-              {Object.entries(SPECTRUM_RESPONSES).map(([value, preset]) => (
-                <option key={value} value={value}>
-                  {preset.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <CustomSelectField
+            label="Response"
+            value={response}
+            options={Object.entries(SPECTRUM_RESPONSES).map(
+              ([value, preset]) => ({ value, label: preset.label }),
+            )}
+            onChange={(value) => {
+              if (isSpectrumResponse(value)) {
+                setResponse(value)
+              }
+            }}
+          />
           <output title="Fast Fourier transform size">
             FFT {fftSize.toLocaleString()}
           </output>

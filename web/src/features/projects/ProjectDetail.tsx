@@ -1,6 +1,9 @@
 import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
-import { editProjectPath } from '../../routes'
+import { Link, useLocation, useNavigate, useParams } from 'react-router'
+import { CustomSelect } from '../../components/CustomSelect'
+import { annotationPath, editProjectPath } from '../../routes'
+import { nextActionableTask, orderedTasks } from '../../domain/taskQueue'
+import { parseAnnotationTaxonomy } from '../../domain/annotationTaxonomy'
 import { permanentlyDeleteProject, updateProjectStatus } from './projectActions'
 import {
   deleteProjectTasks,
@@ -20,6 +23,10 @@ function messageFrom(error: unknown): string {
 export function ProjectDetail() {
   const { projectId } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const completionMessage = (
+    location.state as { completionMessage?: string } | null
+  )?.completionMessage
   const state = useProject(projectId)
   const [actionError, setActionError] = useState<string | null>(null)
   const [acting, setActing] = useState(false)
@@ -67,16 +74,26 @@ export function ProjectDetail() {
     tasks,
   } = state.data
 
-  const visibleTasks = tasks
-    .filter(
-      (task) =>
-        (statusFilter === 'all' || task.status === statusFilter) &&
-        [task.displayName, task.externalId, task.relativePath].some((value) =>
-          value?.toLowerCase().includes(query.toLowerCase()),
-        ),
-    )
-    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
-  const pageTasks = visibleTasks.slice(page * 25, page * 25 + 25)
+  const visibleTasks = tasks.filter(
+    (task) =>
+      (statusFilter === 'all' || task.status === statusFilter) &&
+      [task.displayName, task.externalId, task.relativePath].some((value) =>
+        value?.toLowerCase().includes(query.toLowerCase()),
+      ),
+  )
+  const orderedVisibleTasks = orderedTasks(visibleTasks)
+  const pageTasks = orderedVisibleTasks.slice(page * 25, page * 25 + 25)
+  const nextTask = nextActionableTask(tasks)
+  const pageIds = pageTasks.map((task) => task.id)
+  const allPageSelected =
+    pageIds.length > 0 && pageIds.every((id) => selectedTasks.includes(id))
+  const somePageSelected = pageIds.some((id) => selectedTasks.includes(id))
+  let taxonomyError: string | null = null
+  try {
+    parseAnnotationTaxonomy(activeTaxonomyVersion.document)
+  } catch (error) {
+    taxonomyError = messageFrom(error)
+  }
   const taskAction = async (action: () => Promise<unknown>) => {
     setActing(true)
     setActionError(null)
@@ -156,6 +173,28 @@ export function ProjectDetail() {
             {project.description && <p>{project.description}</p>}
           </div>
           <div className="detail-hero__actions">
+            {nextTask && !taxonomyError && project.status === 'active' ? (
+              <Link
+                className="button-link primary-button"
+                to={annotationPath(project.id, nextTask.id)}
+              >
+                Start Labeling
+              </Link>
+            ) : (
+              <button
+                type="button"
+                disabled
+                title={
+                  taxonomyError
+                    ? 'Replace the taxonomy before labeling.'
+                    : project.status === 'archived'
+                      ? 'Restore the project before labeling.'
+                      : 'No actionable tasks remain.'
+                }
+              >
+                Start Labeling
+              </button>
+            )}
             <Link className="button-link" to={editProjectPath(project.id)}>
               Edit project
             </Link>
@@ -168,6 +207,20 @@ export function ProjectDetail() {
             </button>
           </div>
         </header>
+
+        {taxonomyError && (
+          <PageNotice title="Taxonomy cannot be used for labeling" tone="error">
+            <p>{taxonomyError}</p>
+            <Link className="button-link" to={editProjectPath(project.id)}>
+              Replace taxonomy
+            </Link>
+          </PageNotice>
+        )}
+        {completionMessage && (
+          <PageNotice title="Task queue updated">
+            <p>{completionMessage}</p>
+          </PageNotice>
+        )}
 
         <section className="detail-metadata" aria-label="Project dates">
           <div>
@@ -229,28 +282,25 @@ export function ProjectDetail() {
                         setPage(0)
                       }}
                     />
-                    <select
-                      aria-label="Filter task status"
+                    <CustomSelect
+                      ariaLabel="Filter task status"
                       value={statusFilter}
-                      onChange={(event) => {
-                        setStatusFilter(event.target.value)
+                      options={[
+                        { value: 'all', label: 'All statuses' },
+                        ...[
+                          'unstarted',
+                          'draft',
+                          'submitted',
+                          'skipped',
+                          'blocked',
+                          'reopened',
+                        ].map((status) => ({ value: status, label: status })),
+                      ]}
+                      onChange={(value) => {
+                        setStatusFilter(value)
                         setPage(0)
                       }}
-                    >
-                      <option value="all">All statuses</option>
-                      {[
-                        'unstarted',
-                        'draft',
-                        'submitted',
-                        'skipped',
-                        'blocked',
-                        'reopened',
-                      ].map((status) => (
-                        <option value={status} key={status}>
-                          {status}
-                        </option>
-                      ))}
-                    </select>
+                    />
                   </div>
                   <div className="task-controls__actions">
                     <button
@@ -292,12 +342,32 @@ export function ProjectDetail() {
                     className="task-table__row task-table__header"
                     role="row"
                   >
-                    <span />
+                    <span>
+                      <input
+                        type="checkbox"
+                        aria-label="Select all tasks on this page"
+                        checked={allPageSelected}
+                        disabled={pageIds.length === 0}
+                        ref={(input) => {
+                          if (input)
+                            input.indeterminate =
+                              somePageSelected && !allPageSelected
+                        }}
+                        onChange={() =>
+                          setSelectedTasks((ids) =>
+                            allPageSelected
+                              ? ids.filter((id) => !pageIds.includes(id))
+                              : [...new Set([...ids, ...pageIds])],
+                          )
+                        }
+                      />
+                    </span>
                     <span>Name / source</span>
                     <span>External ID</span>
                     <span>Status</span>
                     <span>Availability</span>
                     <span>Updated</span>
+                    <span>Action</span>
                   </div>
                   {pageTasks.map((task) => {
                     const name =
@@ -334,6 +404,60 @@ export function ProjectDetail() {
                               : 'Available'}
                         </span>
                         <span>{formatTimestamp(task.updatedAt)}</span>
+                        <span className="task-table__action">
+                          {((project.status === 'active' &&
+                            (task.status === 'unstarted' ||
+                              task.status === 'draft' ||
+                              task.status === 'reopened')) ||
+                            task.status === 'submitted') && (
+                            <Link
+                              className="button-link button-link--compact"
+                              to={annotationPath(project.id, task.id)}
+                            >
+                              {task.status === 'submitted'
+                                ? 'View'
+                                : task.status === 'unstarted'
+                                  ? 'Label'
+                                  : 'Continue'}
+                            </Link>
+                          )}
+                          {(task.status === 'skipped' ||
+                            task.status === 'blocked') && (
+                            <button
+                              type="button"
+                              className="button-link button-link--compact"
+                              disabled={acting}
+                              onClick={() =>
+                                void taskAction(() =>
+                                  setTaskStatus(
+                                    project.id,
+                                    [task.id],
+                                    'unstarted',
+                                  ),
+                                )
+                              }
+                            >
+                              Restore
+                            </button>
+                          )}
+                          {task.status === 'submitted' && (
+                            <button
+                              type="button"
+                              disabled={acting}
+                              onClick={() =>
+                                void taskAction(() =>
+                                  setTaskStatus(
+                                    project.id,
+                                    [task.id],
+                                    'reopened',
+                                  ),
+                                )
+                              }
+                            >
+                              Reopen
+                            </button>
+                          )}
+                        </span>
                       </div>
                     )
                   })}
@@ -348,11 +472,11 @@ export function ProjectDetail() {
                   </button>
                   <span>
                     {page + 1} /{' '}
-                    {Math.max(1, Math.ceil(visibleTasks.length / 25))}
+                    {Math.max(1, Math.ceil(orderedVisibleTasks.length / 25))}
                   </span>
                   <button
                     type="button"
-                    disabled={(page + 1) * 25 >= visibleTasks.length}
+                    disabled={(page + 1) * 25 >= orderedVisibleTasks.length}
                     onClick={() => setPage((value) => value + 1)}
                   >
                     Next

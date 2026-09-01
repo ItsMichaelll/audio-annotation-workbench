@@ -1,8 +1,8 @@
 # Interaction model
 
-These controls apply to the transitional standalone editor at `/editor`. The
-dashboard and project screens use conventional links, forms, and browser history.
-Project tasks are not connected to the editor in the current milestone.
+These controls apply to the standalone editor at `/editor` and the project-task
+annotation workspace. The dashboard and project screens use conventional links,
+forms, and browser history.
 
 ## Principles
 
@@ -15,7 +15,7 @@ Project tasks are not connected to the editor in the current milestone.
 
 ## Transport controls
 
-The transport bar is ordered as Play/Pause; separator; Fit, zoom out, zoom in, and Reset V-Scale; separator; Loop and Delete; separator; Spectrogram, Spectrum Analyzer, and Meter. The analysis-view buttons use the active accent background when enabled and the normal transport-control background when disabled. Their view-local close buttons provide the same hide action.
+The transport bar includes Previous Region and Next Region controls alongside the existing playback, zoom, region, and analysis controls. Region navigation is chronological, does not wrap or autoplay, selects and reveals the destination, and seeks to its start.
 
 Loop and Delete are disabled when no region is selected. Reset V-Scale restores `1.00`. Undo and redo remain available through `Ctrl+Z`, `Ctrl+Y`, and `Ctrl+Shift+Z`; they are not transport buttons.
 
@@ -24,13 +24,13 @@ Loop and Delete are disabled when no region is selected. Reset V-Scale restores 
 The waveform scroll container handles gestures in this order:
 
 1. Alt + wheel scales waveform amplitude vertically without changing time zoom or audio gain.
-2. Shift + wheel precisely nudges the hovered region, or the selected region when none is hovered. The gesture is reserved for region movement and does nothing when no region is targeted. Each wheel sequence commits one undoable region edit.
+2. Shift + wheel pans horizontally when no region is selected, regardless of which element is hovered. When a region is selected, the gesture precisely nudges only that region and each wheel sequence commits one undoable region edit.
 3. Middle-button drag and Alt + left-button drag capture the pointer for horizontal panning and prevent region interaction.
 4. An unmodified vertical wheel reaches the official Zoom plugin for pointer-centered zoom.
 5. An unmodified left drag on an empty waveform area reaches the official Regions plugin for creation.
 6. A left drag on a region handle resizes; a left drag on the region body moves it.
 
-Handled waveform gestures prevent native page scrolling or middle-click autoscroll. Shift+wheel is not horizontal panning.
+Handled waveform gestures prevent native page scrolling or middle-click autoscroll.
 
 ## Zoom anchors
 
@@ -40,7 +40,28 @@ Wheel input over the minimap is translated to the same zoom operation using the 
 
 ## Region history
 
-Serializable region snapshots contain stable UUID, start, end, and an empty generic `data` record reserved for future configured metadata. WaveSurfer emits live updates during a move or resize and a completed update once the pointer is released. Only the completed snapshot is committed to history. Undo and redo replace the complete serializable region snapshot and the WaveSurfer layer synchronizes to it.
+Serializable project annotations contain stable region UUIDs, normalized bounds,
+label assignments, and optional notes. WaveSurfer emits live updates during a
+move or resize and a completed update once the pointer is released. Only the
+completed snapshot is committed to history. Region creation/deletion, geometry,
+region and clip labels, scales, and notes share snapshot undo/redo. WaveSurfer
+synchronization and autosave do not create history entries; undo/redo changes
+save through the normal draft path.
+
+## Annotation keyboard and submission
+
+Configured taxonomy shortcuts toggle a region-capable label on the selected
+region, or a clip-capable label when no region is selected. Existing editor keys
+are reserved during taxonomy validation. All shortcuts are ignored while an
+input, textarea, select, button, or editable element has focus.
+
+`Ctrl+Left` and `Ctrl+Right` select the previous or next chronological region,
+reveal it in the waveform viewport, and seek to its start without autoplaying.
+
+`Ctrl+Enter` runs normal submission validation and empty-annotation
+confirmation before submitting and advancing. `Ctrl+Shift+Enter` flushes the
+draft, skips the task, and advances. Navigation is stopped when a required save
+fails. Submitted tasks render read-only until reopened from project management.
 
 ## Loop behavior
 

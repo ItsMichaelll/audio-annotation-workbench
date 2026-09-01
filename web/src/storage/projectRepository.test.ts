@@ -1,6 +1,7 @@
 import 'fake-indexeddb/auto'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
+  ANNOTATION_SCHEMA_VERSION,
   INSTRUCTIONS_SCHEMA_VERSION,
   TASK_SCHEMA_VERSION,
   type ProjectInstructions,
@@ -48,6 +49,7 @@ describe('IndexedDB project repository', () => {
   it('initializes the migrated schema with task source indexes', () => {
     expect(database.version).toBe(DATABASE_VERSION)
     expect(Array.from(database.objectStoreNames)).toEqual([
+      'annotations',
       'instructions',
       'projects',
       'tasks',
@@ -97,6 +99,255 @@ describe('IndexedDB project repository', () => {
     expect(await database.getAll('projects')).toEqual([])
     expect(await database.getAll('taxonomyVersions')).toEqual([])
     expect(await database.getAll('instructions')).toEqual([])
+    expect(await database.getAll('annotations')).toEqual([])
+  })
+
+  it('restores drafts, pins taxonomy versions, rejects stale writes, and submits transactionally', async () => {
+    const project = await repository.createProject({
+      name: 'Annotations',
+      taxonomy: taxonomy(),
+    })
+    const [task] = await repository.importTasks(project.id, [
+      { audio: 'clip.wav' },
+    ])
+    expect(task).toBeDefined()
+    const annotation = {
+      id: 'annotation-1',
+      schemaVersion: ANNOTATION_SCHEMA_VERSION,
+      projectId: project.id,
+      taskId: task!.id,
+      taxonomyVersionId: project.activeTaxonomyVersionId,
+      revision: 1,
+      regions: [],
+      clipAssignments: [],
+      createdAt: NOW,
+      updatedAt: NOW,
+    }
+    await repository.saveAnnotationDraft(annotation)
+    await expect(
+      repository.saveAnnotationDraft(annotation),
+    ).resolves.toMatchObject({ revision: 1 })
+    expect((await repository.getProject(project.id))?.tasks[0]?.status).toBe(
+      'draft',
+    )
+    expect(await repository.getAnnotation(task!.id)).toMatchObject({
+      id: 'annotation-1',
+      taxonomyVersionId: project.activeTaxonomyVersionId,
+    })
+
+    await repository.addTaxonomyVersion(project.id, taxonomy('b'.repeat(64)))
+    expect((await repository.getAnnotation(task!.id))?.taxonomyVersionId).toBe(
+      project.activeTaxonomyVersionId,
+    )
+    await expect(
+      repository.saveAnnotationDraft({ ...annotation, revision: 0 }),
+    ).rejects.toThrow('newer draft revision')
+
+    const submitted = await repository.submitAnnotation({
+      ...annotation,
+      revision: 2,
+    })
+    expect(submitted.submittedAt).toBe(NOW)
+    expect((await repository.getProject(project.id))?.tasks[0]?.status).toBe(
+      'submitted',
+    )
+    await expect(
+      repository.saveAnnotationDraft({
+        ...submitted,
+        revision: submitted.revision + 1,
+      }),
+    ).rejects.toThrow('Reopen')
+    await repository.updateTaskStatus(project.id, [task!.id], 'reopened')
+    expect((await repository.getAnnotation(task!.id))?.submittedAt).toBe(NOW)
+    await expect(
+      repository.saveAnnotationDraft({
+        ...submitted,
+        revision: submitted.revision + 1,
+      }),
+    ).resolves.toMatchObject({
+      taxonomyVersionId: project.activeTaxonomyVersionId,
+    })
+  })
+
+  it('normalizes region cardinality at the persistence boundary', async () => {
+    const project = await repository.createProject({
+      name: 'Single region label',
+      taxonomy: taxonomy(),
+    })
+    const [task] = await repository.importTasks(project.id, [
+      { audio: 'clip.wav' },
+    ])
+    const saved = await repository.saveAnnotationDraft({
+      id: 'cardinality-annotation',
+      schemaVersion: ANNOTATION_SCHEMA_VERSION,
+      projectId: project.id,
+      taskId: task!.id,
+      taxonomyVersionId: project.activeTaxonomyVersionId,
+      revision: 1,
+      regions: [
+        {
+          id: 'region',
+          start: 0,
+          end: 1,
+          assignments: [
+            { labelId: 'first', confidence: 'high' },
+            { labelId: 'second' },
+          ],
+        },
+      ],
+      clipAssignments: [{ labelId: 'first' }, { labelId: 'second' }],
+      createdAt: NOW,
+      updatedAt: NOW,
+    })
+
+    expect(saved.regions[0]?.assignments).toEqual([
+      { labelId: 'first', confidence: 'high' },
+    ])
+    expect(saved.clipAssignments).toHaveLength(2)
+    expect(
+      (await repository.getAnnotation(task!.id))?.regions[0]?.assignments,
+    ).toEqual([{ labelId: 'first', confidence: 'high' }])
+  })
+
+  it('rejects a first draft when the active taxonomy changed after the task opened', async () => {
+    const project = await repository.createProject({
+      name: 'Concurrent taxonomy',
+      taxonomy: taxonomy(),
+    })
+    const [task] = await repository.importTasks(project.id, [
+      { audio: 'clip.wav' },
+    ])
+    await repository.addTaxonomyVersion(project.id, taxonomy('b'.repeat(64)))
+
+    await expect(
+      repository.saveAnnotationDraft({
+        id: 'stale-taxonomy-draft',
+        schemaVersion: ANNOTATION_SCHEMA_VERSION,
+        projectId: project.id,
+        taskId: task!.id,
+        taxonomyVersionId: project.activeTaxonomyVersionId,
+        revision: 1,
+        regions: [],
+        clipAssignments: [],
+        createdAt: NOW,
+        updatedAt: NOW,
+      }),
+    ).rejects.toThrow('active taxonomy changed')
+    expect(await repository.getAnnotation(task!.id)).toBeNull()
+  })
+
+  it('relinks a missing task source without changing its annotation', async () => {
+    const project = await repository.createProject({
+      name: 'Relink',
+      taxonomy: taxonomy(),
+    })
+    const [task] = await repository.importTasks(project.id, [
+      { audio: 'set/clip.wav' },
+    ])
+    const annotation = {
+      id: 'relink-annotation',
+      schemaVersion: ANNOTATION_SCHEMA_VERSION,
+      projectId: project.id,
+      taskId: task!.id,
+      taxonomyVersionId: project.activeTaxonomyVersionId,
+      revision: 1,
+      regions: [],
+      clipAssignments: [],
+      createdAt: NOW,
+      updatedAt: NOW,
+    }
+    await repository.saveAnnotationDraft(annotation)
+    await repository.relinkTask(
+      project.id,
+      task!.id,
+      {
+        kind: 'external-reference',
+        locator: 'session:clip',
+        displayName: 'clip.wav',
+        permission: 'granted',
+      },
+      { name: 'clip.wav', size: 1 },
+    )
+
+    expect(
+      (await repository.getProject(project.id))?.tasks[0]?.primaryMedia,
+    ).toMatchObject({ locator: 'session:clip' })
+    expect(await repository.getAnnotation(task!.id)).toMatchObject(annotation)
+  })
+
+  it('rejects an incorrect relink without changing task source or annotation', async () => {
+    const project = await repository.createProject({
+      name: 'Reject relink',
+      taxonomy: taxonomy(),
+    })
+    const [task] = await repository.importTasks(project.id, [
+      { audio: 'set/clip.wav' },
+    ])
+    const annotation = {
+      id: 'unchanged-annotation',
+      schemaVersion: ANNOTATION_SCHEMA_VERSION,
+      projectId: project.id,
+      taskId: task!.id,
+      taxonomyVersionId: project.activeTaxonomyVersionId,
+      revision: 1,
+      regions: [],
+      clipAssignments: [],
+      createdAt: NOW,
+      updatedAt: NOW,
+    }
+    await repository.saveAnnotationDraft(annotation)
+    const originalSource = task!.primaryMedia
+
+    await expect(
+      repository.relinkTask(
+        project.id,
+        task!.id,
+        {
+          kind: 'external-reference',
+          locator: 'session:wrong',
+          displayName: 'wrong.wav',
+          permission: 'granted',
+        },
+        { name: 'wrong.wav', size: 10 },
+      ),
+    ).rejects.toThrow('Expected: "set/clip.wav" (or a file named clip.wav).')
+
+    expect(
+      (await repository.getProject(project.id))?.tasks[0]?.primaryMedia,
+    ).toEqual(originalSource)
+    expect(await repository.getAnnotation(task!.id)).toMatchObject(annotation)
+  })
+
+  it('skips a draft, preserves it, and allows project management to restore it', async () => {
+    const project = await repository.createProject({
+      name: 'Skip and restore',
+      taxonomy: taxonomy(),
+    })
+    const [task] = await repository.importTasks(project.id, [
+      { audio: 'skip.wav' },
+    ])
+    await repository.saveAnnotationDraft({
+      id: 'skip-annotation',
+      schemaVersion: ANNOTATION_SCHEMA_VERSION,
+      projectId: project.id,
+      taskId: task!.id,
+      taxonomyVersionId: project.activeTaxonomyVersionId,
+      revision: 1,
+      regions: [],
+      clipAssignments: [],
+      createdAt: NOW,
+      updatedAt: NOW,
+    })
+
+    await repository.skipTask(project.id, task!.id)
+    expect((await repository.getProject(project.id))?.tasks[0]?.status).toBe(
+      'skipped',
+    )
+    expect(await repository.getAnnotation(task!.id)).not.toBeNull()
+    await repository.updateTaskStatus(project.id, [task!.id], 'unstarted')
+    expect((await repository.getProject(project.id))?.tasks[0]?.status).toBe(
+      'unstarted',
+    )
   })
 
   it('lists active and archived projects separately and preserves rename IDs', async () => {
@@ -207,6 +458,18 @@ describe('IndexedDB project repository', () => {
       updatedAt: NOW,
     }
     await database.put('tasks', task)
+    await database.put('annotations', {
+      id: 'annotation-delete',
+      schemaVersion: ANNOTATION_SCHEMA_VERSION,
+      projectId: target.id,
+      taskId: task.id,
+      taxonomyVersionId: target.activeTaxonomyVersionId,
+      revision: 1,
+      regions: [],
+      clipAssignments: [],
+      createdAt: NOW,
+      updatedAt: NOW,
+    })
     await repository.deleteProject(target.id)
 
     expect(await repository.getProject(target.id)).toBeNull()
@@ -224,6 +487,36 @@ describe('IndexedDB project repository', () => {
     expect(
       await database.getAllFromIndex('instructions', 'by-project', target.id),
     ).toEqual([])
+    expect(
+      await database.getAllFromIndex('annotations', 'by-project', target.id),
+    ).toEqual([])
+  })
+
+  it('deletes a task and its annotation together', async () => {
+    const project = await repository.createProject({
+      name: 'Task delete',
+      taxonomy: taxonomy(),
+    })
+    const [task] = await repository.importTasks(project.id, [
+      { audio: 'delete.wav' },
+    ])
+    await database.put('annotations', {
+      id: 'task-annotation',
+      schemaVersion: ANNOTATION_SCHEMA_VERSION,
+      projectId: project.id,
+      taskId: task!.id,
+      taxonomyVersionId: project.activeTaxonomyVersionId,
+      revision: 1,
+      regions: [],
+      clipAssignments: [],
+      createdAt: NOW,
+      updatedAt: NOW,
+    })
+
+    await repository.deleteTasks(project.id, [task!.id])
+
+    expect(await database.get('tasks', task!.id)).toBeUndefined()
+    expect(await repository.getAnnotation(task!.id)).toBeNull()
   })
 
   it('returns null for an unknown project and derives stored task progress', async () => {

@@ -6,6 +6,9 @@ interface TransportBarProps {
   spectrumEnabled: boolean
   meterEnabled: boolean
   hasSelection: boolean
+  canDelete?: boolean
+  canPreviousRegion?: boolean
+  canNextRegion?: boolean
   verticalScale: number
   onPlayPause(): void
   onFit(): void
@@ -14,6 +17,8 @@ interface TransportBarProps {
   onResetVerticalScale(): void
   onToggleLoop(): void
   onDelete(): void
+  onPreviousRegion?(): void
+  onNextRegion?(): void
   onToggleSpectrogram(): void
   onToggleSpectrum(): void
   onToggleMeter(): void
@@ -27,6 +32,9 @@ export function TransportBar({
   spectrumEnabled,
   meterEnabled,
   hasSelection,
+  canDelete = hasSelection,
+  canPreviousRegion = false,
+  canNextRegion = false,
   verticalScale,
   onPlayPause,
   onFit,
@@ -35,6 +43,8 @@ export function TransportBar({
   onResetVerticalScale,
   onToggleLoop,
   onDelete,
+  onPreviousRegion,
+  onNextRegion,
   onToggleSpectrogram,
   onToggleSpectrum,
   onToggleMeter,
@@ -73,6 +83,27 @@ export function TransportBar({
         {isPlaying ? 'Pause' : 'Play'}
       </button>
       <span className="transport__divider" aria-hidden="true" />
+      {onPreviousRegion && onNextRegion && (
+        <>
+          <button
+            type="button"
+            onClick={onPreviousRegion}
+            disabled={!isLoaded || !canPreviousRegion}
+            title="Previous region (Ctrl+Left)"
+          >
+            Previous Region
+          </button>
+          <button
+            type="button"
+            onClick={onNextRegion}
+            disabled={!isLoaded || !canNextRegion}
+            title="Next region (Ctrl+Right)"
+          >
+            Next Region
+          </button>
+          <span className="transport__divider" aria-hidden="true" />
+        </>
+      )}
       <button
         type="button"
         onClick={onFit}
@@ -121,7 +152,7 @@ export function TransportBar({
       <button
         type="button"
         onClick={onDelete}
-        disabled={!hasSelection}
+        disabled={!canDelete}
         title="Delete selected region (Delete, Backspace, or Ctrl+D)"
       >
         Delete

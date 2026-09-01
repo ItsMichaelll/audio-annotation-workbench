@@ -147,7 +147,7 @@ export function ProjectDashboard() {
           <div className="state-panel state-panel--empty">
             <h2>
               {status === 'active'
-                ? 'Create the first project'
+                ? 'Create a project to get started'
                 : 'No archived projects'}
             </h2>
             <p>

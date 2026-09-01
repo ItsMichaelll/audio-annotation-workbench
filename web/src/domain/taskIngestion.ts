@@ -2,6 +2,7 @@ import {
   TASK_SCHEMA_VERSION,
   type MediaSourceReference,
   type TaskRecord,
+  type TaskSourceIdentity,
   type TaskStatus,
 } from './models'
 
@@ -14,6 +15,7 @@ export interface ManifestTask {
 
 export interface ImportCandidate extends ManifestTask {
   source?: MediaSourceReference
+  sourceIdentity?: TaskSourceIdentity
 }
 
 export interface ImportPlan {
@@ -186,6 +188,7 @@ export function taskFromCandidate(
   candidate: ImportCandidate,
   id: string,
   timestamp: string,
+  importOrder?: number,
 ): TaskRecord {
   const relativePath = normalizeRelativePath(candidate.audio)
   return {
@@ -202,7 +205,12 @@ export function taskFromCandidate(
       displayName: relativePath.split('/').at(-1) || 'Audio task',
       reason: 'not-yet-linked',
     },
+    sourceIdentity: candidate.sourceIdentity ?? {
+      kind: 'manifest',
+      relativePath,
+    },
     metadata: candidate.metadata ?? {},
+    ...(importOrder !== undefined ? { importOrder } : {}),
     createdAt: timestamp,
     updatedAt: timestamp,
   }
@@ -211,7 +219,15 @@ export function taskFromCandidate(
 export function canTransitionTask(from: TaskStatus, to: TaskStatus): boolean {
   return (
     from === to ||
-    (from === 'unstarted' && (to === 'skipped' || to === 'blocked')) ||
+    (from === 'unstarted' &&
+      (to === 'draft' ||
+        to === 'submitted' ||
+        to === 'skipped' ||
+        to === 'blocked')) ||
+    (from === 'draft' &&
+      (to === 'submitted' || to === 'skipped' || to === 'blocked')) ||
+    (from === 'reopened' &&
+      (to === 'submitted' || to === 'skipped' || to === 'blocked')) ||
     ((from === 'skipped' || from === 'blocked') && to === 'unstarted') ||
     (from === 'submitted' && to === 'reopened')
   )
