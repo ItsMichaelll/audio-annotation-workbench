@@ -19,7 +19,7 @@ const shortcutGroups = [
     items: [
       ['Wheel', 'Zoom at pointer'],
       ['Alt + wheel', 'Scale waveform height'],
-      ['Shift + wheel', 'Nudge region'],
+      ['Shift + wheel', 'Pan or nudge selected region'],
       ['Middle drag', 'Pan'],
       ['Alt + left drag', 'Pan'],
       ['F', 'Fit file'],
@@ -31,6 +31,7 @@ const shortcutGroups = [
     items: [
       ['Left drag', 'Create region'],
       ['Double-click', 'Play region'],
+      ['Ctrl + ← / →', 'Previous / next region'],
       ['L', 'Toggle loop'],
       ['Delete / Backspace', 'Delete region'],
       ['Ctrl + D', 'Delete region'],

@@ -6,13 +6,16 @@ import {
   type ImportPlan,
 } from '../../domain/taskIngestion'
 import type { TaskRecord } from '../../domain/models'
+import { registerCurrentSessionFile } from '../../domain/mediaSources'
 
 const AUDIO = /\.(wav|mp3|flac|ogg|m4a|aac|aiff?)$/i
 
 function sourceFor(file: File, relativePath: string) {
+  const locator = `${relativePath}:${file.size}:${file.lastModified}`
+  registerCurrentSessionFile(locator, file)
   return {
     kind: 'external-reference' as const,
-    locator: relativePath,
+    locator,
     displayName: file.name,
     permission: 'prompt' as const,
   }
@@ -41,6 +44,11 @@ export function TaskImport({
           audio: path,
           name: file.name,
           source: sourceFor(file, path),
+          sourceIdentity: {
+            kind: 'direct-file',
+            filename: file.name,
+            size: file.size,
+          },
         })
       else unsupported.push(file.name)
     }

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { hashText, parseTaxonomySource, UploadValidationError } from './uploads'
+import {
+  hashText,
+  parseTaxonomySource,
+  prepareTaxonomyFile,
+  UploadValidationError,
+} from './uploads'
 
 describe('taxonomy uploads', () => {
   it('parses JSON and extracts optional metadata', () => {
@@ -50,5 +55,14 @@ describe('taxonomy uploads', () => {
     expect(first).toBe(second)
     expect(first).toMatch(/^[a-f0-9]{64}$/)
     expect(changed).not.toBe(first)
+  })
+
+  it('gives annotation-schema feedback for newly uploaded taxonomies', async () => {
+    const file = new File(['schemaVersion: 1\nlabels: []\n'], 'taxonomy.yaml', {
+      type: 'text/yaml',
+    })
+    await expect(prepareTaxonomyFile(file)).rejects.toThrow(
+      'labels must be a non-empty array',
+    )
   })
 })

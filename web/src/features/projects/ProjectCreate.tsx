@@ -178,7 +178,10 @@ export function ProjectCreate() {
               <span>02</span>
               <div>
                 <h2>Taxonomy *</h2>
-                <p>JSON or YAML, up to 1 MB. The root must be an object.</p>
+                <p>
+                  JSON or YAML, up to 1 MB. Annotation schema version one and at
+                  least one stable label are required.
+                </p>
               </div>
             </div>
             <input

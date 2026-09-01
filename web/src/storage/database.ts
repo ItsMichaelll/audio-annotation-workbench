@@ -1,13 +1,15 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
+import { normalizeAnnotationCardinality } from '../domain/annotations'
 import type {
   Project,
+  AnnotationDocument,
   ProjectInstructions,
   TaskRecord,
   TaxonomyVersion,
 } from '../domain/models'
 
 export const DATABASE_NAME = 'audio-annotation-workbench'
-export const DATABASE_VERSION = 2
+export const DATABASE_VERSION = 4
 
 export interface WorkbenchDatabase extends DBSchema {
   projects: {
@@ -41,6 +43,14 @@ export interface WorkbenchDatabase extends DBSchema {
       'by-project-relative-path': [string, string]
     }
   }
+  annotations: {
+    key: string
+    value: AnnotationDocument
+    indexes: {
+      'by-project': string
+      'by-task': string
+    }
+  }
 }
 
 export type WorkbenchDatabaseConnection = IDBPDatabase<WorkbenchDatabase>
@@ -56,7 +66,7 @@ export async function openWorkbenchDatabase(
 
   try {
     return await openDB<WorkbenchDatabase>(name, DATABASE_VERSION, {
-      upgrade(database, oldVersion, _newVersion, transaction) {
+      async upgrade(database, oldVersion, _newVersion, transaction) {
         if (oldVersion < 1) {
           const projects = database.createObjectStore('projects', {
             keyPath: 'id',
@@ -87,6 +97,21 @@ export async function openWorkbenchDatabase(
               'projectId',
               'relativePath',
             ])
+        }
+        if (oldVersion < 3) {
+          const annotations = database.createObjectStore('annotations', {
+            keyPath: 'id',
+          })
+          annotations.createIndex('by-project', 'projectId')
+          annotations.createIndex('by-task', 'taskId', { unique: true })
+        }
+        if (oldVersion < 4) {
+          const annotations = transaction.objectStore('annotations')
+          let cursor = await annotations.openCursor()
+          while (cursor) {
+            await cursor.update(normalizeAnnotationCardinality(cursor.value))
+            cursor = await cursor.continue()
+          }
         }
       },
     })

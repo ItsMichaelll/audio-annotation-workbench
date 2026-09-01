@@ -1,5 +1,6 @@
 import { parseDocument } from 'yaml'
 import type { TaxonomyMetadata, TaxonomySourceFormat } from './models'
+import { parseAnnotationTaxonomy } from './annotationTaxonomy'
 
 export const TAXONOMY_FILE_SIZE_LIMIT = 1024 * 1024
 export const INSTRUCTIONS_FILE_SIZE_LIMIT = 512 * 1024
@@ -129,6 +130,13 @@ export async function prepareTaxonomyFile(
   }
   const rawSource = await file.text()
   const parsed = parseTaxonomySource(rawSource, file.name)
+  try {
+    parseAnnotationTaxonomy(parsed.document)
+  } catch (error) {
+    throw new UploadValidationError(
+      error instanceof Error ? error.message : 'Invalid annotation taxonomy.',
+    )
+  }
   return { ...parsed, contentHash: await hashText(rawSource) }
 }
 

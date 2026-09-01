@@ -9,6 +9,9 @@ export type EditorCommand =
   | { type: 'clear-selection' }
   | { type: 'undo' }
   | { type: 'redo' }
+  | { type: 'submit-next' }
+  | { type: 'skip-next' }
+  | { type: 'navigate-region'; direction: 'previous' | 'next' }
 
 export interface KeyboardCommandInput {
   key: string
@@ -26,6 +29,18 @@ export function keyboardCommand(
   const commandModifier = input.ctrlKey === true || input.metaKey === true
 
   if (commandModifier) {
+    if (!input.shiftKey && !input.altKey && key === 'arrowleft') {
+      return { type: 'navigate-region', direction: 'previous' }
+    }
+    if (!input.shiftKey && !input.altKey && key === 'arrowright') {
+      return { type: 'navigate-region', direction: 'next' }
+    }
+    if (input.ctrlKey && key === 'enter' && input.shiftKey && !input.altKey) {
+      return { type: 'skip-next' }
+    }
+    if (input.ctrlKey && key === 'enter' && !input.shiftKey && !input.altKey) {
+      return { type: 'submit-next' }
+    }
     if (input.ctrlKey && key === 'd' && !input.shiftKey && !input.altKey) {
       return { type: 'delete-region' }
     }
@@ -84,10 +99,33 @@ export function keyboardCommand(
 
 export function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
+  return isEditableElement(target.tagName, target.isContentEditable)
+}
+
+export function isEditableElement(
+  tagName: string,
+  isContentEditable = false,
+): boolean {
   return (
-    target.isContentEditable ||
-    target instanceof HTMLInputElement ||
-    target instanceof HTMLTextAreaElement ||
-    target instanceof HTMLSelectElement
+    isContentEditable ||
+    ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(tagName.toUpperCase())
+  )
+}
+
+export function labelingShortcut(
+  input: KeyboardCommandInput,
+  labels: readonly { id: string; shortcut?: string }[],
+): string | null {
+  if (
+    input.ctrlKey ||
+    input.metaKey ||
+    input.altKey ||
+    input.key.length !== 1
+  ) {
+    return null
+  }
+  const key = input.key.toLowerCase()
+  return (
+    labels.find((label) => label.shortcut?.toLowerCase() === key)?.id ?? null
   )
 }

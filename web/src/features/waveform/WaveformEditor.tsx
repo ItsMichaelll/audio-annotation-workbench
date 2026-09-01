@@ -16,8 +16,17 @@ import WindowedSpectrogramPlugin from 'wavesurfer.js/dist/plugins/spectrogram-wi
 import TimelinePlugin from 'wavesurfer.js/dist/plugins/timeline.esm.js'
 import ZoomPlugin from 'wavesurfer.js/dist/plugins/zoom.esm.js'
 import type { RegionMetadata } from '../../domain/region'
-import { normalizeRegion, translateRegion } from '../../domain/region'
+import {
+  clampRegionEdit,
+  maximumAudioScroll,
+  normalizeRegion,
+  regionDragBounds,
+  regionVisualColors,
+  translateRegion,
+  viewportAutoScrollDelta,
+} from '../../domain/region'
 import { clampTime, formatTime } from '../../domain/transport'
+import { clampedWheelScroll, shiftWheelMode } from '../../domain/wheel'
 import { useAnalysisAudio } from '../analysis/useAnalysisAudio'
 import { LoudnessMeter } from '../loudness/LoudnessMeter'
 import { SpectrumAnalyzer } from '../spectrum/SpectrumAnalyzer'
@@ -36,7 +45,6 @@ import {
 } from '../../domain/zoom'
 
 const REGION_COLOR = 'rgba(70, 144, 255, 0.28)'
-const SELECTED_REGION_COLOR = 'rgba(70, 144, 255, 0.42)'
 const WARNING_COLOR = '#ffa500'
 const REGION_WHEEL_NUDGE_RATIO = 0.1
 const SPECTROGRAM_FREQUENCY_LABELS = [
@@ -61,6 +69,7 @@ export interface WaveformEditorHandle {
   resetVerticalScale(): void
   seekBy(seconds: number): void
   seekTo(seconds: number): void
+  revealRegion(start: number, end: number): void
   zoom(direction: 'in' | 'out'): void
 }
 
@@ -73,6 +82,7 @@ interface WaveformEditorProps {
   spectrumEnabled: boolean
   spectrogramEnabled: boolean
   isPlaying: boolean
+  readOnly?: boolean
   onLoading(): void
   onReady(duration: number): void
   onError(message: string): void
@@ -137,6 +147,7 @@ export const WaveformEditor = forwardRef<
     spectrumEnabled,
     spectrogramEnabled,
     isPlaying,
+    readOnly = false,
     onLoading,
     onReady,
     onError,
@@ -164,6 +175,9 @@ export const WaveformEditor = forwardRef<
   const wavesurferRef = useRef<WaveSurfer | null>(null)
   const regionsPluginRef = useRef<RegionsPlugin | null>(null)
   const synchronizationRef = useRef(false)
+  const lastValidRegionsRef = useRef(
+    new Map<string, Pick<RegionMetadata, 'start' | 'end'>>(),
+  )
   const selectedRegionIdRef = useRef(selectedRegionId)
   const loopEnabledRef = useRef(loopEnabled)
   const spectrumEnabledRef = useRef(spectrumEnabled)
@@ -292,6 +306,39 @@ export const WaveformEditor = forwardRef<
         const wavesurfer = wavesurferRef.current
         if (!wavesurfer) return
         wavesurfer.setTime(clampTime(seconds, wavesurfer.getDuration()))
+      },
+      revealRegion(start: number, end: number) {
+        const wavesurfer = wavesurferRef.current
+        if (!wavesurfer) return
+        const duration = wavesurfer.getDuration()
+        const scrollContainer = wavesurfer.getWrapper().parentElement
+        if (!scrollContainer || duration <= 0) return
+        const bounded = normalizeRegion(start, end, duration)
+        if (!bounded) return
+        if (wavesurfer.isPlaying()) wavesurfer.pause()
+        wavesurfer.setTime(bounded.start)
+        const pixelsPerSecond = Math.max(
+          wavesurfer.options.minPxPerSec,
+          scrollContainer.clientWidth / duration,
+        )
+        const viewportStart = scrollContainer.scrollLeft / pixelsPerSecond
+        const viewportEnd =
+          (scrollContainer.scrollLeft + scrollContainer.clientWidth) /
+          pixelsPerSecond
+        if (bounded.start >= viewportStart && bounded.end <= viewportEnd) return
+        const center = (bounded.start + bounded.end) / 2
+        const targetScroll =
+          center * pixelsPerSecond - scrollContainer.clientWidth / 2
+        wavesurfer.setScroll(
+          Math.min(
+            Math.max(targetScroll, 0),
+            maximumAudioScroll(
+              duration,
+              pixelsPerSecond,
+              scrollContainer.clientWidth,
+            ),
+          ),
+        )
       },
       zoom(direction: 'in' | 'out') {
         const wavesurfer = wavesurferRef.current
@@ -529,6 +576,46 @@ export const WaveformEditor = forwardRef<
       callbacksRef.current.onZoomChange(zoom)
     })
 
+    const scrollContainer = wavesurfer.getWrapper().parentElement
+    const audioPixelsPerSecond = () => {
+      const duration = wavesurfer.getDuration()
+      if (!scrollContainer || duration <= 0) return 1
+      return Math.max(
+        wavesurfer.options.minPxPerSec,
+        scrollContainer.clientWidth / duration,
+      )
+    }
+    const audioContentWidth = () => {
+      if (!scrollContainer) return 0
+      return (
+        maximumAudioScroll(
+          wavesurfer.getDuration(),
+          audioPixelsPerSecond(),
+          scrollContainer.clientWidth,
+        ) + scrollContainer.clientWidth
+      )
+    }
+    const audioMaximumScroll = () => {
+      if (!scrollContainer) return 0
+      return Math.max(audioContentWidth() - scrollContainer.clientWidth, 0)
+    }
+    let activeRegionDrag:
+      | {
+          pointerId: number
+          pointerX: number
+          regionId: string
+          resizing: boolean
+          origin: {
+            start: number
+            end: number
+            pointerX: number
+            scrollLeft: number
+            pixelsPerSecond: number
+          }
+        }
+      | undefined
+    let regionDragFrame = 0
+
     const unsubscribeInitialized = regionsPlugin.on(
       'region-initialized',
       (region) => {
@@ -537,6 +624,41 @@ export const WaveformEditor = forwardRef<
         }
       },
     )
+    const clampRenderedRegion = (
+      region: Region,
+      bounds: Pick<RegionMetadata, 'start' | 'end'>,
+    ): RegionMetadata => {
+      if (
+        Math.abs(region.start - bounds.start) > 1e-7 ||
+        Math.abs(region.end - bounds.end) > 1e-7
+      ) {
+        synchronizationRef.current = true
+        try {
+          region.setOptions(bounds)
+        } finally {
+          synchronizationRef.current = false
+        }
+      }
+      lastValidRegionsRef.current.set(region.id, bounds)
+      return { id: region.id, ...bounds, data: {} }
+    }
+    const applyActiveRegionDrag = (region: Region): RegionMetadata | null => {
+      if (
+        !activeRegionDrag ||
+        activeRegionDrag.resizing ||
+        activeRegionDrag.regionId !== region.id ||
+        !scrollContainer
+      ) {
+        return null
+      }
+      const bounds = regionDragBounds(
+        activeRegionDrag.origin,
+        activeRegionDrag.pointerX,
+        scrollContainer.scrollLeft,
+        wavesurfer.getDuration(),
+      )
+      return bounds ? clampRenderedRegion(region, bounds) : null
+    }
     const unsubscribeCreated = regionsPlugin.on('region-created', (region) => {
       if (synchronizationRef.current) return
       const metadata = regionMetadata(region, wavesurfer.getDuration())
@@ -544,29 +666,59 @@ export const WaveformEditor = forwardRef<
         region.remove()
         return
       }
-      callbacksRef.current.onRegionCreate(metadata)
-      selectRegion(metadata.id)
+      const clamped = clampRenderedRegion(region, metadata)
+      callbacksRef.current.onRegionCreate(clamped)
+      selectRegion(clamped.id)
       if (wavesurfer.isPlaying()) {
         pendingPlaybackRegionIdRef.current = null
-        wavesurfer.setTime(metadata.start)
+        wavesurfer.setTime(clamped.start)
       } else {
-        pendingPlaybackRegionIdRef.current = metadata.id
+        pendingPlaybackRegionIdRef.current = clamped.id
       }
     })
     const unsubscribeRegionUpdate = regionsPlugin.on(
       'region-update',
-      (region) => {
+      (region, side) => {
         if (synchronizationRef.current) return
-        const metadata = regionMetadata(region, wavesurfer.getDuration())
-        if (metadata) callbacksRef.current.onRegionLiveChange(metadata)
+        const previous = lastValidRegionsRef.current.get(region.id)
+        if (activeRegionDrag?.regionId === region.id && side) {
+          activeRegionDrag.resizing = true
+        }
+        const dragged = !side ? applyActiveRegionDrag(region) : null
+        const bounds =
+          dragged ??
+          (previous
+            ? clampRegionEdit(
+                previous,
+                region.start,
+                region.end,
+                wavesurfer.getDuration(),
+              )
+            : normalizeRegion(
+                region.start,
+                region.end,
+                wavesurfer.getDuration(),
+              ))
+        if (bounds) {
+          callbacksRef.current.onRegionLiveChange(
+            dragged ?? clampRenderedRegion(region, bounds),
+          )
+        }
       },
     )
     const unsubscribeRegionUpdated = regionsPlugin.on(
       'region-updated',
       (region) => {
         if (synchronizationRef.current) return
-        const metadata = regionMetadata(region, wavesurfer.getDuration())
-        if (metadata) callbacksRef.current.onRegionCommit(metadata)
+        const dragged = applyActiveRegionDrag(region)
+        const bounds = dragged
+          ? dragged
+          : normalizeRegion(region.start, region.end, wavesurfer.getDuration())
+        if (bounds) {
+          callbacksRef.current.onRegionCommit(
+            dragged ?? clampRenderedRegion(region, bounds),
+          )
+        }
       },
     )
     const unsubscribeRegionClicked = regionsPlugin.on(
@@ -605,17 +757,18 @@ export const WaveformEditor = forwardRef<
       },
     )
 
-    const disableRegionCreation = regionsPlugin.enableDragSelection(
-      {
-        color: REGION_COLOR,
-        drag: true,
-        resize: true,
-        minLength: 0.001,
-      },
-      3,
-    )
+    const disableRegionCreation = readOnly
+      ? () => undefined
+      : regionsPlugin.enableDragSelection(
+          {
+            color: REGION_COLOR,
+            drag: true,
+            resize: true,
+            minLength: 0.001,
+          },
+          3,
+        )
 
-    const scrollContainer = wavesurfer.getWrapper().parentElement
     const scrollbar = scrollbarElementRef.current
     const scrollbarTrack = scrollbarTrackElementRef.current
     let activePan:
@@ -638,12 +791,16 @@ export const WaveformEditor = forwardRef<
 
     const syncScrollbar = () => {
       if (!scrollContainer || !scrollbar || !scrollbarTrack) return
-      scrollbarTrack.style.width = `${scrollContainer.scrollWidth}px`
-      const canScroll =
-        scrollContainer.scrollWidth > scrollContainer.clientWidth + 1
+      const contentWidth = audioContentWidth()
+      const maximumScroll = audioMaximumScroll()
+      scrollbarTrack.style.width = `${contentWidth}px`
+      const canScroll = maximumScroll > 1
       scrollbar.classList.toggle('is-inactive', !canScroll)
       scrollbar.setAttribute('aria-disabled', String(!canScroll))
       scrollbar.tabIndex = canScroll ? 0 : -1
+      if (scrollContainer.scrollLeft > maximumScroll) {
+        scrollContainer.scrollLeft = maximumScroll
+      }
       if (Math.abs(scrollbar.scrollLeft - scrollContainer.scrollLeft) > 0.5) {
         scrollbar.scrollLeft = scrollContainer.scrollLeft
       }
@@ -654,9 +811,11 @@ export const WaveformEditor = forwardRef<
     }
     const handleMainScroll = () => {
       if (!scrollContainer || !scrollbar) return
-      if (
-        !scrollWidthsMatch(scrollContainer.scrollWidth, scrollbar.scrollWidth)
-      ) {
+      const maximumScroll = audioMaximumScroll()
+      if (scrollContainer.scrollLeft > maximumScroll) {
+        scrollContainer.scrollLeft = maximumScroll
+      }
+      if (!scrollWidthsMatch(audioContentWidth(), scrollbar.scrollWidth)) {
         scheduleScrollbarSync()
         return
       }
@@ -664,13 +823,14 @@ export const WaveformEditor = forwardRef<
     }
     const handleScrollbarScroll = () => {
       if (!scrollContainer || !scrollbar) return
-      if (
-        !scrollWidthsMatch(scrollContainer.scrollWidth, scrollbar.scrollWidth)
-      ) {
+      if (!scrollWidthsMatch(audioContentWidth(), scrollbar.scrollWidth)) {
         scheduleScrollbarSync()
         return
       }
-      scrollContainer.scrollLeft = scrollbar.scrollLeft
+      scrollContainer.scrollLeft = Math.min(
+        scrollbar.scrollLeft,
+        audioMaximumScroll(),
+      )
     }
     const handleMinimapWheel = (event: WheelEvent) => {
       if (!minimapElement || !scrollContainer) return
@@ -888,18 +1048,20 @@ export const WaveformEditor = forwardRef<
           : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
             ? rawDelta * scrollContainer.clientWidth
             : rawDelta
-      const eventPath = event.composedPath()
       const renderedRegions = regionsPlugin.getRegions()
-      const hoveredRegion = renderedRegions.find(
-        (region) =>
-          region.element !== null && eventPath.includes(region.element),
+      const selectedId = selectedRegionIdRef.current
+      if (shiftWheelMode(selectedId) === 'pan') {
+        scrollContainer.scrollLeft = clampedWheelScroll(
+          scrollContainer.scrollLeft,
+          pixelDelta,
+          audioMaximumScroll(),
+        )
+        return
+      }
+      if (readOnly) return
+      const targetRegion = renderedRegions.find(
+        (region) => region.id === selectedId,
       )
-      const selectedRegion = selectedRegionIdRef.current
-        ? renderedRegions.find(
-            (region) => region.id === selectedRegionIdRef.current,
-          )
-        : undefined
-      const targetRegion = hoveredRegion ?? selectedRegion
 
       if (targetRegion) {
         const duration = wavesurfer.getDuration()
@@ -919,6 +1081,7 @@ export const WaveformEditor = forwardRef<
             translated.end !== targetRegion.end)
         ) {
           targetRegion.setOptions(translated)
+          lastValidRegionsRef.current.set(targetRegion.id, translated)
           const metadata = regionMetadata(targetRegion, duration)
           if (metadata) {
             callbacksRef.current.onRegionLiveChange(metadata)
@@ -941,6 +1104,99 @@ export const WaveformEditor = forwardRef<
       }
       scrollContainer.setPointerCapture(event.pointerId)
       scrollContainer.classList.add('is-panning')
+    }
+    const runRegionAutoScroll = () => {
+      cancelAnimationFrame(regionDragFrame)
+      const tick = () => {
+        if (!activeRegionDrag || !scrollContainer) return
+        if (!activeRegionDrag.resizing) {
+          const viewport = scrollContainer.getBoundingClientRect()
+          const maximumScroll = audioMaximumScroll()
+          const delta = viewportAutoScrollDelta(
+            activeRegionDrag.pointerX,
+            viewport.left,
+            viewport.right,
+            scrollContainer.scrollLeft,
+            maximumScroll,
+          )
+          if (delta !== 0) {
+            scrollContainer.scrollLeft = Math.min(
+              Math.max(scrollContainer.scrollLeft + delta, 0),
+              maximumScroll,
+            )
+            const region = regionsPlugin
+              .getRegions()
+              .find((item) => item.id === activeRegionDrag?.regionId)
+            if (region) {
+              const metadata = applyActiveRegionDrag(region)
+              if (metadata) callbacksRef.current.onRegionLiveChange(metadata)
+            }
+          }
+        }
+        regionDragFrame = requestAnimationFrame(tick)
+      }
+      regionDragFrame = requestAnimationFrame(tick)
+    }
+    const beginRegionDrag = (event: PointerEvent) => {
+      if (readOnly || event.button !== 0 || event.altKey || !scrollContainer) {
+        return
+      }
+      const path = event.composedPath()
+      const region = regionsPlugin
+        .getRegions()
+        .find((item) => item.element !== null && path.includes(item.element))
+      if (!region) return
+      const resizing = path.some(
+        (item) =>
+          item instanceof Element &&
+          (item.getAttribute('part') ?? '').includes('region-handle'),
+      )
+      const duration = wavesurfer.getDuration()
+      const bounds = normalizeRegion(region.start, region.end, duration)
+      if (!bounds || duration <= 0) return
+      activeRegionDrag = {
+        pointerId: event.pointerId,
+        pointerX: event.clientX,
+        regionId: region.id,
+        resizing,
+        origin: {
+          ...bounds,
+          pointerX: event.clientX,
+          scrollLeft: scrollContainer.scrollLeft,
+          pixelsPerSecond: audioPixelsPerSecond(),
+        },
+      }
+      runRegionAutoScroll()
+    }
+    const trackRegionDrag = (event: PointerEvent) => {
+      if (
+        !activeRegionDrag ||
+        activeRegionDrag.pointerId !== event.pointerId ||
+        activeRegionDrag.resizing
+      ) {
+        return
+      }
+      activeRegionDrag.pointerX = event.clientX
+      const region = regionsPlugin
+        .getRegions()
+        .find((item) => item.id === activeRegionDrag?.regionId)
+      if (!region) return
+      const metadata = applyActiveRegionDrag(region)
+      if (metadata) callbacksRef.current.onRegionLiveChange(metadata)
+    }
+    const finishRegionDrag = (event: PointerEvent) => {
+      const finishing = activeRegionDrag
+      if (!finishing || finishing.pointerId !== event.pointerId) return
+      cancelAnimationFrame(regionDragFrame)
+      queueMicrotask(() => {
+        if (activeRegionDrag !== finishing) return
+        const region = regionsPlugin
+          .getRegions()
+          .find((item) => item.id === finishing.regionId)
+        const metadata = region ? applyActiveRegionDrag(region) : null
+        if (metadata) callbacksRef.current.onRegionCommit(metadata)
+        activeRegionDrag = undefined
+      })
     }
     const handlePointerMove = (event: PointerEvent) => {
       if (
@@ -979,6 +1235,10 @@ export const WaveformEditor = forwardRef<
       rememberPlayingOnPointerDown,
       true,
     )
+    scrollContainer?.addEventListener('pointerdown', beginRegionDrag, true)
+    scrollContainer?.addEventListener('pointermove', trackRegionDrag, true)
+    scrollContainer?.addEventListener('pointerup', finishRegionDrag, true)
+    scrollContainer?.addEventListener('pointercancel', finishRegionDrag, true)
     scrollContainer?.addEventListener('pointerdown', handlePointerDown, true)
     scrollContainer?.addEventListener('pointermove', handlePointerMove, true)
     scrollContainer?.addEventListener('pointerup', finishPan, true)
@@ -1025,6 +1285,7 @@ export const WaveformEditor = forwardRef<
       unsubscribeMinimapReady()
       unsubscribeMinimapClick()
       cancelAnimationFrame(scrollbarFrame)
+      cancelAnimationFrame(regionDragFrame)
       window.clearTimeout(minimapClickReset)
       if (pendingWheelRegionCommit) {
         window.clearTimeout(pendingWheelRegionCommit.timeout)
@@ -1033,6 +1294,14 @@ export const WaveformEditor = forwardRef<
       scrollContainer?.removeEventListener(
         'pointerdown',
         rememberPlayingOnPointerDown,
+        true,
+      )
+      scrollContainer?.removeEventListener('pointerdown', beginRegionDrag, true)
+      scrollContainer?.removeEventListener('pointermove', trackRegionDrag, true)
+      scrollContainer?.removeEventListener('pointerup', finishRegionDrag, true)
+      scrollContainer?.removeEventListener(
+        'pointercancel',
+        finishRegionDrag,
         true,
       )
       scrollContainer?.removeEventListener(
@@ -1081,7 +1350,7 @@ export const WaveformEditor = forwardRef<
       if (regionsPluginRef.current === regionsPlugin)
         regionsPluginRef.current = null
     }
-  }, [activateAudioAnalyzer, activateLoudnessMeter, audioUrl])
+  }, [activateAudioAnalyzer, activateLoudnessMeter, audioUrl, readOnly])
 
   useEffect(() => {
     const wavesurfer = wavesurferRef.current
@@ -1090,41 +1359,63 @@ export const WaveformEditor = forwardRef<
 
     synchronizationRef.current = true
     try {
-      const expected = new Map(regions.map((region) => [region.id, region]))
+      const duration = wavesurfer.getDuration()
+      const normalizedRegions = regions.flatMap((region) => {
+        const bounds = normalizeRegion(region.start, region.end, duration)
+        return bounds ? [{ ...region, ...bounds }] : []
+      })
+      const expected = new Map(
+        normalizedRegions.map((region) => [region.id, region]),
+      )
+      for (const regionId of lastValidRegionsRef.current.keys()) {
+        if (!expected.has(regionId))
+          lastValidRegionsRef.current.delete(regionId)
+      }
       for (const renderedRegion of plugin.getRegions()) {
         if (!expected.has(renderedRegion.id)) renderedRegion.remove()
       }
 
-      for (const metadata of regions) {
+      for (const metadata of normalizedRegions) {
+        lastValidRegionsRef.current.set(metadata.id, metadata)
         const renderedRegion = plugin
           .getRegions()
           .find((region) => region.id === metadata.id)
-        const color =
-          metadata.id === selectedRegionId
-            ? SELECTED_REGION_COLOR
-            : REGION_COLOR
+        const visual = regionVisualColors(
+          typeof metadata.data.color === 'string'
+            ? metadata.data.color
+            : undefined,
+          metadata.id === selectedRegionId,
+        )
         if (renderedRegion) {
           renderedRegion.setOptions({
             start: metadata.start,
             end: metadata.end,
-            color,
+            color: visual.fill,
           })
+          if (renderedRegion.element) {
+            renderedRegion.element.style.border = `1px solid ${visual.border}`
+            renderedRegion.element.style.boxSizing = 'border-box'
+          }
         } else {
-          plugin.addRegion({
+          const addedRegion = plugin.addRegion({
             id: metadata.id,
             start: metadata.start,
             end: metadata.end,
-            color,
-            drag: true,
-            resize: true,
+            color: visual.fill,
+            drag: !readOnly,
+            resize: !readOnly,
             minLength: 0.001,
           })
+          if (addedRegion.element) {
+            addedRegion.element.style.border = `1px solid ${visual.border}`
+            addedRegion.element.style.boxSizing = 'border-box'
+          }
         }
       }
     } finally {
       synchronizationRef.current = false
     }
-  }, [instanceVersion, regions, selectedRegionId])
+  }, [instanceVersion, readOnly, regions, selectedRegionId])
 
   useEffect(() => {
     const wavesurfer = wavesurferRef.current

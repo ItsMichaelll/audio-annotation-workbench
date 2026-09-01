@@ -1,8 +1,10 @@
 import type { IDBPTransaction, StoreNames } from 'idb'
+import { normalizeAnnotationCardinality } from '../domain/annotations'
 import {
   INSTRUCTIONS_SCHEMA_VERSION,
   PROJECT_SCHEMA_VERSION,
   TAXONOMY_RECORD_SCHEMA_VERSION,
+  type AnnotationDocument,
   type Project,
   type ProjectAggregate,
   type ProjectInstructions,
@@ -12,6 +14,10 @@ import {
   type TaxonomyVersion,
 } from '../domain/models'
 import { deriveTaskProgress } from '../domain/taskProgress'
+import {
+  assertRelinkSelectionMatchesTask,
+  type RelinkSelection,
+} from '../domain/relink'
 import {
   canTransitionTask,
   taskFromCandidate,
@@ -73,8 +79,14 @@ export interface ProjectRepository {
     projectId: string,
     taskId: string,
     source: TaskRecord['primaryMedia'],
-    replacement?: boolean,
+    selection: RelinkSelection,
   ): Promise<void>
+  getAnnotation(taskId: string): Promise<AnnotationDocument | null>
+  saveAnnotationDraft(
+    annotation: AnnotationDocument,
+  ): Promise<AnnotationDocument>
+  submitAnnotation(annotation: AnnotationDocument): Promise<AnnotationDocument>
+  skipTask(projectId: string, taskId: string): Promise<void>
 }
 
 interface RepositoryDependencies {
@@ -103,7 +115,7 @@ type ProjectTransaction = IDBPTransaction<
 
 async function deleteAllByProject(
   transaction: ProjectTransaction,
-  storeName: 'taxonomyVersions' | 'instructions' | 'tasks',
+  storeName: 'taxonomyVersions' | 'instructions' | 'tasks' | 'annotations',
   projectId: string,
 ): Promise<void> {
   const store = transaction.objectStore(storeName)
@@ -154,7 +166,7 @@ export class IndexedDbProjectRepository implements ProjectRepository {
       timestamp,
     )
     const transaction = this.database.transaction(
-      ['projects', 'taxonomyVersions', 'instructions', 'tasks'],
+      ['projects', 'taxonomyVersions', 'instructions', 'tasks', 'annotations'],
       'readwrite',
     )
     try {
@@ -171,10 +183,18 @@ export class IndexedDbProjectRepository implements ProjectRepository {
           updatedAt: timestamp,
         })
       }
-      for (const candidate of input.tasks ?? []) {
+      for (const [index, candidate] of (input.tasks ?? []).entries()) {
         await transaction
           .objectStore('tasks')
-          .add(taskFromCandidate(projectId, candidate, this.uuid(), timestamp))
+          .add(
+            taskFromCandidate(
+              projectId,
+              candidate,
+              this.uuid(),
+              timestamp,
+              index,
+            ),
+          )
       }
       this.beforeCreateCommit?.()
       await transaction.done
@@ -194,7 +214,7 @@ export class IndexedDbProjectRepository implements ProjectRepository {
 
   async getProject(id: string): Promise<ProjectAggregate | null> {
     const transaction = this.database.transaction(
-      ['projects', 'taxonomyVersions', 'instructions', 'tasks'],
+      ['projects', 'taxonomyVersions', 'instructions', 'tasks', 'annotations'],
       'readonly',
     )
     const project = await transaction.objectStore('projects').get(id)
@@ -406,13 +426,14 @@ export class IndexedDbProjectRepository implements ProjectRepository {
 
   async deleteProject(projectId: string): Promise<void> {
     const transaction = this.database.transaction(
-      ['projects', 'taxonomyVersions', 'instructions', 'tasks'],
+      ['projects', 'taxonomyVersions', 'instructions', 'tasks', 'annotations'],
       'readwrite',
     ) as ProjectTransaction
     try {
       await deleteAllByProject(transaction, 'taxonomyVersions', projectId)
       await deleteAllByProject(transaction, 'instructions', projectId)
       await deleteAllByProject(transaction, 'tasks', projectId)
+      await deleteAllByProject(transaction, 'annotations', projectId)
       await transaction.objectStore('projects').delete(projectId)
       await transaction.done
     } catch (error) {
@@ -447,8 +468,25 @@ export class IndexedDbProjectRepository implements ProjectRepository {
       const project = await transaction.objectStore('projects').get(projectId)
       if (!project) throw new Error('Project not found.')
       const timestamp = this.now()
-      const records = candidates.map((candidate) =>
-        taskFromCandidate(projectId, candidate, this.uuid(), timestamp),
+      const existing = await transaction
+        .objectStore('tasks')
+        .index('by-project')
+        .getAll(projectId)
+      const firstImportOrder = Math.max(
+        existing.length,
+        existing.reduce(
+          (highest, task) => Math.max(highest, task.importOrder ?? -1),
+          -1,
+        ) + 1,
+      )
+      const records = candidates.map((candidate, index) =>
+        taskFromCandidate(
+          projectId,
+          candidate,
+          this.uuid(),
+          timestamp,
+          firstImportOrder + index,
+        ),
       )
       for (const record of records)
         await transaction.objectStore('tasks').add(record)
@@ -499,13 +537,20 @@ export class IndexedDbProjectRepository implements ProjectRepository {
 
   async deleteTasks(projectId: string, taskIds: string[]): Promise<void> {
     const transaction = this.database.transaction(
-      ['projects', 'tasks'],
+      ['projects', 'tasks', 'annotations'],
       'readwrite',
     )
     for (const id of taskIds) {
       const task = await transaction.objectStore('tasks').get(id)
       if (!task || task.projectId !== projectId)
         throw new Error('Task not found.')
+      const annotation = await transaction
+        .objectStore('annotations')
+        .index('by-task')
+        .get(id)
+      if (annotation) {
+        await transaction.objectStore('annotations').delete(annotation.id)
+      }
       await transaction.objectStore('tasks').delete(id)
     }
     const project = await transaction.objectStore('projects').get(projectId)
@@ -520,21 +565,175 @@ export class IndexedDbProjectRepository implements ProjectRepository {
     projectId: string,
     taskId: string,
     source: TaskRecord['primaryMedia'],
-    replacement = false,
+    selection: RelinkSelection,
   ): Promise<void> {
     const task = await this.database.get('tasks', taskId)
     if (!task || task.projectId !== projectId)
       throw new Error('Task not found.')
-    const path = source.kind === 'file-handle' ? source.relativePath : undefined
-    if (!replacement && task.relativePath && path && task.relativePath !== path)
-      throw new Error(
-        'Selected source does not match this task. Confirm a replacement to continue.',
-      )
+    assertRelinkSelectionMatchesTask(task, selection)
     await this.database.put('tasks', {
       ...task,
       primaryMedia: source,
       updatedAt: this.now(),
     })
+  }
+
+  async getAnnotation(taskId: string): Promise<AnnotationDocument | null> {
+    const annotation = await this.database.getFromIndex(
+      'annotations',
+      'by-task',
+      taskId,
+    )
+    return annotation ? normalizeAnnotationCardinality(annotation) : null
+  }
+
+  async saveAnnotationDraft(
+    annotation: AnnotationDocument,
+  ): Promise<AnnotationDocument> {
+    annotation = normalizeAnnotationCardinality(annotation)
+    const transaction = this.database.transaction(
+      ['projects', 'tasks', 'annotations'],
+      'readwrite',
+    )
+    const taskStore = transaction.objectStore('tasks')
+    const annotationStore = transaction.objectStore('annotations')
+    const task = await taskStore.get(annotation.taskId)
+    if (!task || task.projectId !== annotation.projectId) {
+      throw new Error('Task not found.')
+    }
+    if (task.status === 'submitted') {
+      throw new Error('Reopen this submitted task before editing it.')
+    }
+    const existing = await annotationStore
+      .index('by-task')
+      .get(annotation.taskId)
+    if (
+      existing?.taxonomyVersionId !== undefined &&
+      existing.taxonomyVersionId !== annotation.taxonomyVersionId
+    ) {
+      throw new Error('This draft is pinned to a different taxonomy version.')
+    }
+    if (existing && annotation.revision < existing.revision) {
+      throw new Error('A newer draft revision is already saved.')
+    }
+    if (
+      existing &&
+      annotation.revision === existing.revision &&
+      JSON.stringify({ ...annotation, updatedAt: existing.updatedAt }) !==
+        JSON.stringify(existing)
+    ) {
+      throw new Error('A conflicting draft revision is already saved.')
+    }
+    if (existing && annotation.revision === existing.revision) {
+      await transaction.done
+      return existing
+    }
+    const timestamp = this.now()
+    const project = await transaction
+      .objectStore('projects')
+      .get(task.projectId)
+    if (!project) throw new Error('Project not found.')
+    if (
+      !existing &&
+      project.activeTaxonomyVersionId !== annotation.taxonomyVersionId
+    ) {
+      throw new Error(
+        'The active taxonomy changed before this first draft was saved. Reload the task before editing.',
+      )
+    }
+    const saved = { ...annotation, updatedAt: timestamp }
+    await annotationStore.put(saved)
+    if (task.status === 'unstarted') {
+      await taskStore.put({ ...task, status: 'draft', updatedAt: timestamp })
+    }
+    await transaction
+      .objectStore('projects')
+      .put({ ...project, updatedAt: timestamp })
+    await transaction.done
+    return saved
+  }
+
+  async submitAnnotation(
+    annotation: AnnotationDocument,
+  ): Promise<AnnotationDocument> {
+    annotation = normalizeAnnotationCardinality(annotation)
+    const transaction = this.database.transaction(
+      ['projects', 'tasks', 'annotations'],
+      'readwrite',
+    )
+    const taskStore = transaction.objectStore('tasks')
+    const annotationStore = transaction.objectStore('annotations')
+    const task = await taskStore.get(annotation.taskId)
+    if (!task || task.projectId !== annotation.projectId) {
+      throw new Error('Task not found.')
+    }
+    if (!canTransitionTask(task.status, 'submitted')) {
+      throw new Error(`Cannot submit a ${task.status} task.`)
+    }
+    const existing = await annotationStore
+      .index('by-task')
+      .get(annotation.taskId)
+    if (
+      existing &&
+      existing.taxonomyVersionId !== annotation.taxonomyVersionId
+    ) {
+      throw new Error(
+        'This annotation is pinned to a different taxonomy version.',
+      )
+    }
+    if (existing && annotation.revision < existing.revision) {
+      throw new Error('A newer draft revision is already saved.')
+    }
+    const timestamp = this.now()
+    const project = await transaction
+      .objectStore('projects')
+      .get(task.projectId)
+    if (!project) throw new Error('Project not found.')
+    if (
+      !existing &&
+      project.activeTaxonomyVersionId !== annotation.taxonomyVersionId
+    ) {
+      throw new Error(
+        'The active taxonomy changed before this annotation was submitted. Reload the task before submitting.',
+      )
+    }
+    const submitted: AnnotationDocument = {
+      ...annotation,
+      revision: Math.max(annotation.revision, existing?.revision ?? 0) + 1,
+      updatedAt: timestamp,
+      submittedAt: timestamp,
+    }
+    await annotationStore.put(submitted)
+    await taskStore.put({ ...task, status: 'submitted', updatedAt: timestamp })
+    await transaction
+      .objectStore('projects')
+      .put({ ...project, updatedAt: timestamp })
+    await transaction.done
+    return submitted
+  }
+
+  async skipTask(projectId: string, taskId: string): Promise<void> {
+    const transaction = this.database.transaction(
+      ['projects', 'tasks'],
+      'readwrite',
+    )
+    const task = await transaction.objectStore('tasks').get(taskId)
+    if (!task || task.projectId !== projectId) {
+      throw new Error('Task not found.')
+    }
+    if (!canTransitionTask(task.status, 'skipped')) {
+      throw new Error(`Cannot skip a ${task.status} task.`)
+    }
+    const timestamp = this.now()
+    await transaction
+      .objectStore('tasks')
+      .put({ ...task, status: 'skipped', updatedAt: timestamp })
+    const project = await transaction.objectStore('projects').get(projectId)
+    if (project)
+      await transaction
+        .objectStore('projects')
+        .put({ ...project, updatedAt: timestamp })
+    await transaction.done
   }
 
   private async requireProject(id: string): Promise<Project> {

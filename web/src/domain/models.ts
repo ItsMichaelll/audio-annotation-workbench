@@ -2,6 +2,7 @@ export const PROJECT_SCHEMA_VERSION = 1 as const
 export const TAXONOMY_RECORD_SCHEMA_VERSION = 1 as const
 export const INSTRUCTIONS_SCHEMA_VERSION = 1 as const
 export const TASK_SCHEMA_VERSION = 1 as const
+export const ANNOTATION_SCHEMA_VERSION = 1 as const
 
 export type ProjectStatus = 'active' | 'archived'
 
@@ -62,6 +63,10 @@ export type TaskStatus = (typeof TASK_STATUSES)[number]
 
 export type MediaPermissionState = 'granted' | 'prompt' | 'denied' | 'unknown'
 
+export type TaskSourceIdentity =
+  | { kind: 'direct-file'; filename: string; size: number }
+  | { kind: 'manifest'; relativePath: string }
+
 export type MediaSourceReference =
   | {
       kind: 'file-handle'
@@ -92,9 +97,42 @@ export interface TaskRecord {
   displayName?: string
   relativePath?: string
   primaryMedia: MediaSourceReference
+  /** Persisted identity used to verify user-selected relinking files. */
+  sourceIdentity?: TaskSourceIdentity
   metadata: Record<string, unknown>
+  /** Stable persisted import position. Older records use a deterministic fallback. */
+  importOrder?: number
   createdAt: string
   updatedAt: string
+}
+
+export interface LabelAssignment {
+  labelId: string
+  severity?: string
+  confidence?: string
+}
+
+export interface RegionAnnotation {
+  id: string
+  start: number
+  end: number
+  assignments: LabelAssignment[]
+  notes?: string
+}
+
+export interface AnnotationDocument {
+  id: string
+  schemaVersion: typeof ANNOTATION_SCHEMA_VERSION
+  projectId: string
+  taskId: string
+  taxonomyVersionId: string
+  revision: number
+  regions: RegionAnnotation[]
+  clipAssignments: LabelAssignment[]
+  taskNotes?: string
+  createdAt: string
+  updatedAt: string
+  submittedAt?: string
 }
 
 export interface TaskProgress {

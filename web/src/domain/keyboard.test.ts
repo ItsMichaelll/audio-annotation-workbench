@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { keyboardCommand } from './keyboard'
+import {
+  isEditableElement,
+  keyboardCommand,
+  labelingShortcut,
+} from './keyboard'
 
 describe('keyboard command mapping', () => {
   it('maps fine and coarse navigation', () => {
@@ -31,8 +35,43 @@ describe('keyboard command mapping', () => {
     })
   })
 
+  it('maps Ctrl+Left and Ctrl+Right to chronological region navigation', () => {
+    expect(keyboardCommand({ key: 'ArrowLeft', ctrlKey: true })).toEqual({
+      type: 'navigate-region',
+      direction: 'previous',
+    })
+    expect(keyboardCommand({ key: 'ArrowRight', ctrlKey: true })).toEqual({
+      type: 'navigate-region',
+      direction: 'next',
+    })
+  })
+
   it('does not claim modified application shortcuts', () => {
     expect(keyboardCommand({ key: 'f', ctrlKey: true })).toBeNull()
     expect(keyboardCommand({ key: 'a', altKey: true })).toBeNull()
+  })
+
+  it('maps submission workflow commands and taxonomy label shortcuts', () => {
+    expect(keyboardCommand({ key: 'Enter', ctrlKey: true })).toEqual({
+      type: 'submit-next',
+    })
+    expect(
+      keyboardCommand({ key: 'Enter', ctrlKey: true, shiftKey: true }),
+    ).toEqual({ type: 'skip-next' })
+    expect(
+      labelingShortcut({ key: '1' }, [{ id: 'noise', shortcut: '1' }]),
+    ).toBe('noise')
+    expect(
+      labelingShortcut({ key: '1', ctrlKey: true }, [
+        { id: 'noise', shortcut: '1' },
+      ]),
+    ).toBeNull()
+  })
+
+  it('guards inputs, textareas, selects, buttons, and editable elements', () => {
+    for (const tag of ['input', 'textarea', 'select', 'button'])
+      expect(isEditableElement(tag)).toBe(true)
+    expect(isEditableElement('div', true)).toBe(true)
+    expect(isEditableElement('div')).toBe(false)
   })
 })

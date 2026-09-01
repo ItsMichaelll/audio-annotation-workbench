@@ -14,24 +14,29 @@ original locations.
 ## Decision
 
 Use React Router in declarative library mode for dashboard, creation, detail,
-editing, and transitional standalone-editor routes. The URL owns navigation
+editing, project-task annotation, and standalone-editor routes. The URL owns navigation
 state, so direct navigation and browser history use normal web semantics.
 
 Use IndexedDB as the structured project database. Database
-`audio-annotation-workbench`, schema version 2, owns four object stores:
+`audio-annotation-workbench`, schema version 3, owns five object stores:
 
 - `projects`, indexed by status and update time
 - `taxonomyVersions`, indexed by project and project-local version
 - `instructions`, uniquely indexed by project
 - `tasks`, indexed by project, project/status, project/update time, and safe
   project-relative source path (the additive version-2 migration)
+- `annotations`, indexed by project and uniquely by task (the additive version-3
+  migration)
 
 The typed repository owns all database access. Multi-record integrity changes
 use explicit transactions: project creation writes its initial taxonomy and
 optional instructions atomically; taxonomy replacement writes a new immutable
 version and updates the active reference atomically; instruction changes update
 the project reference atomically; deletion removes every associated record in
-one transaction.
+one transaction. Draft saves write the annotation and first `draft` task status
+together; submissions write the final annotation revision, submitted timestamp,
+and `submitted` task status together. Project and task deletion remove associated
+annotations in their transactions.
 
 Schema versions for persisted records are centralized in domain models. Database
 upgrades are ordered by the previous database version in the `upgrade` callback.
@@ -57,5 +62,5 @@ targets, and protect links opened in a new tab.
   milestone.
 - File System Access API support and handle permission behavior vary by browser.
 - Static production hosting must return `index.html` for application routes.
-- The standalone editor remains at `/editor` until project tasks are connected
-  to the annotation workspace.
+- The standalone editor remains at `/editor` for direct waveform testing and is
+  independent from project-task annotation persistence.

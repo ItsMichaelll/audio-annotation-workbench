@@ -1,8 +1,8 @@
 # Frontend architecture
 
 Audio Annotation Workbench is a browser-only React application with two current
-product layers: durable project management and the transitional standalone audio
-editor. No project or audio data is sent over a network.
+product layers: durable project management, a persisted annotation workspace,
+and the standalone audio editor. No project or audio data is sent over a network.
 
 ## Application boundaries
 
@@ -11,6 +11,8 @@ editor. No project or audio data is sent over a network.
 - `storage/` owns the IndexedDB schema, upgrades, repository, transactions, and
   browser storage durability checks.
 - `features/projects/` owns project queries, actions, and routed screens.
+- `features/annotation/` owns task loading, autosave, validation, queue
+  navigation, and the taxonomy-driven inspector.
 - `features/waveform/` owns WaveSurfer lifecycle, official plugins, pointer
   gestures, waveform/spectrogram viewport synchronization, and teardown.
 - `features/analysis/` owns the guarded shared Web Audio graph and its single
@@ -26,7 +28,7 @@ stale async updates. Forms prepare and validate files before repository writes.
 ## Routing
 
 React Router provides `/`, `/projects`, `/projects/new`, project detail and edit
-paths, and `/editor`. Navigation uses links and route parameters rather than
+paths, `/projects/:projectId/tasks/:taskId/annotate`, and `/editor`. Navigation uses links and route parameters rather than
 component-local page state. Unknown routes and missing IndexedDB projects render
 distinct states. Browser back and forward navigation follows URL history.
 
@@ -35,8 +37,8 @@ must route application paths to `index.html`.
 
 ## IndexedDB ownership
 
-Database `audio-annotation-workbench`, version 2, contains `projects`,
-`taxonomyVersions`, `instructions`, and `tasks`. Database access is confined to
+Database `audio-annotation-workbench`, version 3, contains `projects`,
+`taxonomyVersions`, `instructions`, `tasks`, and `annotations`. Database access is confined to
 `storage/`; React components do not open stores or transactions.
 
 The database upgrade callback applies migrations in ascending version order.
@@ -47,6 +49,8 @@ Version 1 creates:
 - one optional instruction record per project
 - task records by UUID, project, project/status, project/update time, and
   project-relative source path (added by the forward version-2 migration)
+- annotation documents by UUID, project, and unique task (added by the forward
+  version-3 migration without rewriting version-2 records)
 
 All record models carry centralized schema versions independently from the
 IndexedDB schema version. Database versions describe physical storage changes;
@@ -58,6 +62,9 @@ Operations that must preserve cross-store integrity are transactional:
 - taxonomy version creation + active project reference update
 - instruction replacement/removal + project reference update
 - project + associated taxonomy, instructions, and task deletion
+- first draft + task transition to `draft`
+- submission revision + task transition to `submitted`
+- task deletion + associated annotation deletion
 
 Creation aborts without partial records. Deletion uses project-scoped indexes and
 never performs filesystem operations.
@@ -74,8 +81,10 @@ hash, local version number, and created timestamp. Updating a taxonomy appends a
 record and changes the active reference; it never rewrites history. A matching
 project content hash suppresses duplicate versions.
 
-Detailed label semantics are deferred until annotation integration. This avoids
-locking the persistence format to an unvalidated taxonomy contract.
+Annotation taxonomy version one defines stable labels, region/clip scopes,
+optional presentation metadata and shortcuts, and optional severity/confidence
+scales. Each annotation pins the immutable taxonomy version used by its first
+draft, so active-taxonomy replacement does not reinterpret existing work.
 
 ## Markdown security
 
@@ -106,9 +115,11 @@ IndexedDB or OPFS.
 
 ## Waveform and analysis ownership
 
-The standalone editor owns selected `File` objects and revocable object URLs.
-WaveSurfer region instances remain a rendering layer; serializable region
-metadata and snapshot history stay separate.
+The standalone editor and task workspace own selected `File` objects and
+revocable object URLs. WaveSurfer region instances remain a rendering layer;
+serializable annotation documents and snapshot history stay separate. Restored
+state synchronization is suppressed from history, while completed region edits
+and metadata changes share undo/redo and flow through normal draft autosave.
 
 The waveform creates one WaveSurfer instance and uses official Timeline,
 Minimap, Regions, Zoom, Hover, and Spectrogram plugins. Pure synchronization

@@ -11,14 +11,17 @@ into the project database.
 
 ## Current implementation
 
-The project-foundation milestone adds the application structure around the
+The annotation-workspace milestone connects the project task queue to the
 existing audio workbench:
 
 - Persistent active and archived projects
 - Project creation, detail, editing, restoration, and deliberate deletion
 - Required JSON or YAML taxonomies with immutable local version history
 - Optional Markdown instructions with safe rendering
-- Task ingestion, import preview, task management, and relinking foundations
+- Task ingestion, import preview, task management, and local-source relinking
+- Taxonomy-driven region and clip labels, configured scales, notes, and shortcuts
+- Debounced local drafts, unified annotation undo/redo, validation, and submission
+- Stable task ordering with skip, submit-next, read-only submission, and reopening
 - Browser storage durability reporting
 - A transitional standalone editor at `/editor`
 
@@ -33,8 +36,8 @@ The standalone editor retains its existing functionality:
 - Standards-oriented loudness and true-peak metering
 - File and selected-region loudness analysis through a shared Web Audio graph
 
-Project-based labeling remains intentionally deferred. Projects can now be
-created empty or with preflighted tasks, then managed from project detail.
+The standalone `/editor` route remains available for direct local-file waveform
+testing without creating a project.
 
 ## Application structure
 
@@ -45,8 +48,7 @@ The completed product is organized into four primary areas:
 2. **Project creation and editing** — project metadata, taxonomy versions,
    Markdown instructions, archive state, and deletion.
 3. **Project detail and task manager** — project status, task import and
-   filtering, progress, annotation export, backup, and restoration. The current
-   milestone implements the project summary and task zero state.
+   filtering, stable queue order, progress, and labeling entry actions.
 4. **Annotation workspace** — the existing waveform and analysis tools combined
    with task navigation, taxonomy-driven labels, instructions, validation,
    autosaved drafts, and submission controls.
@@ -59,6 +61,7 @@ The completed product is organized into four primary areas:
 | `/projects/new` | Project creation |
 | `/projects/:projectId` | Project detail |
 | `/projects/:projectId/edit` | Project editing |
+| `/projects/:projectId/tasks/:taskId/annotate` | Task annotation workspace |
 | `/editor` | Transitional standalone audio workbench |
 
 Unknown routes and unknown project IDs show explicit recovery states. React
@@ -67,7 +70,7 @@ production static hosting must serve `index.html` for these application paths.
 
 ## Persistence and data ownership
 
-IndexedDB database `audio-annotation-workbench` is currently schema version 2.
+IndexedDB database `audio-annotation-workbench` is currently schema version 3.
 It contains:
 
 | Store | Responsibility |
@@ -75,13 +78,14 @@ It contains:
 | `projects` | Project identity, metadata, status, and active record references |
 | `taxonomyVersions` | Immutable project-local taxonomy versions and source text |
 | `instructions` | Optional raw Markdown instructions |
-| `tasks` | Future-compatible task records and status indexes |
+| `tasks` | Task source, stable import order, lifecycle status, and indexes |
+| `annotations` | Versioned drafts and submissions, uniquely indexed by task |
 
 The typed repository is independent of React and owns database initialization,
-migrations, queries, and writes. Project creation and deletion are transactional.
-Taxonomy and instruction changes atomically update their corresponding project
-references. Errors propagate to the UI instead of being treated as successful
-writes.
+migrations, queries, and writes. Project and task deletion remove associated
+annotations. Draft creation atomically moves an unstarted task to draft;
+submission atomically writes the submitted annotation and task status. Errors
+propagate to the UI instead of being treated as successful writes.
 
 Persisted models use stable UUIDs and ISO 8601 timestamps. Names are presentation
 values and never database keys. Project, taxonomy-record, instruction, and task
@@ -98,10 +102,45 @@ See [frontend architecture](docs/architecture.md) and
 
 ## Taxonomy versions
 
-Project creation requires a `.json`, `.yaml`, or `.yml` taxonomy no larger than
-1 MB. The parser requires an object at the document root and extracts optional
-`name` and `schema_version` metadata without imposing the future annotation
-contract.
+Project creation requires an annotation-capable `.json`, `.yaml`, or `.yml`
+taxonomy no larger than 1 MB. Version one requires `schemaVersion: 1` and at
+least one label with a unique stable ID and name. Omitted label scopes default
+to `region`; supported scopes are `region` and `clip`.
+
+```yaml
+schemaVersion: 1
+labels:
+  - id: background-noise
+    name: Background noise
+    description: Sustained unwanted environmental sound
+    scopes: [region, clip]
+    color: "#4f8cff"
+    shortcut: "1"
+scales:
+  severity:
+    required: false
+    options:
+      - value: minor
+        label: Minor
+      - value: moderate
+        label: Moderate
+      - value: severe
+        label: Severe
+  confidence:
+    required: false
+    options:
+      - value: low
+        label: Low
+      - value: medium
+        label: Medium
+      - value: high
+        label: High
+```
+
+Validation rejects duplicate label IDs, invalid scopes and colors, conflicting
+shortcuts, malformed scales, and duplicate scale option values. Existing
+projects with an older incompatible taxonomy remain intact and direct users to
+upload a replacement before starting a new annotation.
 
 Each record preserves:
 
@@ -113,6 +152,8 @@ Each record preserves:
 Replacing a taxonomy creates a new immutable record and changes the project's
 active reference. Identical content is detected by hash and does not create a
 duplicate version. Earlier versions remain available in project history.
+The first saved draft pins its annotation to the then-active taxonomy version;
+later replacements do not reinterpret drafts or submissions.
 
 Uploaded content is parsed as data. It is never executed or evaluated.
 
@@ -147,6 +188,30 @@ query and request behavior, missing or moved files, unresolved references, and
 future fallback adapters. This allows File System Access API handles, a local
 companion service, or a desktop wrapper to be added later without rewriting
 project and annotation domain logic.
+
+The annotation workspace queries saved-handle permission without prompting.
+Permission requests and relinking occur only after a user action. Resolved files
+receive short-lived object URLs that are revoked on task changes and teardown.
+Audio bytes, object URLs, waveform peaks, spectrogram data, and analysis results
+are never written to IndexedDB.
+
+## Labeling workflow and local drafts
+
+`Start Labeling` opens the first actionable task in persisted import order.
+Task-row actions open new work, continue drafts or reopened submissions, and
+show submitted work read-only. `Skip & Next` and `Submit & Next` wrap through
+the remaining actionable queue; completion returns to current project progress.
+
+Meaningful annotation edits are debounced to IndexedDB. The workspace reports
+Unsaved, Saving, Saved, or Save failed and flushes pending work before controlled
+navigation. Failed required saves stop navigation. Revision checks prevent an
+older asynchronous save from overwriting newer state. Reopening a submitted task
+preserves its annotation and permits another draft/submission cycle.
+
+Submission rejects unlabeled regions, missing or wrong-scope labels, missing
+required scale values, invalid timing, duplicate assignments, and unresolved
+save failures. A reviewed task with no regions or clip labels requires explicit
+confirmation before submission.
 
 ## Development
 
@@ -184,6 +249,7 @@ fixture rules.
 | Space | Play or pause |
 | Left / Right | Move playhead 50 ms |
 | Shift + Left / Right | Move playhead 250 ms |
+| Ctrl + Left / Right | Select and reveal the previous / next region |
 | A / D | Move backward / forward 1 second |
 | Home / End | Move to file start / end |
 | F | Fit the complete waveform |
@@ -194,6 +260,11 @@ fixture rules.
 | Ctrl + Z | Undo region edit |
 | Ctrl + Y or Ctrl + Shift + Z | Redo region edit |
 
+The project-task workspace retains these controls and adds taxonomy-configured
+single-key label toggles, `Ctrl + Enter` for Submit & Next, and
+`Ctrl + Shift + Enter` for Skip & Next. Labeling and workflow shortcuts are
+ignored while an input, textarea, select, button, or editable element has focus.
+
 ### Pointer
 
 | Gesture | Action |
@@ -203,7 +274,7 @@ fixture rules.
 | Double-click region | Play that region |
 | Wheel over waveform or minimap | Zoom around pointer |
 | Alt + wheel | Scale waveform height |
-| Shift + wheel | Nudge hovered or selected region |
+| Shift + wheel | Pan, or nudge the selected region |
 | Middle drag or Alt + left drag | Pan horizontally |
 | Drag minimap viewport or scrollbar | Pan synchronized views |
 
@@ -230,7 +301,7 @@ measurement details.
 - Duplicate, missing-file, and conflict detection with import preview
 - Task table, filters, sorting, status counts, and navigation
 
-### 3. Annotation-workspace integration
+### 3. Annotation-workspace integration — implemented
 
 - Project task loading in the existing editor
 - Back-to-project and task navigation
@@ -247,6 +318,11 @@ measurement details.
 - Project backup import, validation, and restoration
 
 ### Later capabilities
+
+Planned local authoring tools include:
+
+- In-browser taxonomy YAML editing through both a raw text editor and a user-friendly structured editor
+- In-browser instructions Markdown editing through a text editor
 
 Quality review, reviewer assignment, collaboration, authentication, cloud
 storage, inter-annotator agreement, and ML-assisted labeling remain explicitly
