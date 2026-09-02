@@ -139,7 +139,7 @@ function LoadedInstructionsEditor({
         )}
 
         <div className="configuration-toolbar">
-          <span className="muted-copy">{filename} · 512 KB maximum</span>
+          <span className="muted-copy">{filename} · 512 KB maximum file size</span>
           <div className="configuration-toolbar__actions">
             <button
               type="button"
@@ -209,9 +209,13 @@ function LoadedInstructionsEditor({
             {source ? (
               <MarkdownInstructions markdown={source} />
             ) : (
-              <p className="muted-copy">
-                No instructions. Start typing Markdown to preview it here.
-              </p>
+              <div className="task-empty-state">
+                <h3>No instructions have been added.</h3>
+                <p className="muted-copy">
+                  Add instructions to help annotators understand the project and
+                  the tasks.
+                </p>
+              </div>
             )}
           </section>
         </div>

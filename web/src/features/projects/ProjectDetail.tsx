@@ -23,6 +23,7 @@ import { MarkdownInstructions } from './MarkdownInstructions'
 import { PageNotice, ProjectLayout, ProjectPageState } from './ProjectLayout'
 import { useProject } from './projectHooks'
 import { TaskImport } from './TaskImport'
+import { ProjectDataPortability } from './ProjectDataPortability'
 
 function messageFrom(error: unknown): string {
   return error instanceof Error ? error.message : 'The operation failed.'
@@ -617,7 +618,7 @@ export function ProjectDetail() {
           </div>
         </section>
 
-        <section className="detail-section">
+        <section className="detail-section instructions-section">
           <div className="section-heading">
             <div>
               <p className="eyebrow">Reference</p>
@@ -643,9 +644,20 @@ export function ProjectDetail() {
           {instructions ? (
             <MarkdownInstructions markdown={instructions.rawMarkdown} />
           ) : (
-            <p className="muted-copy">No instructions have been added.</p>
+            <div className="task-empty-state">
+              <h3>No instructions have been added.</h3>
+              <p className="muted-copy">
+                Add instructions to help annotators understand the project and
+                the tasks.
+              </p>
+            </div>
           )}
         </section>
+
+        <ProjectDataPortability
+          projectId={project.id}
+          projectName={project.name}
+        />
 
         <section className="danger-zone">
           <div>

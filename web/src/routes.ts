@@ -2,6 +2,7 @@ export const APP_ROUTES = {
   dashboard: '/',
   projects: '/projects',
   newProject: '/projects/new',
+  restoreProject: '/projects/restore',
   project: '/projects/:projectId',
   editProject: '/projects/:projectId/edit',
   editTaxonomy: '/projects/:projectId/taxonomy',

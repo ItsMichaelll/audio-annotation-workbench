@@ -128,10 +128,17 @@ export function downloadText(
   filename: string,
   type: string,
 ): void {
-  const url = URL.createObjectURL(new Blob([source], { type }))
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = filename
-  anchor.click()
-  URL.revokeObjectURL(url)
+  let url: string | null = null
+  try {
+    url = URL.createObjectURL(new Blob([source], { type }))
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = filename
+    anchor.click()
+  } finally {
+    if (url) {
+      const revokeUrl = url
+      window.setTimeout(() => URL.revokeObjectURL(revokeUrl), 0)
+    }
+  }
 }

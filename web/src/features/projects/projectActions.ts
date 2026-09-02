@@ -4,7 +4,11 @@ import type {
   PreparedInstructions,
   PreparedTaxonomy,
 } from '../../domain/uploads'
-import { getProjectRepository } from '../../storage/projectRepository'
+import {
+  getProjectRepository,
+  ProjectRestoreCollisionError,
+} from '../../storage/projectRepository'
+import type { ProjectBackup } from '../../domain/projectBackup'
 
 export interface ProjectFormValues {
   name: string
@@ -84,4 +88,24 @@ export async function setTaskStatus(
 
 export async function deleteProjectTasks(projectId: string, taskIds: string[]) {
   return (await getProjectRepository()).deleteTasks(projectId, taskIds)
+}
+
+export async function loadProjectBackupRecords(projectId: string) {
+  return (await getProjectRepository()).getProjectBackupRecords(projectId)
+}
+
+export async function restoreProjectBackup(
+  backup: ProjectBackup,
+  replaceExisting = false,
+) {
+  return (await getProjectRepository()).restoreProjectBackup(
+    backup,
+    replaceExisting,
+  )
+}
+
+export function isProjectRestoreCollision(
+  error: unknown,
+): error is ProjectRestoreCollisionError {
+  return error instanceof ProjectRestoreCollisionError
 }

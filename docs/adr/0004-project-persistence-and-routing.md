@@ -58,9 +58,16 @@ targets, and protect links opened in a new tab.
 
 - Projects survive refreshes without a backend, but remain browser-profile data.
 - Storage can still be evicted unless the browser grants durable storage.
-- Browser persistence is not a backup. Export and restoration remain a later
-  milestone.
+- Browser persistence is not a backup. Export and restoration were subsequently
+  implemented by ADR 0005.
 - File System Access API support and handle permission behavior vary by browser.
 - Static production hosting must return `index.html` for application routes.
 - The standalone editor remains at `/editor` for direct waveform testing and is
   independent from project-task annotation persistence.
+
+## Amendment
+
+Database version 3 was current when this decision was written. Version 4 later
+normalized legacy region-label cardinality without adding stores or indexes.
+ADR 0005 adds portable export and atomic restoration while preserving this
+document's original persistence context.

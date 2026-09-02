@@ -42,13 +42,12 @@ export function ProjectDashboard() {
     setRequestingStorage(true)
     setStorageError(null)
     try {
-      setDurability(await requestPersistentStorage())
-    } catch (error) {
-      setStorageError(
-        error instanceof Error
-          ? error.message
-          : 'The browser did not complete the storage request.',
-      )
+      const result = await requestPersistentStorage()
+      setDurability(result)
+      if (result !== 'persistent')
+        setStorageError('Unable to grant persistent storage.')
+    } catch {
+      setStorageError('Unable to grant persistent storage.')
     } finally {
       setRequestingStorage(false)
     }
@@ -61,6 +60,9 @@ export function ProjectDashboard() {
           <Link className="button-link" to="/editor">
             Standalone editor
           </Link>
+          <Link className="button-link" to="/projects/restore">
+            Restore backup
+          </Link>
           <Link className="button-link button-link--primary" to="/projects/new">
             New Project
           </Link>
@@ -72,10 +74,7 @@ export function ProjectDashboard() {
           <div>
             <p className="eyebrow">Project library</p>
             <h1>Projects</h1>
-            <p>
-              Organize taxonomies and instructions locally before importing
-              audio tasks.
-            </p>
+            <p>View and manage your projects.</p>
           </div>
           <div className="segmented-control" aria-label="Project status filter">
             <button
@@ -110,21 +109,23 @@ export function ProjectDashboard() {
           <PageNotice title="Browser storage is not guaranteed" tone="warning">
             <p>
               This browser may evict local project data under storage pressure.
-              Browser persistence is not a substitute for the backup workflow
-              planned for a later milestone.
+              Browser persistence is not a substitute for downloading project
+              backups regularly.
             </p>
-            <button
-              type="button"
-              onClick={() => void requestDurability()}
-              disabled={requestingStorage}
-            >
-              {requestingStorage ? 'Requesting…' : 'Request durable storage'}
-            </button>
-          </PageNotice>
-        )}
-        {storageError && (
-          <PageNotice title="Storage request failed" tone="error">
-            <p>{storageError}</p>
+            <div className="storage-request-action">
+              <button
+                type="button"
+                onClick={() => void requestDurability()}
+                disabled={requestingStorage}
+              >
+                {requestingStorage ? 'Requesting…' : 'Request durable storage'}
+              </button>
+              {storageError && (
+                <span className="storage-request-error" role="alert">
+                  {storageError}
+                </span>
+              )}
+            </div>
           </PageNotice>
         )}
 
@@ -147,7 +148,7 @@ export function ProjectDashboard() {
             </h2>
             <p>
               {status === 'active'
-                ? 'A project starts with a name and versioned taxonomy. Task import arrives in the next milestone.'
+                ? 'Create a project or restore a validated backup to continue a local-first annotation workflow.'
                 : 'Archived projects remain available here and can be restored at any time.'}
             </p>
             {status === 'active' && (
