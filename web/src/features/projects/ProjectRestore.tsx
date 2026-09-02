@@ -12,6 +12,8 @@ import {
 import { projectPath } from '../../routes'
 import { formatTimestamp } from './format'
 import { PageNotice, ProjectLayout } from './ProjectLayout'
+import layoutStyles from './ProjectLayout.module.css'
+import styles from './ProjectRestore.module.css'
 import {
   isProjectRestoreCollision,
   restoreProjectBackup,
@@ -30,37 +32,41 @@ export function ProjectRestorePreview({
 }) {
   const counts = backupRecordCounts(backup)
   return (
-    <section className="detail-section restore-preview">
-      <div className="section-heading">
+    <section className={styles.preview}>
+      <div className={styles.sectionHeading}>
         <div>
-          <p className="eyebrow">Validated preview</p>
-          <h2>{backup.project.name}</h2>
+          <p className={`${layoutStyles.eyebrow} ${styles.eyebrow}`}>
+            Validated preview
+          </p>
+          <h2 className={styles.sectionTitle}>{backup.project.name}</h2>
         </div>
       </div>
-      <dl className="restore-counts">
-        <div>
-          <dt>Exported</dt>
-          <dd>{formatTimestamp(backup.exportedAt)}</dd>
+      <dl className={styles.counts}>
+        <div className={styles.count}>
+          <dt className={styles.countLabel}>Exported</dt>
+          <dd className={styles.countValue}>
+            {formatTimestamp(backup.exportedAt)}
+          </dd>
         </div>
-        <div>
-          <dt>Taxonomy versions</dt>
-          <dd>{counts.taxonomyVersions}</dd>
+        <div className={styles.count}>
+          <dt className={styles.countLabel}>Taxonomy versions</dt>
+          <dd className={styles.countValue}>{counts.taxonomyVersions}</dd>
         </div>
-        <div>
-          <dt>Instructions</dt>
-          <dd>{counts.instructions}</dd>
+        <div className={styles.count}>
+          <dt className={styles.countLabel}>Instructions</dt>
+          <dd className={styles.countValue}>{counts.instructions}</dd>
         </div>
-        <div>
-          <dt>Tasks</dt>
-          <dd>{counts.tasks}</dd>
+        <div className={styles.count}>
+          <dt className={styles.countLabel}>Tasks</dt>
+          <dd className={styles.countValue}>{counts.tasks}</dd>
         </div>
-        <div>
-          <dt>Annotations</dt>
-          <dd>{counts.annotations}</dd>
+        <div className={styles.count}>
+          <dt className={styles.countLabel}>Annotations</dt>
+          <dd className={styles.countValue}>{counts.annotations}</dd>
         </div>
-        <div>
-          <dt>Media to relink</dt>
-          <dd>{mediaRelinkCount(backup)}</dd>
+        <div className={styles.count}>
+          <dt className={styles.countLabel}>Media to relink</dt>
+          <dd className={styles.countValue}>{mediaRelinkCount(backup)}</dd>
         </div>
       </dl>
       <Button
@@ -150,20 +156,24 @@ export function ProjectRestore() {
     <ProjectLayout
       actions={<ButtonLink to="/projects">Back to projects</ButtonLink>}
     >
-      <main className="project-page restore-page">
-        <div className="page-heading">
+      <main className={layoutStyles.page}>
+        <div className={layoutStyles.pageHeading}>
           <div>
-            <p className="eyebrow">Recovery</p>
-            <h1>Restore project backup</h1>
-            <p>
+            <p className={layoutStyles.eyebrow}>Recovery</p>
+            <h1 className={layoutStyles.pageHeadingTitle}>
+              Restore project backup
+            </h1>
+            <p className={layoutStyles.pageHeadingDescription}>
               Validate and preview a project backup before writing any browser
               data.
             </p>
           </div>
         </div>
 
-        <section className="detail-section restore-panel">
-          <label htmlFor="backup-file">Project backup JSON</label>
+        <section className={styles.panel}>
+          <label className={styles.fieldLabel} htmlFor="backup-file">
+            Project backup JSON
+          </label>
           <input
             ref={backupInput}
             id="backup-file"
@@ -181,17 +191,19 @@ export function ProjectRestore() {
           >
             {filename ? 'Choose another backup' : 'Choose backup file'}
           </Button>
-          <span style={{ maxWidth: '420px' }}>
-            <p className="muted-copy">Maximum file size: {MAX_SIZE_LABEL}</p>
-            <p className="muted-copy">
+          <span className={styles.helper}>
+            <p className={styles.mutedCopy}>
+              Maximum file size: {MAX_SIZE_LABEL}
+            </p>
+            <p className={styles.mutedCopy}>
               Imported content is treated as untrusted JSON. Source audio is not
               part of a backup.
             </p>
           </span>
           {filename && (
-            <div className="file-selection">
+            <div className={styles.fileSelection}>
               <strong>{filename}</strong>
-              <span>Selected backup</span>
+              <span className={styles.fileSelectionName}>Selected backup</span>
             </div>
           )}
         </section>

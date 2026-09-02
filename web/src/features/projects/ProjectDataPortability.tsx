@@ -19,6 +19,8 @@ import {
 } from '../../domain/projectBackup'
 import { downloadText } from './editorBehavior'
 import { loadProjectBackupRecords } from './projectActions'
+import layoutStyles from './ProjectLayout.module.css'
+import styles from './ProjectDataPortability.module.css'
 
 export function ProjectDataPortability({
   projectId,
@@ -87,18 +89,20 @@ export function ProjectDataPortability({
     })
 
   return (
-    <section className="detail-section portability-section">
-      <div className="section-heading">
+    <section className={styles.section}>
+      <div className={styles.heading}>
         <div>
-          <p className="eyebrow">Data portability</p>
-          <h2>Backup and export</h2>
+          <p className={`${layoutStyles.eyebrow} ${styles.headingEyebrow}`}>
+            Data portability
+          </p>
+          <h2 className={styles.headingTitle}>Backup and export</h2>
         </div>
       </div>
-      <p className="muted-copy">
+      <p className={styles.description}>
         Backups contain project configuration, tasks, and annotations. Source
         audio is never included and must be relinked after restoration.
       </p>
-      <div className="portability-actions">
+      <div className={styles.actions}>
         <Button
           type="button"
           disabled={busy}
@@ -122,12 +126,12 @@ export function ProjectDataPortability({
         <ModalDescription id={descriptionId}>
           Choose a versioned machine-readable export. Audio is not included.
         </ModalDescription>
-        <fieldset className="export-options">
+        <fieldset className={styles.options}>
           <legend>Format</legend>
-          <label>
+          <label className={styles.option}>
             <input
               type="radio"
-              className="export-format-radio"
+              className={styles.radio}
               name="export-format"
               value="jsonl"
               checked={format === 'jsonl'}
@@ -135,10 +139,10 @@ export function ProjectDataPortability({
             />
             JSONL
           </label>
-          <label>
+          <label className={styles.option}>
             <input
               type="radio"
-              className="export-format-radio"
+              className={styles.radio}
               name="export-format"
               value="csv"
               checked={format === 'csv'}
@@ -147,11 +151,12 @@ export function ProjectDataPortability({
             Flattened CSV
           </label>
         </fieldset>
-        <fieldset className="export-options">
+        <fieldset className={styles.options}>
           <legend>Tasks</legend>
-          <label>
+          <label className={styles.option}>
             <input
               type="radio"
+              className={styles.radio}
               name="export-mode"
               value="submitted"
               checked={mode === 'submitted'}
@@ -159,9 +164,10 @@ export function ProjectDataPortability({
             />
             Submitted only
           </label>
-          <label>
+          <label className={styles.option}>
             <input
               type="radio"
+              className={styles.radio}
               name="export-mode"
               value="all"
               checked={mode === 'all'}

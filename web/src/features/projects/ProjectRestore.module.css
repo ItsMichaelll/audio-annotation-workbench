@@ -1,0 +1,87 @@
+.panel,
+.preview {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  margin-bottom: 16px;
+  border: 1px solid var(--border-default);
+  border-radius: 5px;
+  background: var(--surface-panel);
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 630;
+}
+
+.eyebrow {
+  margin-bottom: 4px;
+}
+
+.fieldLabel {
+  color: #cbd2d5;
+  font-size: 11px;
+}
+
+.helper {
+  max-width: 420px;
+}
+
+.mutedCopy {
+  max-width: 510px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.fileSelection {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  margin-top: 10px;
+  border: 1px solid var(--border-default);
+  border-radius: 4px;
+  background: var(--surface-control);
+  font-size: 11px;
+}
+
+.fileSelectionName {
+  flex: 1;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.counts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.count {
+  padding: 10px;
+  border: 1px solid var(--border-default);
+}
+
+.countLabel {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.countValue {
+  margin: 4px 0 0;
+  font-weight: 700;
+}
