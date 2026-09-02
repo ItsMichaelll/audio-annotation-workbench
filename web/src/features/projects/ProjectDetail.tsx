@@ -1,14 +1,22 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
+import { useConfirmation } from '../../components/confirmationContext'
 import { CustomSelect } from '../../components/CustomSelect'
-import { annotationPath, editProjectPath } from '../../routes'
+import { Modal } from '../../components/Modal'
+import {
+  annotationPath,
+  editProjectPath,
+  instructionsEditorPath,
+  taxonomyEditorPath,
+} from '../../routes'
 import { nextActionableTask, orderedTasks } from '../../domain/taskQueue'
 import { parseAnnotationTaxonomy } from '../../domain/annotationTaxonomy'
-import { permanentlyDeleteProject, updateProjectStatus } from './projectActions'
 import {
   deleteProjectTasks,
   importProjectTasks,
+  permanentlyDeleteProject,
   setTaskStatus,
+  updateProjectStatus,
 } from './projectActions'
 import { formatTimestamp } from './format'
 import { MarkdownInstructions } from './MarkdownInstructions'
@@ -23,6 +31,9 @@ function messageFrom(error: unknown): string {
 export function ProjectDetail() {
   const { projectId } = useParams()
   const navigate = useNavigate()
+  const confirm = useConfirmation()
+  const deleteProjectTriggerRef = useRef<HTMLButtonElement>(null)
+  const deleteProjectInputRef = useRef<HTMLInputElement>(null)
   const location = useLocation()
   const completionMessage = (
     location.state as { completionMessage?: string } | null
@@ -38,15 +49,7 @@ export function ProjectDetail() {
   const [page, setPage] = useState(0)
 
   if (state.loading) {
-    return (
-      <ProjectLayout>
-        <main className="project-page">
-          <div className="state-panel" role="status">
-            Loading project…
-          </div>
-        </main>
-      </ProjectLayout>
-    )
+    return <ProjectLayout>{null}</ProjectLayout>
   }
   if (state.error) {
     return (
@@ -88,12 +91,24 @@ export function ProjectDetail() {
   const allPageSelected =
     pageIds.length > 0 && pageIds.every((id) => selectedTasks.includes(id))
   const somePageSelected = pageIds.some((id) => selectedTasks.includes(id))
+
+  let activeTaxonomy: ReturnType<typeof parseAnnotationTaxonomy> | null = null
   let taxonomyError: string | null = null
+
   try {
-    parseAnnotationTaxonomy(activeTaxonomyVersion.document)
+    activeTaxonomy = parseAnnotationTaxonomy(activeTaxonomyVersion.document)
   } catch (error) {
     taxonomyError = messageFrom(error)
   }
+
+  const regionLabels =
+    activeTaxonomy?.labels.filter((label) => label.scopes.includes('region')) ??
+    []
+  const clipLabels =
+    activeTaxonomy?.labels.filter((label) => label.scopes.includes('clip')) ??
+    []
+  const scaleCount = Object.keys(activeTaxonomy?.scales ?? {}).length
+
   const taskAction = async (action: () => Promise<unknown>) => {
     setActing(true)
     setActionError(null)
@@ -135,6 +150,28 @@ export function ProjectDetail() {
       setActionError(messageFrom(error))
       setActing(false)
       setDeleteOpen(false)
+    }
+  }
+
+  const closeDeleteProject = () => {
+    if (acting) return
+    setDeleteOpen(false)
+    setConfirmation('')
+  }
+
+  const deleteSelectedTasks = async () => {
+    const taskIds = [...selectedTasks]
+    const count = taskIds.length
+    if (!count || acting) return
+    const accepted = await confirm({
+      title: `Delete ${count} ${count === 1 ? 'task' : 'tasks'}?`,
+      message:
+        'This removes the selected task records and their annotations from this browser.',
+      confirmLabel: `Delete ${count}`,
+      tone: 'danger',
+    })
+    if (accepted) {
+      await taskAction(() => deleteProjectTasks(project.id, taskIds))
     }
   }
 
@@ -211,8 +248,8 @@ export function ProjectDetail() {
         {taxonomyError && (
           <PageNotice title="Taxonomy cannot be used for labeling" tone="error">
             <p>{taxonomyError}</p>
-            <Link className="button-link" to={editProjectPath(project.id)}>
-              Replace taxonomy
+            <Link className="button-link" to={taxonomyEditorPath(project.id)}>
+              Edit taxonomy
             </Link>
           </PageNotice>
         )}
@@ -318,16 +355,7 @@ export function ProjectDetail() {
                       type="button"
                       className="danger-button"
                       disabled={!selectedTasks.length || acting}
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            `Delete ${selectedTasks.length} task(s)?`,
-                          )
-                        )
-                          void taskAction(() =>
-                            deleteProjectTasks(project.id, selectedTasks),
-                          )
-                      }}
+                      onClick={() => void deleteSelectedTasks()}
                     >
                       Delete selected
                     </button>
@@ -489,42 +517,66 @@ export function ProjectDetail() {
           <section className="detail-section">
             <div className="section-heading">
               <div>
-                <p className="eyebrow">Active definition</p>
-                <h2>Taxonomy</h2>
+                <p className="eyebrow">Labeling configuration</p>
+                <h2>Active taxonomy</h2>
               </div>
               <span className="count-badge">
                 v{activeTaxonomyVersion.version}
               </span>
             </div>
-            <dl className="definition-list">
+
+            <div className="active-taxonomy-summary">
               <div>
-                <dt>Source</dt>
-                <dd>{activeTaxonomyVersion.sourceFilename}</dd>
+                <span>Taxonomy</span>
+                <strong>
+                  {activeTaxonomyVersion.metadata.name ?? 'Unnamed taxonomy'}
+                </strong>
+                <small>{activeTaxonomyVersion.sourceFilename}</small>
               </div>
-              <div>
-                <dt>Format</dt>
-                <dd>{activeTaxonomyVersion.sourceFormat.toUpperCase()}</dd>
+
+              <div className="active-taxonomy-metrics">
+                <div>
+                  <strong>{regionLabels.length}</strong>
+                  <span>Region labels</span>
+                </div>
+                <div>
+                  <strong>{clipLabels.length}</strong>
+                  <span>Clip labels</span>
+                </div>
+                <div>
+                  <strong>{scaleCount}</strong>
+                  <span>Scales</span>
+                </div>
               </div>
-              <div>
-                <dt>Taxonomy name</dt>
-                <dd>
-                  {activeTaxonomyVersion.metadata.name ?? 'Not specified'}
-                </dd>
-              </div>
-              <div>
-                <dt>Schema version</dt>
-                <dd>
-                  {activeTaxonomyVersion.taxonomySchemaVersion ??
-                    'Not specified'}
-                </dd>
-              </div>
-              <div>
-                <dt>Content hash</dt>
-                <dd className="hash-value">
-                  {activeTaxonomyVersion.contentHash}
-                </dd>
-              </div>
-            </dl>
+
+              {regionLabels.length > 0 && (
+                <div className="taxonomy-label-preview">
+                  {regionLabels.map((label) => (
+                    <span key={label.id}>
+                      <i
+                        aria-hidden="true"
+                        style={{
+                          backgroundColor: label.color ?? 'var(--accent)',
+                        }}
+                      />
+                      {label.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <p className="taxonomy-version-note">
+                New annotations use this version. Existing drafts remain pinned
+                to the version they were created with.
+              </p>
+
+              <Link
+                className="button-link button-link--compact"
+                to={taxonomyEditorPath(project.id)}
+              >
+                Edit taxonomy
+              </Link>
+            </div>
           </section>
         </div>
 
@@ -571,7 +623,22 @@ export function ProjectDetail() {
               <p className="eyebrow">Reference</p>
               <h2>Annotation instructions</h2>
             </div>
-            {instructions && <span>{instructions.sourceFilename}</span>}
+            <div className="section-heading__actions">
+              {instructions && (
+                <span
+                  className="section-heading__filename"
+                  title={instructions.sourceFilename}
+                >
+                  {instructions.sourceFilename}
+                </span>
+              )}
+              <Link
+                className="button-link button-link--compact"
+                to={instructionsEditorPath(project.id)}
+              >
+                Edit instructions
+              </Link>
+            </div>
           </div>
           {instructions ? (
             <MarkdownInstructions markdown={instructions.rawMarkdown} />
@@ -589,6 +656,7 @@ export function ProjectDetail() {
             </p>
           </div>
           <button
+            ref={deleteProjectTriggerRef}
             className="danger-button"
             type="button"
             onClick={() => setDeleteOpen(true)}
@@ -598,47 +666,44 @@ export function ProjectDetail() {
         </section>
       </main>
 
-      {deleteOpen && (
-        <div className="dialog-backdrop" role="presentation">
-          <div
-            className="confirmation-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="delete-title"
+      <Modal
+        open={deleteOpen}
+        className="project-delete-dialog"
+        titleId="delete-title"
+        descriptionId="delete-description"
+        initialFocusRef={deleteProjectInputRef}
+        returnFocusRef={deleteProjectTriggerRef}
+        closeOnBackdrop={!acting}
+        closeOnEscape={!acting}
+        onClose={closeDeleteProject}
+      >
+        <h2 id="delete-title">Permanently delete {project.name}?</h2>
+        <p id="delete-description">
+          This cannot be undone without a future project backup. Source audio
+          files remain untouched.
+        </p>
+        <label className="field">
+          <span>Type the project name to confirm</span>
+          <input
+            ref={deleteProjectInputRef}
+            value={confirmation}
+            onChange={(event) => setConfirmation(event.target.value)}
+          />
+        </label>
+        <div className="form-actions">
+          <button type="button" onClick={closeDeleteProject} disabled={acting}>
+            Cancel
+          </button>
+          <button
+            className="danger-button"
+            type="button"
+            disabled={confirmation !== project.name || acting}
+            onClick={() => void deleteProject()}
           >
-            <h2 id="delete-title">Permanently delete {project.name}?</h2>
-            <p>
-              This cannot be undone without a future project backup. Source
-              audio files remain untouched.
-            </p>
-            <label className="field">
-              <span>Type the project name to confirm</span>
-              <input
-                value={confirmation}
-                onChange={(event) => setConfirmation(event.target.value)}
-                autoFocus
-              />
-            </label>
-            <div className="form-actions">
-              <button
-                type="button"
-                onClick={() => setDeleteOpen(false)}
-                disabled={acting}
-              >
-                Cancel
-              </button>
-              <button
-                className="danger-button"
-                type="button"
-                disabled={confirmation !== project.name || acting}
-                onClick={() => void deleteProject()}
-              >
-                {acting ? 'Deleting…' : 'Delete permanently'}
-              </button>
-            </div>
-          </div>
+            {acting ? 'Deleting…' : 'Delete permanently'}
+          </button>
         </div>
-      )}
+      </Modal>
     </ProjectLayout>
   )
 }

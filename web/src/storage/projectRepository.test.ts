@@ -25,7 +25,7 @@ function taxonomy(
     sourceFilename: filename,
     sourceFormat: filename.endsWith('.json') ? 'json' : 'yaml',
     rawSource: 'name: Generic labels\n',
-    document: { name: 'Generic labels' },
+    document: { name: 'Generic labels', contentMarker: hash },
     metadata: { name: 'Generic labels', schemaVersion: '1' },
     contentHash: hash,
   }
@@ -405,6 +405,29 @@ describe('IndexedDB project repository', () => {
     ])
     expect(aggregate?.activeTaxonomyVersion.id).toBe(replacement.taxonomy.id)
     expect(aggregate?.taxonomyVersions[1]?.sourceFilename).toBe('first.yaml')
+  })
+
+  it('reactivates an identical historical taxonomy without duplicating it', async () => {
+    const project = await repository.createProject({
+      name: 'Reactivate taxonomy',
+      taxonomy: taxonomy('a'.repeat(64), 'first.yaml'),
+    })
+    await repository.addTaxonomyVersion(
+      project.id,
+      taxonomy('b'.repeat(64), 'second.yaml'),
+    )
+    const result = await repository.addTaxonomyVersion(
+      project.id,
+      taxonomy('a'.repeat(64), 'same-as-first.yaml'),
+    )
+    const aggregate = await repository.getProject(project.id)
+
+    expect(result).toMatchObject({
+      created: false,
+      taxonomy: { version: 1 },
+    })
+    expect(aggregate?.taxonomyVersions).toHaveLength(2)
+    expect(aggregate?.activeTaxonomyVersion.version).toBe(1)
   })
 
   it('creates, replaces, and removes one instruction record', async () => {

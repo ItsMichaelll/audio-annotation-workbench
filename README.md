@@ -17,7 +17,8 @@ existing audio workbench:
 - Persistent active and archived projects
 - Project creation, detail, editing, restoration, and deliberate deletion
 - Required JSON or YAML taxonomies with immutable local version history
-- Optional Markdown instructions with safe rendering
+- In-browser YAML and structured taxonomy editing with local downloads
+- In-browser Markdown instructions editing, preview, and local downloads
 - Task ingestion, import preview, task management, and local-source relinking
 - Taxonomy-driven region and clip labels, configured scales, notes, and shortcuts
 - Debounced local drafts, unified annotation undo/redo, validation, and submission
@@ -61,6 +62,8 @@ The completed product is organized into four primary areas:
 | `/projects/new` | Project creation |
 | `/projects/:projectId` | Project detail |
 | `/projects/:projectId/edit` | Project editing |
+| `/projects/:projectId/taxonomy` | YAML and structured taxonomy editor |
+| `/projects/:projectId/instructions` | Markdown instructions editor and preview |
 | `/projects/:projectId/tasks/:taskId/annotate` | Task annotation workspace |
 | `/editor` | Transitional standalone audio workbench |
 
@@ -70,7 +73,7 @@ production static hosting must serve `index.html` for these application paths.
 
 ## Persistence and data ownership
 
-IndexedDB database `audio-annotation-workbench` is currently schema version 3.
+IndexedDB database `audio-annotation-workbench` is currently schema version 4.
 It contains:
 
 | Store | Responsibility |
@@ -155,13 +158,37 @@ duplicate version. Earlier versions remain available in project history.
 The first saved draft pins its annotation to the then-active taxonomy version;
 later replacements do not reinterpret drafts or submissions.
 
+The project taxonomy editor has synchronized YAML and Structured modes. YAML
+mode preserves the current source while it is edited and reports parser or
+schema errors without changing the saved taxonomy. Structured mode supports
+labels, descriptions, region/clip scopes, colors, shortcuts, severity and
+confidence scales, required states, and ordered scale options. Because a
+structured edit must serialize canonical YAML, the editor asks for confirmation
+before comments, custom formatting, or currently unrecognized fields are
+discarded. Merely switching modes never rewrites the source.
+
+Confirmations for destructive actions, canonicalization, empty submissions, and
+unsaved in-app navigation use the workbench's shared accessible modal. The
+browser's native leave-page warning remains in place for refreshes and tab
+closure; the application does not layer a custom dialog over those browser
+prompts. Short route and IndexedDB loading transitions intentionally render no
+loading panel to avoid flicker.
+
+`Ctrl+S` saves valid changes. A save appends and activates a new immutable
+version; semantic hashing suppresses duplicates caused only by YAML formatting
+or mapping-key order. Existing drafts and submissions remain pinned, while a
+new annotation uses the newly active taxonomy. The working source can be
+downloaded as `taxonomy.yaml`; saving and downloading remain entirely local.
+
 Uploaded content is parsed as data. It is never executed or evaluated.
 
 ## Markdown instructions
 
 Projects may include one `.md` instructions file no larger than 512 KB. The raw
-Markdown and source filename are preserved. Editing can replace or remove the
-record.
+Markdown and source filename are preserved. The in-browser editor loads the raw
+source (or an empty document), displays a live preview through the same safe
+renderer used elsewhere, and supports `Ctrl+S`. Saving an empty document removes
+the record. The working source can be downloaded locally as Markdown.
 
 Rendering uses `react-markdown` without raw HTML support. An element allowlist
 omits scripts, iframes, images, and other executable or externally loaded
@@ -309,7 +336,15 @@ measurement details.
 - Severity, confidence, notes, and submission validation
 - Automatic drafts, skip/flag behavior, and submit-next workflow
 
-### 4. Export, backup, and recovery
+### 4. Project configuration authoring — implemented
+
+- Focused raw YAML taxonomy editing with parser and schema feedback
+- Structured taxonomy editing for every version-one annotation field
+- Immutable activation, annotation pinning, and semantic duplicate suppression
+- Markdown instructions editing with safe rendered preview and removal
+- Unsaved-change protection, `Ctrl+S`, and local YAML/Markdown downloads
+
+### 5. Export, backup, and recovery
 
 - Canonical lossless project JSON
 - JSONL annotation export and optional flattened CSV
@@ -318,11 +353,6 @@ measurement details.
 - Project backup import, validation, and restoration
 
 ### Later capabilities
-
-Planned local authoring tools include:
-
-- In-browser taxonomy YAML editing through both a raw text editor and a user-friendly structured editor
-- In-browser instructions Markdown editing through a text editor
 
 Quality review, reviewer assignment, collaboration, authentication, cloud
 storage, inter-annotator agreement, and ML-assisted labeling remain explicitly

@@ -26,6 +26,10 @@ export interface PreparedInstructions {
   rawMarkdown: string
 }
 
+function byteLength(source: string): number {
+  return new TextEncoder().encode(source).byteLength
+}
+
 function extensionOf(filename: string): string {
   const period = filename.lastIndexOf('.')
   return period >= 0 ? filename.slice(period).toLowerCase() : ''
@@ -119,6 +123,46 @@ export async function hashText(source: string): Promise<string> {
   ).join('')
 }
 
+function canonicalValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalValue)
+  if (!isRecord(value)) return value
+  return Object.fromEntries(
+    Object.keys(value)
+      .sort()
+      .map((key) => [key, canonicalValue(value[key])]),
+  )
+}
+
+export function canonicalTaxonomyContent(
+  document: Record<string, unknown>,
+): string {
+  return JSON.stringify(canonicalValue(document))
+}
+
+export async function prepareTaxonomySource(
+  rawSource: string,
+  filename = 'taxonomy.yaml',
+): Promise<PreparedTaxonomy> {
+  taxonomyFormat(filename)
+  if (byteLength(rawSource) > TAXONOMY_FILE_SIZE_LIMIT) {
+    throw new UploadValidationError(
+      `Taxonomy files must be ${TAXONOMY_FILE_SIZE_LIMIT / 1024} KB or smaller.`,
+    )
+  }
+  const parsed = parseTaxonomySource(rawSource, filename)
+  try {
+    parseAnnotationTaxonomy(parsed.document)
+  } catch (error) {
+    throw new UploadValidationError(
+      error instanceof Error ? error.message : 'Invalid annotation taxonomy.',
+    )
+  }
+  return {
+    ...parsed,
+    contentHash: await hashText(canonicalTaxonomyContent(parsed.document)),
+  }
+}
+
 export async function prepareTaxonomyFile(
   file: File,
 ): Promise<PreparedTaxonomy> {
@@ -128,16 +172,24 @@ export async function prepareTaxonomyFile(
       `Taxonomy files must be ${TAXONOMY_FILE_SIZE_LIMIT / 1024} KB or smaller.`,
     )
   }
-  const rawSource = await file.text()
-  const parsed = parseTaxonomySource(rawSource, file.name)
-  try {
-    parseAnnotationTaxonomy(parsed.document)
-  } catch (error) {
+  return prepareTaxonomySource(await file.text(), file.name)
+}
+
+export function prepareInstructionsSource(
+  rawMarkdown: string,
+  filename = 'instructions.md',
+): PreparedInstructions {
+  if (extensionOf(filename) !== '.md') {
     throw new UploadValidationError(
-      error instanceof Error ? error.message : 'Invalid annotation taxonomy.',
+      'Instruction files must use the .md extension.',
     )
   }
-  return { ...parsed, contentHash: await hashText(rawSource) }
+  if (byteLength(rawMarkdown) > INSTRUCTIONS_FILE_SIZE_LIMIT) {
+    throw new UploadValidationError(
+      `Instruction files must be ${INSTRUCTIONS_FILE_SIZE_LIMIT / 1024} KB or smaller.`,
+    )
+  }
+  return { sourceFilename: filename, rawMarkdown }
 }
 
 export async function prepareInstructionsFile(
@@ -153,5 +205,5 @@ export async function prepareInstructionsFile(
       `Instruction files must be ${INSTRUCTIONS_FILE_SIZE_LIMIT / 1024} KB or smaller.`,
     )
   }
-  return { sourceFilename: file.name, rawMarkdown: await file.text() }
+  return prepareInstructionsSource(await file.text(), file.name)
 }

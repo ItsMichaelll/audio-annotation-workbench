@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
+import { useConfirmation } from '../../components/confirmationContext'
 import { StatusReadout } from '../../components/StatusReadout'
 import { TransportBar } from '../../components/TransportBar'
 import {
@@ -149,12 +150,7 @@ function LoadedAnnotationRoute({
   }, [aggregate, task.id])
 
   if (loaded.kind === 'loading') {
-    return (
-      <ProjectPageState
-        title="Opening annotation"
-        message="Restoring the local draft and pinned taxonomy…"
-      />
-    )
+    return <ProjectLayout>{null}</ProjectLayout>
   }
   if (loaded.kind === 'error') {
     return (
@@ -206,6 +202,7 @@ function ActiveAnnotationWorkspace({
   taxonomyVersion: TaxonomyVersion
   taxonomy: AnnotationTaxonomy
 }) {
+  const confirm = useConfirmation()
   const navigate = useNavigate()
   const waveformRef = useRef<WaveformEditorHandle>(null)
   const relinkInputRef = useRef<HTMLInputElement>(null)
@@ -217,6 +214,7 @@ function ActiveAnnotationWorkspace({
   const savedRevisionRef = useRef(initialAnnotation.revision)
   const autosaveTimerRef = useRef<number | null>(null)
   const saveGateRef = useRef(new AutosaveRevisionGate())
+  const submitInFlightRef = useRef(false)
   const [task, setTask] = useState(initialTask)
   const [annotation, setAnnotation] = useState(initialAnnotation)
   const [saveState, setSaveState] = useState<SaveState>('Saved')
@@ -241,6 +239,7 @@ function ActiveAnnotationWorkspace({
   const [spectrogramEnabled, setSpectrogramEnabled] = useState(false)
   const [meterEnabled, setMeterEnabled] = useState(false)
   const [workflowError, setWorkflowError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
   const readOnly = task.status === 'submitted'
   const ordered = useMemo(
     () => orderedTasks(aggregate.tasks),
@@ -426,36 +425,42 @@ function ActiveAnnotationWorkspace({
   )
 
   const submit = useCallback(async () => {
-    if (readOnly) return
+    if (readOnly || submitInFlightRef.current) return
+    submitInFlightRef.current = true
+    setSubmitting(true)
     setWorkflowError(null)
-    if (loadStatus !== 'ready') {
-      setWorkflowError('Load or relink the task audio before submitting.')
-      return
-    }
-    if (!(await flush())) {
-      setWorkflowError(
-        'The latest draft could not be saved. Submission was stopped.',
-      )
-      return
-    }
-    const validation = validateSubmission(
-      documentRef.current,
-      taxonomy,
-      duration,
-      false,
-    )
-    if (!validation.valid) {
-      setWorkflowError(validation.errors.join(' '))
-      return
-    }
-    if (
-      validation.empty &&
-      !window.confirm(
-        'Submit this task with no regions or clip labels? This confirms that the audio was reviewed and no labels apply.',
-      )
-    )
-      return
     try {
+      if (loadStatus !== 'ready') {
+        setWorkflowError('Load or relink the task audio before submitting.')
+        return
+      }
+      if (!(await flush())) {
+        setWorkflowError(
+          'The latest draft could not be saved. Submission was stopped.',
+        )
+        return
+      }
+      const validation = validateSubmission(
+        documentRef.current,
+        taxonomy,
+        duration,
+        false,
+      )
+      if (!validation.valid) {
+        setWorkflowError(validation.errors.join(' '))
+        return
+      }
+      if (
+        validation.empty &&
+        !(await confirm({
+          title: 'Submit an empty annotation?',
+          message:
+            'This confirms that the audio was reviewed and no regions or clip labels apply.',
+          confirmLabel: 'Submit empty task',
+        }))
+      )
+        return
+
       const repository = await getProjectRepository()
       const submitted = await repository.submitAnnotation(documentRef.current)
       documentRef.current = submitted
@@ -464,8 +469,11 @@ function ActiveAnnotationWorkspace({
       navigateAfter('submitted', 'All actionable tasks are complete.')
     } catch (error) {
       setWorkflowError(messageFrom(error))
+    } finally {
+      submitInFlightRef.current = false
+      setSubmitting(false)
     }
-  }, [duration, flush, loadStatus, navigateAfter, readOnly, taxonomy])
+  }, [confirm, duration, flush, loadStatus, navigateAfter, readOnly, taxonomy])
 
   const skip = useCallback(async () => {
     if (readOnly) return
@@ -770,9 +778,14 @@ function ActiveAnnotationWorkspace({
             <button
               className="primary-button"
               type="button"
+              disabled={submitting}
               onClick={() => void submit()}
             >
-              {nextTask ? 'Submit & Next' : 'Submit Task'}
+              {submitting
+                ? 'Submitting…'
+                : nextTask
+                  ? 'Submit & Next'
+                  : 'Submit Task'}
             </button>
           )}
         </div>
@@ -1033,13 +1046,7 @@ function ActiveAnnotationWorkspace({
 export function AnnotationWorkspace() {
   const { projectId, taskId } = useParams()
   const state = useProject(projectId)
-  if (state.loading)
-    return (
-      <ProjectPageState
-        title="Opening task"
-        message="Loading the project task queue…"
-      />
-    )
+  if (state.loading) return <ProjectLayout>{null}</ProjectLayout>
   if (state.error)
     return (
       <ProjectPageState

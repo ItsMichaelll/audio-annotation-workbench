@@ -17,6 +17,9 @@ and the standalone audio editor. No project or audio data is sent over a network
   gestures, waveform/spectrogram viewport synchronization, and teardown.
 - `features/analysis/` owns the guarded shared Web Audio graph and its single
   media-element source.
+- `components/Modal.tsx` owns portal rendering, focus containment, background
+  inertness, and dismissal; `ConfirmationDialog.tsx` serializes asynchronous
+  application confirmation requests above routed content.
 - `features/spectrum/` and `features/loudness/` own observational analysis.
 - `App.tsx` remains the standalone editor shell. `RouterApplication.tsx` owns
   URL routing and mounts it only at `/editor`.
@@ -28,7 +31,8 @@ stale async updates. Forms prepare and validate files before repository writes.
 ## Routing
 
 React Router provides `/`, `/projects`, `/projects/new`, project detail and edit
-paths, `/projects/:projectId/tasks/:taskId/annotate`, and `/editor`. Navigation uses links and route parameters rather than
+paths, dedicated taxonomy and instructions editor paths,
+`/projects/:projectId/tasks/:taskId/annotate`, and `/editor`. Navigation uses links and route parameters rather than
 component-local page state. Unknown routes and missing IndexedDB projects render
 distinct states. Browser back and forward navigation follows URL history.
 
@@ -37,7 +41,7 @@ must route application paths to `index.html`.
 
 ## IndexedDB ownership
 
-Database `audio-annotation-workbench`, version 3, contains `projects`,
+Database `audio-annotation-workbench`, version 4, contains `projects`,
 `taxonomyVersions`, `instructions`, `tasks`, and `annotations`. Database access is confined to
 `storage/`; React components do not open stores or transactions.
 
@@ -51,6 +55,8 @@ Version 1 creates:
   project-relative source path (added by the forward version-2 migration)
 - annotation documents by UUID, project, and unique task (added by the forward
   version-3 migration without rewriting version-2 records)
+- version 4 normalizes legacy multi-label region annotations to the current
+  single-region-label cardinality without changing clip labels
 
 All record models carry centralized schema versions independently from the
 IndexedDB schema version. Database versions describe physical storage changes;
@@ -79,12 +85,22 @@ Taxonomy versions preserve the source filename, JSON/YAML format, original text,
 parsed object, extracted `name` and `schema_version` metadata, SHA-256 content
 hash, local version number, and created timestamp. Updating a taxonomy appends a
 record and changes the active reference; it never rewrites history. A matching
-project content hash suppresses duplicate versions.
+project semantic-content hash suppresses duplicate versions even when YAML
+formatting or mapping-key order changes. Repository comparison remains
+compatible with versions created before semantic hashing.
 
 Annotation taxonomy version one defines stable labels, region/clip scopes,
 optional presentation metadata and shortcuts, and optional severity/confidence
 scales. Each annotation pins the immutable taxonomy version used by its first
 draft, so active-taxonomy replacement does not reinterpret existing work.
+
+Framework-independent taxonomy editing utilities parse raw YAML through the
+upload parser, validate through the annotation schema, and serialize structured
+schema data to canonical YAML. The raw editor owns source fidelity. Structured
+state synchronizes only from valid YAML; its first mutation requires explicit
+confirmation because canonical serialization removes comments, formatting, and
+unrecognized fields. Editor saves return to the same repository transaction used
+by taxonomy uploads.
 
 ## Markdown security
 
@@ -94,6 +110,10 @@ renderer uses an explicit element allowlist, excludes images and executable
 embeds, filters link protocols, and adds `noopener noreferrer` to links opened in
 new tabs. A rendering error boundary shows an explicit failure without changing
 the stored source.
+
+The instructions editor applies the same filename and UTF-8 byte-size validation
+as uploads, previews through this renderer, and uses repository replacement or
+removal transactions. Editor state and downloads stay in the browser.
 
 ## Task and media-source foundation
 
