@@ -1,0 +1,15 @@
+/*
+ * Compatibility name retained while callers migrate to .u-visually-hidden.
+ * This is the only intentionally global utility.
+ */
+:where(.u-visually-hidden, .visually-hidden) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  padding: 0;
+  margin: -1px;
+  border: 0;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}

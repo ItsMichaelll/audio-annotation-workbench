@@ -1,130 +1,3 @@
-:root {
-  color-scheme: dark;
-  font-family:
-    Inter,
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    sans-serif;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  --bg: #0d0f10;
-  --panel: #131618;
-  --panel-raised: #191d20;
-  --border: #2b3135;
-  --border-strong: #3a4348;
-  --text: #edf1f2;
-  --muted: #8d979e;
-  --text-inverted: #07111f;
-  --accent: #4690ff;
-  --accent-rgb: 70 144 255;
-  --accent-dim: #2f70cf;
-  --status: #18f76e;
-  --warning: #ffa500;
-  --danger: #ff4646;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-html,
-body,
-#root {
-  width: 100%;
-  min-width: 960px;
-  height: 100%;
-  margin: 0;
-}
-
-body {
-  overflow: hidden;
-  background: var(--bg);
-  color: var(--text);
-}
-
-button,
-input,
-select,
-textarea {
-  font: inherit;
-}
-
-button {
-  min-height: 30px;
-  padding: 0 12px;
-  border: 1px solid rgb(255 255 255 / 10%);
-  border-radius: 4px;
-  background: rgb(255 255 255 / 4%);
-  font-size: 12px;
-  color: var(--text);
-  cursor: pointer;
-  transition:
-    background-color 140ms ease,
-    border-color 140ms ease,
-    color 140ms ease,
-    box-shadow 140ms ease;
-}
-
-button:hover:not(:disabled) {
-  background: rgb(255 255 255 / 10%);
-}
-
-button:focus-visible {
-  border-color: rgb(var(--accent-rgb) / 70%);
-  outline: none;
-  box-shadow:
-    0 0 0 2px var(--bg),
-    0 0 0 3px var(--accent);
-}
-
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible,
-a:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-input[type='checkbox'] {
-  accent-color: var(--accent);
-}
-
-select {
-  appearance: none;
-  padding-right: 28px;
-  border: 1px solid var(--border-strong);
-  border-radius: 3px;
-  background-color: #101315;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='m1 1 5 5 5-5' fill='none' stroke='%239aa4aa' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 9px center;
-  color: var(--text);
-  color-scheme: dark;
-  cursor: pointer;
-}
-
-select:hover:not(:disabled) {
-  border-color: rgb(255 255 255 / 24%);
-  background-color: #15191c;
-}
-
-select:focus-visible {
-  border-color: var(--accent);
-}
-
-select:disabled {
-  opacity: 0.48;
-  cursor: not-allowed;
-}
-
-select option {
-  background: #101315;
-  color: var(--text);
-}
-
 .custom-select {
   position: relative;
   min-width: 0;
@@ -612,27 +485,6 @@ kbd {
   .annotation-header__actions {
     grid-column: 1 / -1;
   }
-}
-
-a {
-  color: inherit;
-}
-
-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.38;
-}
-
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
 }
 
 .app-shell {
@@ -1147,23 +999,10 @@ button:disabled {
   box-shadow: 0 1px 0 #050606;
 }
 
-.waveform-surface::part(scroll) {
-  scrollbar-width: none;
-}
-
 .waveform-minimap {
   margin-top: 10px;
   border: 1px solid #252b2e;
   background: #0e1112;
-}
-
-.waveform-minimap > [part~='minimap'] {
-  cursor: grab;
-  touch-action: none;
-}
-
-.waveform-minimap > [part~='minimap']:active {
-  cursor: grabbing;
 }
 
 .spectrum-analyzer {
@@ -1269,74 +1108,6 @@ button:disabled {
   height: 208px;
   background: #0b0d0e;
   cursor: crosshair;
-}
-
-.waveform-scrollbar {
-  width: 100%;
-  height: 12px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  border: 1px solid #252b2e;
-  border-top: 0;
-  background: #0e1112;
-  scrollbar-color: #465158 #161a1c;
-  scrollbar-width: thin;
-}
-
-.waveform-scrollbar.is-inactive {
-  overflow-x: hidden;
-  pointer-events: none;
-}
-
-.waveform-scrollbar:focus-visible {
-  outline: 1px solid var(--accent);
-  outline-offset: 1px;
-}
-
-.waveform-scrollbar::-webkit-scrollbar {
-  height: 10px;
-}
-
-.waveform-scrollbar::-webkit-scrollbar-track {
-  background: #161a1c;
-}
-
-.waveform-scrollbar::-webkit-scrollbar-thumb {
-  border: 2px solid #161a1c;
-  border-radius: 999px;
-  background: #465158;
-}
-
-.waveform-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #59666e;
-}
-
-.waveform-scrollbar__track {
-  height: 1px;
-}
-
-.waveform-surface::part(region) {
-  border-top: 1px solid rgb(var(--accent-rgb) / 85%);
-  border-bottom: 1px solid rgb(var(--accent-rgb) / 75%);
-}
-
-.waveform-surface::part(region-handle) {
-  width: 10px !important;
-  background: rgb(var(--accent-rgb) / 28%);
-}
-
-.waveform-surface::part(region-handle-left) {
-  border-left: 3px solid var(--accent) !important;
-}
-
-.waveform-surface::part(region-handle-right) {
-  border-right: 3px solid var(--accent) !important;
-}
-
-.waveform-surface .is-panning,
-.is-panning {
-  cursor: grabbing !important;
-  user-select: none;
 }
 
 .spectrogram-panel {
@@ -1663,14 +1434,5 @@ button:disabled {
 
   .waveform-surface > div {
     max-height: 260px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  button,
-  .loading-indicator,
-  .empty-state__wave i {
-    transition: none;
-    animation: none;
   }
 }

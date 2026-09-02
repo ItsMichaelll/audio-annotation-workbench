@@ -185,9 +185,7 @@ export function ProjectRestore() {
             {filename ? 'Choose another backup' : 'Choose backup file'}
           </button>
           <span style={{ maxWidth: '420px' }}>
-            <p className="muted-copy">
-              Maximum file size: {MAX_SIZE_LABEL}
-            </p>
+            <p className="muted-copy">Maximum file size: {MAX_SIZE_LABEL}</p>
             <p className="muted-copy">
               Imported content is treated as untrusted JSON. Source audio is not
               part of a backup.
