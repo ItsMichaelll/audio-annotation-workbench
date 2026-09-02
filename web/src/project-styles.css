@@ -50,48 +50,6 @@
   gap: 8px;
 }
 
-.button-link {
-  display: inline-flex;
-  min-height: 32px;
-  align-items: center;
-  justify-content: center;
-  padding: 0 12px;
-  border: 1px solid rgb(255 255 255 / 10%);
-  border-radius: 999px;
-  background: rgb(255 255 255 / 4%);
-  color: var(--text);
-  font-size: 12px;
-  text-decoration: none;
-}
-
-.button-link:hover {
-  background: rgb(255 255 255 / 10%);
-}
-
-.button-link--primary,
-.primary-button {
-  border-color: transparent;
-  background: var(--accent);
-  color: var(--text-inverted);
-  font-weight: 600;
-}
-
-.button-link--primary:hover,
-.primary-button:hover:not(:disabled) {
-  border-color: transparent;
-  background: color-mix(in srgb, var(--accent) 78%, white);
-}
-
-.button-link--primary:active,
-.primary-button:active:not(:disabled) {
-  border-color: transparent;
-  background: color-mix(in srgb, var(--accent) 88%, black);
-}
-
-.project-app-shell button:not(.danger-button) {
-  border-radius: 999px;
-}
-
 .project-page {
   width: min(1280px, calc(100% - 48px));
   padding: 42px 0 72px;
@@ -187,11 +145,6 @@ fieldset.export-options {
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px;
   margin: 0;
-}
-
-.restore-file-button {
-  border-radius: 4px !important;
-  justify-self: start;
 }
 
 .restore-counts div {
@@ -621,7 +574,7 @@ fieldset.export-options {
   font-size: 10px;
 }
 
-.file-selection .danger-button {
+.file-selection__remove {
   margin-left: auto;
   font-size: 12px;
 }
@@ -743,7 +696,7 @@ fieldset.export-options {
   place-items: center;
   border: 1px solid var(--border);
   border-radius: 3px;
-  color: #dce5e8 !important;
+  color: #dce5e8;
   font-family: Consolas, 'SFMono-Regular', monospace;
 }
 
@@ -832,8 +785,7 @@ fieldset.export-options {
 .task-import__actions button:focus-visible,
 .task-controls button:focus-visible,
 .task-pagination button:focus-visible,
-.task-controls input:focus-visible,
-.task-controls .custom-select__trigger:focus-visible {
+.task-controls input:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -848,20 +800,20 @@ fieldset.export-options {
   opacity: 1;
 }
 
-.task-controls .danger-button {
+.task-controls [data-button-variant='danger'] {
   border-color: rgb(255 70 70 / 35%);
   background: rgb(255 70 70 / 8%);
   color: #ff9a9a;
   font-size: 11px;
 }
 
-.task-controls .danger-button:hover:not(:disabled) {
+.task-controls [data-button-variant='danger']:hover:not(:disabled) {
   border-color: var(--danger);
   background: var(--danger);
   color: #fff;
 }
 
-.task-controls .danger-button:disabled {
+.task-controls [data-button-variant='danger']:disabled {
   border-color: rgb(255 70 70 / 16%);
   background: rgb(255 70 70 / 4%);
   color: #8f6666;
@@ -898,8 +850,7 @@ fieldset.export-options {
   flex: 1 1 420px;
 }
 
-.task-controls input,
-.task-controls .custom-select .custom-select__trigger {
+.task-controls input {
   min-height: 32px;
   padding: 6px 9px;
   border: 1px solid var(--border);
@@ -910,24 +861,9 @@ fieldset.export-options {
   font-size: 11px;
 }
 
-.task-controls .custom-select {
-  min-width: 150px;
-  font-size: 11px;
-}
-
-.task-controls .custom-select__trigger {
-  border-radius: 4px;
-  font-weight: 400;
-  text-transform: none;
-}
-
 .task-controls input {
   width: clamp(220px, 38vw, 420px);
   flex: 1 1 220px;
-}
-
-.task-controls__actions button {
-  border-radius: 4px !important;
 }
 
 .task-table {
@@ -955,7 +891,6 @@ fieldset.export-options {
   gap: 5px;
 }
 
-.button-link--compact,
 .task-table__action button {
   min-height: 27px;
   padding: 0 8px;
@@ -1218,67 +1153,6 @@ fieldset.export-options {
 .danger-zone {
   align-items: center;
   border-color: rgb(255 70 70 / 50%);
-}
-
-.danger-button {
-  min-height: 32px;
-  padding: 0 12px;
-  border-color: transparent;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--danger);
-  font-size: 15px;
-  font-weight: 500;
-}
-
-.danger-button:hover:not(:disabled) {
-  background: var(--danger);
-  color: #fff;
-}
-
-.dialog-backdrop,
-.modal-backdrop {
-  position: fixed;
-  z-index: 100;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 30px;
-  background: rgb(0 0 0 / 72%);
-}
-
-.confirmation-dialog,
-.modal-dialog {
-  width: min(480px, 100%);
-  padding: 22px;
-  border: 1px solid var(--border-strong);
-  border-radius: 5px;
-  background: #15191b;
-  box-shadow: 0 18px 60px rgb(0 0 0 / 50%);
-}
-
-.confirmation-dialog h2,
-.modal-dialog h2 {
-  margin: 0 0 9px;
-  font-size: 18px;
-}
-
-.confirmation-dialog > p,
-.modal-dialog > p {
-  margin: 0 0 18px;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.confirmation-dialog--danger {
-  border-color: rgb(255 70 70 / 48%);
 }
 
 .configuration-editor {
@@ -2307,7 +2181,6 @@ fieldset.export-options {
   }
 
   .task-controls__filters,
-  .task-controls__filters .custom-select,
   .task-controls__actions {
     width: 100%;
   }

@@ -8,7 +8,13 @@ import {
   type PointerEvent,
   type ReactNode,
 } from 'react'
-import { Modal } from '../../components/Modal'
+import { Button } from '../../components/Button'
+import {
+  Modal,
+  ModalActions,
+  ModalDescription,
+  ModalTitle,
+} from '../../components/Modal'
 import {
   hexToHsv,
   hsvToHex,
@@ -98,8 +104,10 @@ export function IconButton({
   onClick: () => void
 }) {
   return (
-    <button
-      className={`compact-icon-button${danger ? ' danger-button compact-danger-button' : ''}${icon === 'chevron-down' ? ' expand-button' : ''}`}
+    <Button
+      variant={danger ? 'danger' : 'secondary'}
+      size="icon"
+      className={`compact-icon-button${danger ? ' compact-danger-button' : ''}${icon === 'chevron-down' ? ' expand-button' : ''}`}
       type="button"
       aria-label={label}
       aria-expanded={expanded}
@@ -109,7 +117,7 @@ export function IconButton({
       onClick={onClick}
     >
       <Icon name={icon} />
-    </button>
+    </Button>
   )
 }
 
@@ -123,7 +131,8 @@ export function DragHandle({
   onDragEnd: () => void
 }) {
   return (
-    <button
+    <Button
+      size="icon"
       className="compact-icon-button drag-handle"
       type="button"
       draggable
@@ -139,7 +148,7 @@ export function DragHandle({
       onDragEnd={onDragEnd}
     >
       <Icon name="drag" />
-    </button>
+    </Button>
   )
 }
 
@@ -216,7 +225,8 @@ export function ColorSwatchInput({
 
   return (
     <>
-      <button
+      <Button
+        size="icon"
         ref={triggerRef}
         type="button"
         className={`interactive-color-swatch${valid ? '' : ' is-empty'}`}
@@ -239,8 +249,10 @@ export function ColorSwatchInput({
       >
         <header className="color-picker-dialog__header">
           <div>
-            <h2 id={`${dialogId}-title`}>Choose color</h2>
-            <p id={`${dialogId}-description`}>{label}</p>
+            <ModalTitle id={`${dialogId}-title`}>Choose color</ModalTitle>
+            <ModalDescription id={`${dialogId}-description`}>
+              {label}
+            </ModalDescription>
           </div>
           <IconButton
             label="Close color picker"
@@ -322,12 +334,12 @@ export function ColorSwatchInput({
           </label>
         </div>
 
-        <div className="color-picker-actions">
-          <button type="button" onClick={closePicker}>
+        <ModalActions className="color-picker-actions">
+          <Button type="button" onClick={closePicker}>
             Cancel
-          </button>
-          <button
-            className="primary-button"
+          </Button>
+          <Button
+            variant="primary"
             type="button"
             disabled={!normalizedDraft}
             onClick={() => {
@@ -337,8 +349,8 @@ export function ColorSwatchInput({
             }}
           >
             Apply color
-          </button>
-        </div>
+          </Button>
+        </ModalActions>
       </Modal>
     </>
   )
@@ -352,10 +364,10 @@ export function AddButton({
   onClick: () => void
 }) {
   return (
-    <button className="button-with-icon" type="button" onClick={onClick}>
+    <Button className="button-with-icon" type="button" onClick={onClick}>
       <Icon name="add" />
       {children}
-    </button>
+    </Button>
   )
 }
 

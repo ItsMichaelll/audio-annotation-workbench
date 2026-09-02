@@ -57,7 +57,8 @@ function AssignmentScales({
             }
             value={assignment[name] ?? ''}
             disabled={disabled}
-            className={scale.required && !assignment[name] ? 'is-missing' : ''}
+            invalid={scale.required && !assignment[name]}
+            variant="inspector"
             options={[
               { value: '', label: 'Select…' },
               ...scale.options.map((option) => ({

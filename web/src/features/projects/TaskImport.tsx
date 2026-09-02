@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { Button } from '../../components/Button'
 import {
   buildImportPlan,
   parseManifest,
@@ -111,15 +112,15 @@ export function TaskImport({
       />
       <div className="task-import__source-controls">
         <div className="task-import__actions">
-          <button type="button" onClick={() => input.current?.click()}>
+          <Button type="button" onClick={() => input.current?.click()}>
             Select audio files
-          </button>
-          <button type="button" onClick={() => directoryInput.current?.click()}>
+          </Button>
+          <Button type="button" onClick={() => directoryInput.current?.click()}>
             Select directory
-          </button>
-          <button type="button" onClick={() => manifestInput.current?.click()}>
+          </Button>
+          <Button type="button" onClick={() => manifestInput.current?.click()}>
             Select JSON/JSONL manifest
-          </button>
+          </Button>
         </div>
         <p className="task-import__helper">
           Audio stays in its original location. Browser file selections are
@@ -142,9 +143,9 @@ export function TaskImport({
               {message}
             </p>
           ))}
-          <button
+          <Button
+            variant="primary"
             type="button"
-            className="primary-button"
             disabled={!plan.valid.length}
             onClick={() => {
               onReady(plan.valid)
@@ -152,7 +153,7 @@ export function TaskImport({
             }}
           >
             Confirm import
-          </button>
+          </Button>
         </div>
       )}
     </section>

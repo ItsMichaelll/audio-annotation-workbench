@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
+import { Button } from '../../components/Button'
 import { useConfirmation } from '../../components/confirmationContext'
 import type { AnnotationTaxonomy } from '../../domain/annotationTaxonomy'
 import {
@@ -196,22 +197,22 @@ function LoadedTaxonomyEditor({
         <div className="configuration-toolbar taxonomy-toolbar">
           <TaxonomyModeSwitch mode={mode} onChange={setMode} />
           <div className="configuration-toolbar__actions">
-            <button
+            <Button
               type="button"
               onClick={() =>
                 downloadText(source, 'taxonomy.yaml', 'application/yaml')
               }
             >
               Download YAML
-            </button>
-            <button
-              className="primary-button"
+            </Button>
+            <Button
+              variant="primary"
               type="button"
               disabled={!dirty || Boolean(error) || saveState === 'Saving'}
               onClick={() => void save()}
             >
               {saveState === 'Saving' ? 'Saving…' : 'Save new version'}
-            </button>
+            </Button>
           </div>
         </div>
 

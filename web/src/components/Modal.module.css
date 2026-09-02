@@ -1,0 +1,36 @@
+.backdrop {
+  position: fixed;
+  z-index: var(--z-overlay);
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 30px;
+  background: rgb(0 0 0 / 72%);
+}
+
+.dialog {
+  width: min(480px, 100%);
+  padding: 22px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--surface-overlay);
+  box-shadow: var(--shadow-overlay);
+}
+
+.title {
+  margin: 0 0 9px;
+  font-size: 18px;
+}
+
+.description {
+  margin: 0 0 18px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-4);
+}

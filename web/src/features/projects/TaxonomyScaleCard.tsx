@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { Button } from '../../components/Button'
 import type { AnnotationScale } from '../../domain/annotationTaxonomy'
 import {
   nextAvailableIdentifier,
@@ -21,7 +22,7 @@ function RequiredSwitch({
   onChange: (checked: boolean) => void
 }) {
   return (
-    <button
+    <Button
       className="taxonomy-required-switch"
       type="button"
       role="switch"
@@ -30,7 +31,7 @@ function RequiredSwitch({
     >
       <span aria-hidden="true" />
       Required
-    </button>
+    </Button>
   )
 }
 
@@ -96,13 +97,15 @@ export function ScaleCard({
             checked={scale.required}
             onChange={(required) => void onChange({ ...scale, required })}
           />
-          <button
-            className="danger-button compact-danger-button taxonomy-delete-scale"
+          <Button
+            variant="danger"
+            size="compact"
+            className="compact-danger-button taxonomy-delete-scale"
             type="button"
             onClick={onRemove}
           >
             Delete scale
-          </button>
+          </Button>
         </div>
       </header>
 

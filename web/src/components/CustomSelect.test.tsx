@@ -49,7 +49,7 @@ describe('CustomSelect', () => {
         onChange={vi.fn()}
       />,
     )
-    const labelId = /<span id="([^"]+)">Severity<\/span>/.exec(html)?.[1]
+    const labelId = /<span[^>]* id="([^"]+)">Severity<\/span>/.exec(html)?.[1]
 
     expect(labelId).toBeTruthy()
     expect(html).toContain(`aria-labelledby="${labelId}"`)

@@ -1,5 +1,6 @@
 import { useRef, useState, type ChangeEvent } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { useNavigate } from 'react-router'
+import { Button, ButtonLink } from '../../components/Button'
 import { useConfirmation } from '../../components/confirmationContext'
 import {
   PROJECT_BACKUP_MAX_BYTES,
@@ -62,14 +63,14 @@ export function ProjectRestorePreview({
           <dd>{mediaRelinkCount(backup)}</dd>
         </div>
       </dl>
-      <button
-        className="primary-button"
+      <Button
+        variant="primary"
         type="button"
         disabled={busy}
         onClick={onRestore}
       >
         {busy ? 'Restoring…' : 'Restore backup'}
-      </button>
+      </Button>
     </section>
   )
 }
@@ -147,11 +148,7 @@ export function ProjectRestore() {
 
   return (
     <ProjectLayout
-      actions={
-        <Link className="button-link" to="/projects">
-          Back to projects
-        </Link>
-      }
+      actions={<ButtonLink to="/projects">Back to projects</ButtonLink>}
     >
       <main className="project-page restore-page">
         <div className="page-heading">
@@ -176,14 +173,14 @@ export function ProjectRestore() {
             disabled={busy}
             onChange={(event) => void selectFile(event)}
           />
-          <button
-            className="restore-file-button"
+          <Button
+            size="square"
             type="button"
             disabled={busy}
             onClick={() => backupInput.current?.click()}
           >
             {filename ? 'Choose another backup' : 'Choose backup file'}
-          </button>
+          </Button>
           <span style={{ maxWidth: '420px' }}>
             <p className="muted-copy">Maximum file size: {MAX_SIZE_LABEL}</p>
             <p className="muted-copy">

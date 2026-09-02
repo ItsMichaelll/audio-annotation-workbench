@@ -1,8 +1,14 @@
 import { useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
+import { Button, ButtonLink } from '../../components/Button'
 import { useConfirmation } from '../../components/confirmationContext'
 import { CustomSelect } from '../../components/CustomSelect'
-import { Modal } from '../../components/Modal'
+import {
+  Modal,
+  ModalActions,
+  ModalDescription,
+  ModalTitle,
+} from '../../components/Modal'
 import {
   annotationPath,
   editProjectPath,
@@ -212,14 +218,14 @@ export function ProjectDetail() {
           </div>
           <div className="detail-hero__actions">
             {nextTask && !taxonomyError && project.status === 'active' ? (
-              <Link
-                className="button-link primary-button"
+              <ButtonLink
+                variant="primary"
                 to={annotationPath(project.id, nextTask.id)}
               >
                 Start Labeling
-              </Link>
+              </ButtonLink>
             ) : (
-              <button
+              <Button
                 type="button"
                 disabled
                 title={
@@ -231,27 +237,27 @@ export function ProjectDetail() {
                 }
               >
                 Start Labeling
-              </button>
+              </Button>
             )}
-            <Link className="button-link" to={editProjectPath(project.id)}>
+            <ButtonLink to={editProjectPath(project.id)}>
               Edit project
-            </Link>
-            <button
+            </ButtonLink>
+            <Button
               type="button"
               onClick={() => void toggleArchive()}
               disabled={acting}
             >
               {project.status === 'active' ? 'Archive' : 'Restore'}
-            </button>
+            </Button>
           </div>
         </header>
 
         {taxonomyError && (
           <PageNotice title="Taxonomy cannot be used for labeling" tone="error">
             <p>{taxonomyError}</p>
-            <Link className="button-link" to={taxonomyEditorPath(project.id)}>
+            <ButtonLink to={taxonomyEditorPath(project.id)}>
               Edit taxonomy
-            </Link>
+            </ButtonLink>
           </PageNotice>
         )}
         {completionMessage && (
@@ -322,6 +328,7 @@ export function ProjectDetail() {
                     />
                     <CustomSelect
                       ariaLabel="Filter task status"
+                      variant="taskFilter"
                       value={statusFilter}
                       options={[
                         { value: 'all', label: 'All statuses' },
@@ -341,7 +348,8 @@ export function ProjectDetail() {
                     />
                   </div>
                   <div className="task-controls__actions">
-                    <button
+                    <Button
+                      size="square"
                       type="button"
                       disabled={!selectedTasks.length || acting}
                       onClick={() =>
@@ -351,15 +359,16 @@ export function ProjectDetail() {
                       }
                     >
                       Skip selected
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="danger"
+                      size="square"
                       type="button"
-                      className="danger-button"
                       disabled={!selectedTasks.length || acting}
                       onClick={() => void deleteSelectedTasks()}
                     >
                       Delete selected
-                    </button>
+                    </Button>
                   </div>
                 </div>
                 <div
@@ -439,8 +448,8 @@ export function ProjectDetail() {
                               task.status === 'draft' ||
                               task.status === 'reopened')) ||
                             task.status === 'submitted') && (
-                            <Link
-                              className="button-link button-link--compact"
+                            <ButtonLink
+                              size="compact"
                               to={annotationPath(project.id, task.id)}
                             >
                               {task.status === 'submitted'
@@ -448,13 +457,13 @@ export function ProjectDetail() {
                                 : task.status === 'unstarted'
                                   ? 'Label'
                                   : 'Continue'}
-                            </Link>
+                            </ButtonLink>
                           )}
                           {(task.status === 'skipped' ||
                             task.status === 'blocked') && (
-                            <button
+                            <Button
+                              size="compact"
                               type="button"
-                              className="button-link button-link--compact"
                               disabled={acting}
                               onClick={() =>
                                 void taskAction(() =>
@@ -467,10 +476,10 @@ export function ProjectDetail() {
                               }
                             >
                               Restore
-                            </button>
+                            </Button>
                           )}
                           {task.status === 'submitted' && (
-                            <button
+                            <Button
                               type="button"
                               disabled={acting}
                               onClick={() =>
@@ -484,7 +493,7 @@ export function ProjectDetail() {
                               }
                             >
                               Reopen
-                            </button>
+                            </Button>
                           )}
                         </span>
                       </div>
@@ -492,24 +501,24 @@ export function ProjectDetail() {
                   })}
                 </div>
                 <div className="task-pagination">
-                  <button
+                  <Button
                     type="button"
                     disabled={page === 0}
                     onClick={() => setPage((value) => value - 1)}
                   >
                     Previous
-                  </button>
+                  </Button>
                   <span>
                     {page + 1} /{' '}
                     {Math.max(1, Math.ceil(orderedVisibleTasks.length / 25))}
                   </span>
-                  <button
+                  <Button
                     type="button"
                     disabled={(page + 1) * 25 >= orderedVisibleTasks.length}
                     onClick={() => setPage((value) => value + 1)}
                   >
                     Next
-                  </button>
+                  </Button>
                 </div>
               </>
             )}
@@ -571,12 +580,9 @@ export function ProjectDetail() {
                 to the version they were created with.
               </p>
 
-              <Link
-                className="button-link button-link--compact"
-                to={taxonomyEditorPath(project.id)}
-              >
+              <ButtonLink size="compact" to={taxonomyEditorPath(project.id)}>
                 Edit taxonomy
-              </Link>
+              </ButtonLink>
             </div>
           </section>
         </div>
@@ -633,12 +639,12 @@ export function ProjectDetail() {
                   {instructions.sourceFilename}
                 </span>
               )}
-              <Link
-                className="button-link button-link--compact"
+              <ButtonLink
+                size="compact"
                 to={instructionsEditorPath(project.id)}
               >
                 Edit instructions
-              </Link>
+              </ButtonLink>
             </div>
           </div>
           {instructions ? (
@@ -667,14 +673,14 @@ export function ProjectDetail() {
               records from this browser. Source audio is never deleted.
             </p>
           </div>
-          <button
+          <Button
             ref={deleteProjectTriggerRef}
-            className="danger-button"
+            variant="danger"
             type="button"
             onClick={() => setDeleteOpen(true)}
           >
             Delete project
-          </button>
+          </Button>
         </section>
       </main>
 
@@ -689,11 +695,13 @@ export function ProjectDetail() {
         closeOnEscape={!acting}
         onClose={closeDeleteProject}
       >
-        <h2 id="delete-title">Permanently delete {project.name}?</h2>
-        <p id="delete-description">
+        <ModalTitle id="delete-title">
+          Permanently delete {project.name}?
+        </ModalTitle>
+        <ModalDescription id="delete-description">
           This cannot be undone without a future project backup. Source audio
           files remain untouched.
-        </p>
+        </ModalDescription>
         <label className="field">
           <span>Type the project name to confirm</span>
           <input
@@ -702,19 +710,19 @@ export function ProjectDetail() {
             onChange={(event) => setConfirmation(event.target.value)}
           />
         </label>
-        <div className="form-actions">
-          <button type="button" onClick={closeDeleteProject} disabled={acting}>
+        <ModalActions className="form-actions">
+          <Button type="button" onClick={closeDeleteProject} disabled={acting}>
             Cancel
-          </button>
-          <button
-            className="danger-button"
+          </Button>
+          <Button
+            variant="danger"
             type="button"
             disabled={confirmation !== project.name || acting}
             onClick={() => void deleteProject()}
           >
             {acting ? 'Deleting…' : 'Delete permanently'}
-          </button>
-        </div>
+          </Button>
+        </ModalActions>
       </Modal>
     </ProjectLayout>
   )

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams } from 'react-router'
+import { Button, ButtonLink } from '../../components/Button'
 import { useConfirmation } from '../../components/confirmationContext'
 import { StatusReadout } from '../../components/StatusReadout'
 import { TransportBar } from '../../components/TransportBar'
@@ -159,18 +160,12 @@ function LoadedAnnotationRoute({
           <PageNotice title="Task cannot be opened" tone="error">
             <p>{loaded.message}</p>
             <div className="form-actions">
-              <Link
-                className="button-link"
-                to={projectPath(aggregate.project.id)}
-              >
+              <ButtonLink to={projectPath(aggregate.project.id)}>
                 Return to project
-              </Link>
-              <Link
-                className="button-link"
-                to={editProjectPath(aggregate.project.id)}
-              >
+              </ButtonLink>
+              <ButtonLink to={editProjectPath(aggregate.project.id)}>
                 Replace taxonomy
-              </Link>
+              </ButtonLink>
             </div>
           </PageNotice>
         </main>
@@ -766,17 +761,17 @@ function ActiveAnnotationWorkspace({
           {saveState}
         </output>
         <div className="annotation-header__actions">
-          <button type="button" onClick={() => void returnToProject()}>
+          <Button type="button" onClick={() => void returnToProject()}>
             Return to Project
-          </button>
+          </Button>
           {!readOnly && (
-            <button type="button" onClick={() => void skip()}>
+            <Button type="button" onClick={() => void skip()}>
               Skip &amp; Next
-            </button>
+            </Button>
           )}
           {!readOnly && (
-            <button
-              className="primary-button"
+            <Button
+              variant="primary"
               type="button"
               disabled={submitting}
               onClick={() => void submit()}
@@ -786,7 +781,7 @@ function ActiveAnnotationWorkspace({
                 : nextTask
                   ? 'Submit & Next'
                   : 'Submit Task'}
-            </button>
+            </Button>
           )}
         </div>
       </header>
@@ -900,16 +895,16 @@ function ActiveAnnotationWorkspace({
               />
               <div className="form-actions">
                 {audioState.kind === 'permission' && (
-                  <button type="button" onClick={() => void grantPermission()}>
+                  <Button type="button" onClick={() => void grantPermission()}>
                     Grant file permission
-                  </button>
+                  </Button>
                 )}
-                <button
+                <Button
                   type="button"
                   onClick={() => relinkInputRef.current?.click()}
                 >
                   Upload audio file
-                </button>
+                </Button>
               </div>
             </div>
           ) : (

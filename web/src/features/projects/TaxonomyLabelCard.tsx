@@ -1,4 +1,5 @@
 import type { DragEvent, MouseEvent } from 'react'
+import { Button } from '../../components/Button'
 import type { AnnotationLabel } from '../../domain/annotationTaxonomy'
 import {
   ColorSwatchInput,
@@ -41,7 +42,8 @@ function ScopeButtons({
         {(['region', 'clip'] as const).map((scope) => {
           const pressed = label.scopes.includes(scope)
           return (
-            <button
+            <Button
+              size="compact"
               key={scope}
               className="compact-toggle-button"
               type="button"
@@ -56,7 +58,7 @@ function ScopeButtons({
               }
             >
               {scope === 'region' ? 'Region' : 'Clip'}
-            </button>
+            </Button>
           )
         })}
       </div>

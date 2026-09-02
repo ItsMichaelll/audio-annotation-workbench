@@ -1,11 +1,13 @@
 import {
   useEffect,
   useRef,
+  type ComponentPropsWithoutRef,
   type KeyboardEvent,
   type ReactNode,
   type RefObject,
 } from 'react'
 import { createPortal } from 'react-dom'
+import styles from './Modal.module.css'
 
 const FOCUSABLE_SELECTOR =
   'a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'
@@ -23,7 +25,7 @@ export function Modal({
   children,
 }: {
   open: boolean
-  className?: string
+  className?: string | undefined
   titleId: string
   descriptionId?: string
   initialFocusRef?: RefObject<HTMLElement | null>
@@ -108,7 +110,7 @@ export function Modal({
   const content = (
     <div
       ref={backdropRef}
-      className="dialog-backdrop modal-backdrop"
+      className={styles.backdrop}
       role="presentation"
       onPointerDown={(event) => {
         event.stopPropagation()
@@ -120,7 +122,7 @@ export function Modal({
     >
       <div
         ref={dialogRef}
-        className={`confirmation-dialog modal-dialog${className ? ` ${className}` : ''}`}
+        className={`${styles.dialog}${className ? ` ${className}` : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -136,4 +138,40 @@ export function Modal({
   return typeof document === 'undefined'
     ? content
     : createPortal(content, document.body)
+}
+
+export function ModalTitle({
+  className,
+  ...props
+}: ComponentPropsWithoutRef<'h2'>) {
+  return (
+    <h2
+      {...props}
+      className={`${styles.title}${className ? ` ${className}` : ''}`}
+    />
+  )
+}
+
+export function ModalDescription({
+  className,
+  ...props
+}: ComponentPropsWithoutRef<'p'>) {
+  return (
+    <p
+      {...props}
+      className={`${styles.description}${className ? ` ${className}` : ''}`}
+    />
+  )
+}
+
+export function ModalActions({
+  className,
+  ...props
+}: ComponentPropsWithoutRef<'div'>) {
+  return (
+    <div
+      {...props}
+      className={`${styles.actions}${className ? ` ${className}` : ''}`}
+    />
+  )
 }

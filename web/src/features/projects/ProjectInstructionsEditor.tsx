@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
+import { Button } from '../../components/Button'
 import { prepareInstructionsSource } from '../../domain/uploads'
 import { projectPath } from '../../routes'
 import {
@@ -143,29 +144,29 @@ function LoadedInstructionsEditor({
             {filename} · 512 KB maximum file size
           </span>
           <div className="configuration-toolbar__actions">
-            <button
+            <Button
               type="button"
               onClick={() =>
                 downloadText(source, filename, 'text/markdown;charset=utf-8')
               }
             >
               Download Markdown
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               disabled={!source}
               onClick={() => changeSource('')}
             >
               Clear instructions
-            </button>
-            <button
-              className="primary-button"
+            </Button>
+            <Button
+              variant="primary"
               type="button"
               disabled={!dirty || Boolean(error) || saveState === 'Saving'}
               onClick={() => void save()}
             >
               {saveState === 'Saving' ? 'Saving…' : 'Save instructions'}
-            </button>
+            </Button>
           </div>
         </div>
 

@@ -4,6 +4,7 @@ import {
   nextListboxIndex,
   selectListboxOption,
 } from '../domain/listbox'
+import styles from './CustomSelect.module.css'
 
 export interface CustomSelectOption {
   value: string
@@ -14,8 +15,10 @@ interface CustomSelectBaseProps {
   value: string
   options: readonly CustomSelectOption[]
   disabled?: boolean
+  invalid?: boolean
   placeholder?: string
   className?: string
+  variant?: 'default' | 'inspector' | 'spectrum' | 'taskFilter'
   onChange(value: string): void
 }
 
@@ -31,8 +34,10 @@ export function CustomSelect({
   ariaLabel,
   ariaLabelledBy,
   disabled = false,
+  invalid = false,
   placeholder = 'Select…',
   className,
+  variant = 'default',
   onChange,
 }: CustomSelectProps) {
   const id = useId()
@@ -74,14 +79,14 @@ export function CustomSelect({
   return (
     <div
       ref={rootRef}
-      className={`custom-select${className ? ` ${className}` : ''}${
-        disabled ? ' is-disabled' : ''
-      }`}
+      className={`${styles.root}${variant === 'default' ? '' : ` ${styles[variant]}`}${
+        invalid ? ` ${styles.inspectorInvalid}` : ''
+      }${disabled ? ` ${styles.disabled}` : ''}${className ? ` ${className}` : ''}`}
     >
       <button
         ref={triggerRef}
         type="button"
-        className="custom-select__trigger"
+        className={styles.trigger}
         role="combobox"
         aria-label={ariaLabel}
         aria-labelledby={ariaLabelledBy}
@@ -101,13 +106,13 @@ export function CustomSelect({
         }}
       >
         <span>{selected?.label ?? placeholder}</span>
-        <i aria-hidden="true" />
+        <i className={styles.chevron} aria-hidden="true" />
       </button>
       {open && (
         <div
           ref={listboxRef}
           id={`${id}-listbox`}
-          className="custom-select__listbox"
+          className={styles.listbox}
           role="listbox"
           aria-label={ariaLabel}
           aria-labelledby={ariaLabelledBy}
@@ -138,7 +143,9 @@ export function CustomSelect({
               id={`${id}-option-${index}`}
               role="option"
               aria-selected={option.value === value}
-              className={index === activeIndex ? 'is-active' : undefined}
+              className={`${styles.option}${
+                index === activeIndex ? ` ${styles.optionActive}` : ''
+              }`}
               key={option.value}
               onMouseEnter={() => setActiveIndex(index)}
               onMouseDown={(event) => event.preventDefault()}
@@ -155,13 +162,24 @@ export function CustomSelect({
 
 export function CustomSelectField({
   label,
+  variant = 'default',
   ...props
 }: CustomSelectBaseProps & { label: ReactNode }) {
   const labelId = useId()
   return (
-    <div className="custom-select-field">
-      <span id={labelId}>{label}</span>
-      <CustomSelect {...props} ariaLabelledBy={labelId} />
+    <div
+      className={`${styles.field} ${
+        variant === 'spectrum'
+          ? styles.fieldSpectrum
+          : variant === 'inspector'
+            ? styles.fieldInspector
+            : ''
+      }`}
+    >
+      <span className={styles.fieldLabel} id={labelId}>
+        {label}
+      </span>
+      <CustomSelect {...props} ariaLabelledBy={labelId} variant={variant} />
     </div>
   )
 }

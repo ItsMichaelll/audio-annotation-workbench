@@ -1,0 +1,47 @@
+.root {
+  display: flex;
+  min-height: 43px;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-default);
+  background: #171a1d;
+}
+
+.control {
+  min-width: 42px;
+  padding: 0 10px;
+  font-size: 11px;
+}
+
+.primary {
+  display: flex;
+  min-width: 78px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.primary svg {
+  color: var(--accent);
+}
+
+.control[aria-pressed='true'] {
+  border-color: rgb(var(--accent-rgb) / 46%);
+  background: rgb(var(--accent-rgb) / 14%);
+  color: color-mix(in srgb, var(--accent) 25%, white);
+}
+
+.viewToggle[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--text-inverse);
+  font-weight: var(--font-weight-medium);
+}
+
+.divider {
+  width: 1px;
+  height: 23px;
+  margin: 0 3px;
+  background: var(--border-default);
+}

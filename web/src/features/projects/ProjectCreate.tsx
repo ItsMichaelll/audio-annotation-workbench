@@ -1,5 +1,6 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
+import { Button, ButtonLink } from '../../components/Button'
 import type {
   PreparedInstructions,
   PreparedTaxonomy,
@@ -166,9 +167,9 @@ export function ProjectCreate() {
             {tasks.length > 0 && (
               <div className="file-selection">
                 <strong>{tasks.length} tasks ready for creation</strong>
-                <button type="button" onClick={() => setTasks([])}>
+                <Button type="button" onClick={() => setTasks([])}>
                   Clear
-                </button>
+                </Button>
               </div>
             )}
           </section>
@@ -195,12 +196,12 @@ export function ProjectCreate() {
                 void selectTaxonomy(file)
               }}
             />
-            <button
+            <Button
               type="button"
               onClick={() => taxonomyInput.current?.click()}
             >
               {taxonomy ? 'Replace taxonomy file' : 'Upload taxonomy file'}
-            </button>
+            </Button>
             {taxonomy && (
               <div className="file-selection">
                 <strong>{taxonomy.sourceFilename}</strong>
@@ -234,18 +235,18 @@ export function ProjectCreate() {
                 void selectInstructions(file)
               }}
             />
-            <button
+            <Button
               type="button"
               onClick={() => instructionsInput.current?.click()}
             >
               {instructions ? 'Replace instructions' : 'Upload Markdown file'}
-            </button>
+            </Button>
             {instructions && (
               <div className="file-selection">
                 <strong>{instructions.sourceFilename}</strong>
-                <button type="button" onClick={() => setInstructions(null)}>
+                <Button type="button" onClick={() => setInstructions(null)}>
                   Remove
-                </button>
+                </Button>
               </div>
             )}
             {instructionsError && (
@@ -267,16 +268,14 @@ export function ProjectCreate() {
           </section>
 
           <div className="form-actions">
-            <Link className="button-link button-link--secondary" to="/projects">
-              Cancel
-            </Link>
-            <button
-              className="primary-button"
+            <ButtonLink to="/projects">Cancel</ButtonLink>
+            <Button
+              variant="primary"
               type="submit"
               disabled={problems.length > 0 || submitting}
             >
               {submitting ? 'Creating…' : 'Create project'}
-            </button>
+            </Button>
           </div>
         </form>
       </main>
