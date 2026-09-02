@@ -15,6 +15,8 @@ import {
 import { MarkdownInstructions } from './MarkdownInstructions'
 import { PageNotice, ProjectLayout, ProjectPageState } from './ProjectLayout'
 import { useProject } from './projectHooks'
+import styles from './ProjectInstructionsEditor.module.css'
+import layoutStyles from './ProjectLayout.module.css'
 
 type SaveState = 'Saved' | 'Unsaved' | 'Saving' | 'Validation error'
 
@@ -106,22 +108,34 @@ function LoadedInstructionsEditor({
 
   return (
     <ProjectLayout>
-      <main className="project-page configuration-editor">
-        <div className="breadcrumbs">
+      <main className={`${layoutStyles.page} ${styles.editor}`}>
+        <div className={layoutStyles.breadcrumbs}>
           <Link to="/projects">Projects</Link>
           <span aria-hidden="true">/</span>
           <Link to={projectPath(project.id)}>{project.name}</Link>
           <span aria-hidden="true">/</span>
           <span>Instructions editor</span>
         </div>
-        <div className="page-heading configuration-editor__heading">
+        <div className={`${layoutStyles.pageHeading} ${styles.heading}`}>
           <div>
-            <p className="eyebrow">Project configuration</p>
-            <h1>Instructions editor</h1>
-            <p>Edit local Markdown and verify the safely rendered preview.</p>
+            <p className={layoutStyles.eyebrow}>Project configuration</p>
+            <h1 className={layoutStyles.pageHeadingTitle}>
+              Instructions editor
+            </h1>
+            <p className={layoutStyles.pageHeadingDescription}>
+              Edit local Markdown and verify the safely rendered preview.
+            </p>
           </div>
           <output
-            className={`editor-save-state editor-save-state--${saveState.toLowerCase().replace(' ', '-')}`}
+            className={`${styles.saveState} ${
+              saveState === 'Unsaved'
+                ? styles.saveStateUnsaved
+                : saveState === 'Saving'
+                  ? styles.saveStateSaving
+                  : saveState === 'Validation error'
+                    ? styles.saveStateValidationError
+                    : ''
+            }`}
             aria-live="polite"
           >
             {saveState}
@@ -139,11 +153,11 @@ function LoadedInstructionsEditor({
           </PageNotice>
         )}
 
-        <div className="configuration-toolbar">
-          <span className="muted-copy">
+        <div className={styles.toolbar}>
+          <span className={styles.mutedCopy}>
             {filename} · 512 KB maximum file size
           </span>
-          <div className="configuration-toolbar__actions">
+          <div className={styles.toolbarActions}>
             <Button
               type="button"
               onClick={() =>
@@ -170,16 +184,13 @@ function LoadedInstructionsEditor({
           </div>
         </div>
 
-        <div className="instructions-editor-grid">
-          <section className="configuration-panel instructions-source-panel">
-            <label
-              className="field instructions-source-field"
-              htmlFor="instructions-source"
-            >
+        <div className={styles.grid}>
+          <section className={styles.sourcePanel}>
+            <label className={styles.sourceField} htmlFor="instructions-source">
               <textarea
                 ref={sourceRef}
                 id="instructions-source"
-                className="code-textarea"
+                className={styles.sourceTextarea}
                 value={source}
                 onChange={(event) => changeSource(event.target.value)}
                 onScroll={(event) => {
@@ -195,7 +206,7 @@ function LoadedInstructionsEditor({
 
           <section
             ref={previewRef}
-            className="configuration-panel instructions-preview"
+            className={styles.preview}
             aria-label="Rendered instructions preview"
             onScroll={(event) => {
               if (sourceRef.current) {
@@ -203,18 +214,20 @@ function LoadedInstructionsEditor({
               }
             }}
           >
-            <div className="structured-taxonomy__heading">
+            <div className={styles.previewHeading}>
               <div>
-                <p className="eyebrow">Safe rendering</p>
-                <h2>Preview</h2>
+                <p className={layoutStyles.eyebrow}>Safe rendering</p>
+                <h2 className={styles.previewTitle}>Preview</h2>
               </div>
             </div>
             {source ? (
               <MarkdownInstructions markdown={source} />
             ) : (
-              <div className="task-empty-state">
-                <h3>No instructions have been added.</h3>
-                <p className="muted-copy">
+              <div className={styles.emptyState}>
+                <h3 className={styles.emptyStateTitle}>
+                  No instructions have been added.
+                </h3>
+                <p className={styles.mutedCopy}>
                   Add instructions to help annotators understand the project and
                   the tasks.
                 </p>

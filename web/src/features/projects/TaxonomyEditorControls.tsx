@@ -21,6 +21,7 @@ import {
   normalizeHexColor,
   type HsvColor,
 } from '../../domain/colorPicker'
+import styles from './TaxonomyEditorControls.module.css'
 
 type IconName =
   'add' | 'chevron-down' | 'drag' | 'move-down' | 'move-up' | 'trash'
@@ -92,6 +93,7 @@ export function IconButton({
   danger = false,
   expanded,
   controls,
+  className,
   onClick,
 }: {
   label: string
@@ -101,13 +103,16 @@ export function IconButton({
   danger?: boolean
   expanded?: boolean
   controls?: string
+  className?: string | undefined
   onClick: () => void
 }) {
   return (
     <Button
       variant={danger ? 'danger' : 'secondary'}
       size="icon"
-      className={`compact-icon-button${danger ? ' compact-danger-button' : ''}${icon === 'chevron-down' ? ' expand-button' : ''}`}
+      className={`${styles.iconButton}${danger ? ` ${styles.dangerButton}` : ''}${
+        icon === 'chevron-down' ? ` ${styles.expandButton}` : ''
+      }${className ? ` ${className}` : ''}`}
       type="button"
       aria-label={label}
       aria-expanded={expanded}
@@ -133,14 +138,14 @@ export function DragHandle({
   return (
     <Button
       size="icon"
-      className="compact-icon-button drag-handle"
+      className={`${styles.iconButton} ${styles.dragHandle}`}
       type="button"
       draggable
       aria-label={label}
       title={label}
       onDragStart={(event) => {
         const dragItem = event.currentTarget.closest<HTMLElement>(
-          '.taxonomy-drag-item',
+          '[data-label-ui-id], [data-option-ui-id]',
         )
         if (dragItem) event.dataTransfer.setDragImage(dragItem, 20, 20)
         onDragStart(event)
@@ -155,10 +160,12 @@ export function DragHandle({
 export function ColorSwatchInput({
   value,
   label,
+  className,
   onChange,
 }: {
   value: string | undefined
   label: string
+  className?: string | undefined
   onChange: (value: string) => void
 }) {
   const dialogId = useId()
@@ -229,7 +236,9 @@ export function ColorSwatchInput({
         size="icon"
         ref={triggerRef}
         type="button"
-        className={`interactive-color-swatch${valid ? '' : ' is-empty'}`}
+        className={`${styles.swatch}${valid ? '' : ` ${styles.swatchEmpty}`}${
+          className ? ` ${className}` : ''
+        }`}
         style={style}
         aria-label={label}
         aria-haspopup="dialog"
@@ -240,21 +249,30 @@ export function ColorSwatchInput({
       />
       <Modal
         open={open}
-        className="color-picker-dialog"
+        className={styles.colorPickerDialog}
         titleId={`${dialogId}-title`}
         descriptionId={`${dialogId}-description`}
         initialFocusRef={hexInputRef}
         returnFocusRef={triggerRef}
         onClose={closePicker}
       >
-        <header className="color-picker-dialog__header">
+        <header className={styles.colorPickerHeader}>
           <div>
-            <ModalTitle id={`${dialogId}-title`}>Choose color</ModalTitle>
-            <ModalDescription id={`${dialogId}-description`}>
+            <ModalTitle
+              className={styles.colorPickerTitle}
+              id={`${dialogId}-title`}
+            >
+              Choose color
+            </ModalTitle>
+            <ModalDescription
+              className={styles.colorPickerDescription}
+              id={`${dialogId}-description`}
+            >
               {label}
             </ModalDescription>
           </div>
           <IconButton
+            className={styles.closeButton}
             label="Close color picker"
             icon="add"
             onClick={closePicker}
@@ -262,7 +280,7 @@ export function ColorSwatchInput({
         </header>
 
         <div
-          className="color-picker-surface"
+          className={styles.colorPickerSurface}
           role="slider"
           tabIndex={0}
           aria-label="Saturation and brightness"
@@ -287,7 +305,7 @@ export function ColorSwatchInput({
           onKeyDown={handleSurfaceKeyDown}
         >
           <span
-            className="color-picker-surface__marker"
+            className={styles.colorPickerMarker}
             style={{
               left: `${draftHsv.saturation}%`,
               top: `${100 - draftHsv.value}%`,
@@ -295,9 +313,10 @@ export function ColorSwatchInput({
           />
         </div>
 
-        <label className="color-picker-slider-field">
+        <label className={styles.sliderField}>
           <span>Hue</span>
           <input
+            className={styles.sliderInput}
             type="range"
             min="0"
             max="359"
@@ -312,17 +331,18 @@ export function ColorSwatchInput({
           />
         </label>
 
-        <div className="color-picker-value-row">
+        <div className={styles.valueRow}>
           <span
-            className="color-picker-preview"
+            className={styles.preview}
             style={{
               backgroundColor: normalizedDraft ?? 'transparent',
             }}
             aria-hidden="true"
           />
-          <label>
+          <label className={styles.valueField}>
             <span>Hex</span>
             <input
+              className={styles.valueInput}
               ref={hexInputRef}
               value={draftHex}
               maxLength={7}
@@ -334,7 +354,7 @@ export function ColorSwatchInput({
           </label>
         </div>
 
-        <ModalActions className="color-picker-actions">
+        <ModalActions className={styles.actions}>
           <Button type="button" onClick={closePicker}>
             Cancel
           </Button>
@@ -358,13 +378,19 @@ export function ColorSwatchInput({
 
 export function AddButton({
   children,
+  className,
   onClick,
 }: {
   children: ReactNode
+  className?: string | undefined
   onClick: () => void
 }) {
   return (
-    <Button className="button-with-icon" type="button" onClick={onClick}>
+    <Button
+      className={`${styles.addButton}${className ? ` ${className}` : ''}`}
+      type="button"
+      onClick={onClick}
+    >
       <Icon name="add" />
       {children}
     </Button>

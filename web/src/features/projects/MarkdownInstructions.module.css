@@ -1,0 +1,107 @@
+.renderError {
+  padding: 13px 15px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border-default);
+  border-left: 6px solid var(--text-danger);
+  border-radius: var(--radius-md);
+  background: var(--surface-panel);
+  font-size: 12px;
+}
+
+.renderErrorTitle {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.renderErrorMessage {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: var(--line-height-body);
+}
+
+.root {
+  color: #d4dbde;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.root h1,
+.root h2,
+.root h3,
+.root h4,
+.root h5,
+.root h6 {
+  margin: 14px 0 5px;
+  color: var(--text-primary);
+  font-size: 17px;
+}
+
+.root > :first-child {
+  margin-top: 0;
+}
+
+.root > :last-child {
+  margin-bottom: 0;
+}
+
+.root h2 {
+  font-size: 15px;
+}
+
+.root h3,
+.root h4,
+.root h5,
+.root h6 {
+  font-size: 13px;
+}
+
+.root p,
+.root ul,
+.root ol {
+  margin: 5px 0;
+}
+
+.root ul,
+.root ol {
+  padding-left: 20px;
+}
+
+.root li + li {
+  margin-top: 2px;
+}
+
+.root a {
+  color: #8dbaff;
+}
+
+.root code {
+  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-code);
+  font-family: var(--font-mono);
+}
+
+.root pre {
+  overflow: auto;
+  padding: 12px;
+  margin: 7px 0;
+  border: 1px solid var(--border-default);
+  background: var(--surface-code);
+}
+
+.root blockquote {
+  padding-left: 12px;
+  margin: 7px 0;
+  border-left: 2px solid var(--accent-dim);
+  color: var(--text-secondary);
+}
+
+.root hr {
+  margin: 10px 0;
+  border: 0;
+  border-top: 1px solid var(--border-default);
+}
+
+.root table {
+  margin: 7px 0;
+}

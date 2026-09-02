@@ -21,6 +21,8 @@ import {
   toggleExpandedLabel,
   type LabelUiState,
 } from './taxonomyEditorUiState'
+import styles from './TaxonomyStructuredEditor.module.css'
+import layoutStyles from './ProjectLayout.module.css'
 
 export type TaxonomyEditorMode = 'yaml' | 'structured'
 type ScaleName = 'severity' | 'confidence'
@@ -35,11 +37,12 @@ export function TaxonomyModeSwitch({
 }) {
   return (
     <div
-      className="segmented-control taxonomy-mode-switch"
+      className={styles.modeSwitch}
       role="group"
       aria-label="Taxonomy editor mode"
     >
       <Button
+        className={styles.modeButton}
         type="button"
         aria-pressed={mode === 'yaml'}
         onClick={() => onChange('yaml')}
@@ -47,6 +50,7 @@ export function TaxonomyModeSwitch({
         YAML
       </Button>
       <Button
+        className={styles.modeButton}
         type="button"
         aria-pressed={mode === 'structured'}
         onClick={() => onChange('structured')}
@@ -149,29 +153,30 @@ export function StructuredTaxonomyEditor({
   }
 
   return (
-    <section
-      className="configuration-panel structured-taxonomy taxonomy-editor-surface"
-      aria-label="Structured taxonomy editor"
-    >
+    <section className={styles.root} aria-label="Structured taxonomy editor">
       {validationError && (
-        <div className="structured-validation" role="alert">
-          <strong>Fix the structured values before saving</strong>
-          <p>{validationError}</p>
-          <small>
+        <div className={styles.validation} role="alert">
+          <strong className={styles.validationTitle}>
+            Fix the structured values before saving
+          </strong>
+          <p className={styles.validationMessage}>{validationError}</p>
+          <small className={styles.validationHint}>
             Your current values remain in both editors; saving stays disabled.
           </small>
         </div>
       )}
 
       <section
-        className="taxonomy-section"
+        className={styles.section}
         aria-labelledby="taxonomy-labels-heading"
       >
-        <div className="structured-taxonomy__heading">
+        <div className={styles.heading}>
           <div>
-            <p className="eyebrow">Annotation vocabulary</p>
-            <h2 id="taxonomy-labels-heading">Labels</h2>
-            <p>
+            <p className={layoutStyles.eyebrow}>Annotation vocabulary</p>
+            <h2 id="taxonomy-labels-heading" className={styles.headingTitle}>
+              Labels
+            </h2>
+            <p className={styles.headingDescription}>
               Configure label identity, display metadata, shortcuts, and scope.
             </p>
           </div>
@@ -179,17 +184,21 @@ export function StructuredTaxonomyEditor({
         </div>
 
         {taxonomy.labels.length === 0 ? (
-          <div className="taxonomy-empty-state">
+          <div className={styles.emptyState}>
             <div>
-              <strong>No labels configured</strong>
-              <p>A valid taxonomy needs at least one annotation label.</p>
+              <strong className={styles.emptyStateTitle}>
+                No labels configured
+              </strong>
+              <p className={styles.emptyStateDescription}>
+                A valid taxonomy needs at least one annotation label.
+              </p>
             </div>
             <AddButton onClick={() => void addLabel()}>
               Add first label
             </AddButton>
           </div>
         ) : (
-          <div className="structured-list">
+          <div className={styles.list}>
             {taxonomy.labels.map((label, index) => {
               const uiId =
                 labelUiState.ids[index] ?? `${instanceId}-label-${index}`
@@ -267,20 +276,22 @@ export function StructuredTaxonomyEditor({
       </section>
 
       <section
-        className="taxonomy-section taxonomy-section--scales"
+        className={`${styles.section} ${styles.scalesSection}`}
         aria-labelledby="taxonomy-scales-heading"
       >
-        <div className="structured-taxonomy__heading">
+        <div className={styles.heading}>
           <div>
-            <p className="eyebrow">Review dimensions</p>
-            <h2 id="taxonomy-scales-heading">Scales</h2>
-            <p>
+            <p className={layoutStyles.eyebrow}>Review dimensions</p>
+            <h2 id="taxonomy-scales-heading" className={styles.headingTitle}>
+              Scales
+            </h2>
+            <p className={styles.headingDescription}>
               Severity and Confidence are optional fixed schema keys. Option
               order is preserved in YAML and annotation controls.
             </p>
           </div>
         </div>
-        <div className="scale-grid">
+        <div className={styles.scaleGrid}>
           {(['severity', 'confidence'] as const).map((name) => (
             <ScaleCard
               key={name}

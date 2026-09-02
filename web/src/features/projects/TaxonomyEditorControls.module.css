@@ -1,0 +1,245 @@
+.iconButton {
+  display: grid;
+  width: var(--icon-button-size-sm);
+  min-width: var(--icon-button-size-sm);
+  min-height: var(--icon-button-size-sm);
+  place-items: center;
+  padding: 0;
+  border-color: transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: #aeb7bc;
+  line-height: 1;
+}
+
+.iconButton:hover:not(:disabled),
+.iconButton:focus-visible {
+  border-color: var(--border-strong);
+  background: rgb(255 255 255 / 5%);
+  color: #eef2f3;
+}
+
+.iconButton:disabled {
+  color: #4f585d;
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.dangerButton {
+  color: #8e7777;
+}
+
+.dangerButton:hover:not(:disabled),
+.dangerButton:focus-visible {
+  border-color: var(--text-danger);
+  background: var(--danger);
+  color: #fff;
+}
+
+.expandButton svg {
+  transition: transform var(--duration-fast) var(--easing-standard);
+}
+
+.expandButton[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+
+.dragHandle {
+  cursor: grab;
+  touch-action: none;
+}
+
+.dragHandle:active {
+  cursor: grabbing;
+}
+
+.swatch {
+  position: relative;
+  display: block;
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+  min-height: 24px;
+  flex: 0 0 auto;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 24%);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.swatchEmpty {
+  border-style: dashed;
+  background: #242a2d;
+}
+
+.colorPickerDialog {
+  width: min(410px, 100%);
+  padding: 18px;
+}
+
+.colorPickerHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.colorPickerTitle {
+  margin: 0;
+  font-size: 16px;
+}
+
+.colorPickerDescription {
+  margin: 3px 0 0;
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.closeButton svg {
+  transform: rotate(45deg);
+}
+
+.colorPickerSurface {
+  position: relative;
+  width: 100%;
+  height: 190px;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background:
+    linear-gradient(to top, #000, transparent),
+    linear-gradient(to right, #fff, transparent),
+    hsl(var(--color-picker-hue) 100% 50%);
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.colorPickerSurface:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.colorPickerMarker {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 75%);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.sliderField {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  color: #818c92;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sliderInput {
+  width: 100%;
+  height: 18px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  appearance: none;
+  background: linear-gradient(
+    to right,
+    #f00,
+    #ff0,
+    #0f0,
+    #0ff,
+    #00f,
+    #f0f,
+    #f00
+  );
+  cursor: pointer;
+}
+
+.sliderInput::-webkit-slider-thumb {
+  width: 14px;
+  height: 22px;
+  border: 2px solid #fff;
+  border-radius: var(--radius-md);
+  appearance: none;
+  background: transparent;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 70%);
+}
+
+.sliderInput::-moz-range-thumb {
+  width: 12px;
+  height: 20px;
+  border: 2px solid #fff;
+  border-radius: var(--radius-md);
+  background: transparent;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 70%);
+}
+
+.valueRow {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: end;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.preview {
+  width: 42px;
+  height: 34px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+}
+
+.valueField {
+  display: grid;
+  gap: 5px;
+  color: #818c92;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.valueInput {
+  width: 100%;
+  height: 34px;
+  padding: 7px 9px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-control);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.valueInput[aria-invalid='true'] {
+  border-color: var(--text-danger);
+}
+
+.actions {
+  gap: 7px;
+  margin-top: 14px;
+}
+
+.addButton {
+  display: inline-flex;
+  min-height: var(--control-height-sm);
+  align-items: center;
+  gap: 6px;
+  padding-inline: 9px;
+  font-size: 10px;
+}
+
+.addButton svg {
+  width: 14px;
+  height: 14px;
+}
