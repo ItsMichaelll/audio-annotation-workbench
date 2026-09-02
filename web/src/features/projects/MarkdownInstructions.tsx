@@ -1,6 +1,7 @@
 import { Component, type ReactNode } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { safeMarkdownUrl } from './markdownSecurity'
+import styles from './MarkdownInstructions.module.css'
 
 class MarkdownErrorBoundary extends Component<
   { children: ReactNode },
@@ -17,9 +18,11 @@ class MarkdownErrorBoundary extends Component<
   render() {
     if (this.state.failed) {
       return (
-        <div className="page-notice page-notice--error" role="alert">
-          <strong>Instructions could not be rendered</strong>
-          <p>
+        <div className={styles.renderError} role="alert">
+          <strong className={styles.renderErrorTitle}>
+            Instructions could not be rendered
+          </strong>
+          <p className={styles.renderErrorMessage}>
             The stored Markdown remains available when the project is edited.
           </p>
         </div>
@@ -32,7 +35,7 @@ class MarkdownErrorBoundary extends Component<
 export function MarkdownInstructions({ markdown }: { markdown: string }) {
   return (
     <MarkdownErrorBoundary>
-      <div className="markdown-content">
+      <div className={styles.root}>
         <ReactMarkdown
           allowedElements={[
             'a',

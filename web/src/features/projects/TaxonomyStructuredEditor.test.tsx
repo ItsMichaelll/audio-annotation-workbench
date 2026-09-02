@@ -78,16 +78,14 @@ describe('taxonomy structured editor', () => {
     expect(uiId).not.toBe('noise')
     expect(html).toContain(`aria-controls="${uiId}-body"`)
     expect(html).toContain('aria-expanded="false"')
-    expect(html).toContain(
-      `id="${uiId}-body" class="taxonomy-card-body" hidden=""`,
-    )
+    expect(html).toMatch(new RegExp(`id="${uiId}-body"[^>]*hidden=""`))
     expect(html).toContain('Drag Noise to reorder')
     expect(html).toContain('Choose header color for Noise')
-    expect(html).toContain('<strong>Noise</strong>')
-    expect(html).toContain('<small>noise</small>')
-    expect(html).toContain('<span>Region</span>')
-    expect(html).toContain('<span>Clip</span>')
-    expect(html).toContain('<kbd title="Keyboard shortcut">1</kbd>')
+    expect(html).toMatch(/<strong[^>]*>Noise<\/strong>/)
+    expect(html).toMatch(/<small[^>]*>noise<\/small>/)
+    expect(html).toMatch(/<span[^>]*>Region<\/span>/)
+    expect(html).toMatch(/<span[^>]*>Clip<\/span>/)
+    expect(html).toMatch(/<kbd[^>]*title="Keyboard shortcut"[^>]*>1<\/kbd>/)
     expect(html.match(/Delete Noise/g)).toHaveLength(1)
     expect(html).not.toContain('taxonomy-card-index')
   })
@@ -111,34 +109,31 @@ describe('taxonomy structured editor', () => {
     expect(html).toContain('Shortcut')
     expect(html).toContain('maxLength="1"')
     expect(html).toContain('Scopes for Noise')
-    expect(html).toContain('class="taxonomy-label-identity-row"')
-    expect(html).toContain('class="taxonomy-label-details-row"')
-    expect(html).toContain('class="taxonomy-keyboard-reorder__controls"')
     expect(html).toContain('>Reorder<')
     expect(html).not.toContain('>Keyboard reorder<')
-    expect(html.indexOf('taxonomy-field--name')).toBeLessThan(
-      html.indexOf('taxonomy-field--stable-id'),
+    expect(html.indexOf('aria-label="Name for Noise"')).toBeLessThan(
+      html.indexOf('aria-label="Stable ID for Noise"'),
     )
-    expect(html.indexOf('taxonomy-field--stable-id')).toBeLessThan(
-      html.indexOf('taxonomy-field--description'),
+    expect(html.indexOf('aria-label="Stable ID for Noise"')).toBeLessThan(
+      html.indexOf('aria-label="Description for Noise"'),
     )
-    expect(html.indexOf('taxonomy-field--description')).toBeLessThan(
-      html.indexOf('taxonomy-scope-field'),
+    expect(html.indexOf('aria-label="Description for Noise"')).toBeLessThan(
+      html.indexOf('aria-label="Scopes for Noise"'),
     )
-    expect(html.indexOf('taxonomy-scope-field')).toBeLessThan(
-      html.indexOf('taxonomy-color-field'),
+    expect(html.indexOf('aria-label="Scopes for Noise"')).toBeLessThan(
+      html.indexOf('aria-label="Color value for Noise"'),
     )
-    expect(html.indexOf('taxonomy-color-field')).toBeLessThan(
-      html.indexOf('taxonomy-field--shortcut'),
+    expect(html.indexOf('aria-label="Color value for Noise"')).toBeLessThan(
+      html.indexOf('aria-label="Shortcut for Noise"'),
     )
-    expect(html.indexOf('taxonomy-field--shortcut')).toBeLessThan(
-      html.indexOf('taxonomy-keyboard-reorder'),
+    expect(html.indexOf('aria-label="Shortcut for Noise"')).toBeLessThan(
+      html.indexOf('aria-label="Move Noise up"'),
     )
     expect(html).toMatch(/aria-pressed="true"[^>]*>Region/)
     expect(html).toMatch(/aria-pressed="true"[^>]*>Clip/)
     expect(html).not.toContain('type="checkbox"')
-    expect(html).toContain('<h3>Severity</h3>')
-    expect(html).toContain('<h3>Confidence</h3>')
+    expect(html).toMatch(/<h3[^>]*>Severity<\/h3>/)
+    expect(html).toMatch(/<h3[^>]*>Confidence<\/h3>/)
     expect(html).toContain('role="switch" aria-checked="true"')
     expect(html).toContain('role="switch" aria-checked="false"')
     expect(html).toContain('Delete scale')
@@ -154,7 +149,6 @@ describe('taxonomy structured editor', () => {
     const html = renderEditor()
 
     expect(html.match(/draggable="true"/g)?.length).toBeGreaterThanOrEqual(4)
-    expect(html.match(/taxonomy-drag-item/g)?.length).toBeGreaterThanOrEqual(4)
     expect(html).toContain('aria-label="Move Noise up"')
     expect(html).toContain('title="Move label down"')
     expect(html).toContain('aria-label="Severity option 1 value"')

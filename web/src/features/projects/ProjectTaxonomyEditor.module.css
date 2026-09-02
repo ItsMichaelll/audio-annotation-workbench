@@ -1,0 +1,122 @@
+.editor {
+  width: min(1500px, 100%);
+}
+
+.heading {
+  align-items: flex-start;
+}
+
+.saveState {
+  padding: 6px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.saveStateUnsaved,
+.saveStateSaving {
+  border-color: #a8792b;
+  color: #ffd28a;
+}
+
+.saveStateValidationError {
+  border-color: rgb(255 70 70 / 65%);
+  color: var(--text-danger);
+}
+
+.toolbar,
+.toolbarActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar {
+  position: relative;
+  z-index: 1;
+  justify-content: space-between;
+  padding: 10px;
+  border: 1px solid var(--border-default);
+  border-bottom: 0;
+  background: #121618;
+}
+
+.sourcePanel {
+  overflow: hidden;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-waveform);
+}
+
+.sourceField {
+  display: block;
+  margin: 0;
+}
+
+.sourceTextarea {
+  display: block;
+  width: 100%;
+  min-height: 620px;
+  padding: 18px 20px;
+  border: 0;
+  border-radius: 0;
+  background: #0c0f11;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.55;
+  resize: vertical;
+  tab-size: 2;
+  white-space: pre;
+}
+
+.sourceTextarea[aria-invalid='true'] {
+  box-shadow: inset 3px 0 0 var(--text-danger);
+}
+
+.sourceTextarea:focus-visible {
+  outline: none;
+}
+
+.sourceHelp {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 12px;
+  margin: 0;
+  border-top: 1px solid var(--border-default);
+  background: #121618;
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.sourceHelpMeta {
+  color: #c8d0d4;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.schemaVersion {
+  margin-left: 5px;
+  color: #79848a;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .toolbarActions {
+    flex-wrap: wrap;
+  }
+}

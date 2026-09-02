@@ -13,6 +13,7 @@ import {
   IconButton,
   MoveButtons,
 } from './TaxonomyEditorControls'
+import styles from './TaxonomyScaleCard.module.css'
 
 function RequiredSwitch({
   checked,
@@ -23,13 +24,13 @@ function RequiredSwitch({
 }) {
   return (
     <Button
-      className="taxonomy-required-switch"
+      className={styles.requiredSwitch}
       type="button"
       role="switch"
       aria-checked={checked}
       onClick={() => onChange(!checked)}
     >
-      <span aria-hidden="true" />
+      <span className={styles.requiredIndicator} aria-hidden="true" />
       Required
     </Button>
   )
@@ -65,11 +66,13 @@ export function ScaleCard({
 
   if (!scale) {
     return (
-      <section className="taxonomy-scale-card taxonomy-scale-card--empty">
+      <section className={`${styles.root} ${styles.empty}`}>
         <div>
-          <p className="eyebrow">Optional scale</p>
-          <h3>{title}</h3>
-          <p>Add this scale when reviewers need to record {name}.</p>
+          <p className={styles.eyebrow}>Optional scale</p>
+          <h3 className={styles.emptyTitle}>{title}</h3>
+          <p className={styles.emptyDescription}>
+            Add this scale when reviewers need to record {name}.
+          </p>
         </div>
         <AddButton onClick={onAdd}>Add {name} scale</AddButton>
       </section>
@@ -89,10 +92,10 @@ export function ScaleCard({
   }
 
   return (
-    <section className="taxonomy-scale-card">
-      <header className="taxonomy-scale-header">
-        <h3>{title}</h3>
-        <div className="taxonomy-scale-header__actions">
+    <section className={styles.root}>
+      <header className={styles.header}>
+        <h3 className={styles.title}>{title}</h3>
+        <div className={styles.headerActions}>
           <RequiredSwitch
             checked={scale.required}
             onChange={(required) => void onChange({ ...scale, required })}
@@ -100,7 +103,7 @@ export function ScaleCard({
           <Button
             variant="danger"
             size="compact"
-            className="compact-danger-button taxonomy-delete-scale"
+            className={styles.deleteScale}
             type="button"
             onClick={onRemove}
           >
@@ -109,13 +112,13 @@ export function ScaleCard({
         </div>
       </header>
 
-      <div className="taxonomy-options-header" aria-hidden="true">
+      <div className={styles.optionsHeader} aria-hidden="true">
         <span />
         <span>Stored value *</span>
         <span>Display label *</span>
         <span>Actions</span>
       </div>
-      <div className="structured-options">
+      <div className={styles.options}>
         {scale.options.map((option, optionIndex) => {
           const optionIdentity = option.label || option.value || 'option'
           const uiId = optionUiIds[optionIndex] ?? `${name}-${optionIndex}`
@@ -128,7 +131,13 @@ export function ScaleCard({
             )
           return (
             <div
-              className={`structured-option taxonomy-drag-item${draggedOptionUiId === uiId ? ' is-dragging' : ''}${optionDropTargetUiId === uiId && draggedOptionUiId !== uiId ? ' is-drag-over' : ''}`}
+              className={`${styles.option}${
+                draggedOptionUiId === uiId ? ` ${styles.dragging}` : ''
+              }${
+                optionDropTargetUiId === uiId && draggedOptionUiId !== uiId
+                  ? ` ${styles.dragOver}`
+                  : ''
+              }`}
               key={uiId}
               data-option-ui-id={uiId}
               onDragOver={(event) => {
@@ -162,9 +171,10 @@ export function ScaleCard({
                   setOptionDropTargetUiId(null)
                 }}
               />
-              <label className="field">
+              <label className={styles.field}>
                 <span className="visually-hidden">Stored value *</span>
                 <input
+                  className={styles.input}
                   value={option.value}
                   aria-label={`${title} option ${optionIndex + 1} value`}
                   aria-invalid={!option.value.trim() || duplicateValue}
@@ -180,16 +190,17 @@ export function ScaleCard({
                   }
                 />
                 {(!option.value.trim() || duplicateValue) && (
-                  <small className="taxonomy-field-error">
+                  <small className={styles.fieldError}>
                     {duplicateValue
                       ? 'Stored values must be unique.'
                       : 'Enter a stored value.'}
                   </small>
                 )}
               </label>
-              <label className="field">
+              <label className={styles.field}>
                 <span className="visually-hidden">Display label *</span>
                 <input
+                  className={styles.input}
                   value={option.label}
                   aria-label={`${title} option ${optionIndex + 1} label`}
                   aria-invalid={!option.label.trim()}
@@ -205,12 +216,12 @@ export function ScaleCard({
                   }
                 />
                 {!option.label.trim() && (
-                  <small className="taxonomy-field-error">
+                  <small className={styles.fieldError}>
                     Enter a display label.
                   </small>
                 )}
               </label>
-              <div className="structured-option__actions">
+              <div className={styles.optionActions}>
                 <MoveButtons
                   identity={`${title} option ${optionIdentity}`}
                   kind="option"
@@ -246,11 +257,12 @@ export function ScaleCard({
         })}
       </div>
       {scale.options.length === 0 && (
-        <div className="taxonomy-inline-empty" role="status">
+        <div className={styles.inlineEmpty} role="status">
           A scale needs at least one option. Add an option to restore validity.
         </div>
       )}
       <AddButton
+        className={styles.addOption}
         onClick={() => {
           void (async () => {
             const nextValue = nextAvailableIdentifier(

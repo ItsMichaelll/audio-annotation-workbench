@@ -23,6 +23,8 @@ import {
   TaxonomyModeSwitch,
   type TaxonomyEditorMode,
 } from './TaxonomyStructuredEditor'
+import styles from './ProjectTaxonomyEditor.module.css'
+import layoutStyles from './ProjectLayout.module.css'
 
 type SaveState = 'Saved' | 'Unsaved' | 'Saving' | 'Validation error'
 
@@ -157,26 +159,34 @@ function LoadedTaxonomyEditor({
 
   return (
     <ProjectLayout>
-      <main className="project-page configuration-editor">
-        <div className="breadcrumbs">
+      <main className={`${layoutStyles.page} ${styles.editor}`}>
+        <div className={layoutStyles.breadcrumbs}>
           <Link to="/projects">Projects</Link>
           <span aria-hidden="true">/</span>
           <Link to={projectPath(project.id)}>{project.name}</Link>
           <span aria-hidden="true">/</span>
           <span>Taxonomy editor</span>
         </div>
-        <div className="page-heading configuration-editor__heading">
+        <div className={`${layoutStyles.pageHeading} ${styles.heading}`}>
           <div>
-            <p className="eyebrow">Project configuration</p>
-            <h1>Taxonomy editor</h1>
-            <p>
+            <p className={layoutStyles.eyebrow}>Project configuration</p>
+            <h1 className={layoutStyles.pageHeadingTitle}>Taxonomy editor</h1>
+            <p className={layoutStyles.pageHeadingDescription}>
               Editing active v{activeVersion}{' '}
-              <span className="taxonomy-schema-version">Schema v1</span>. Saving
+              <span className={styles.schemaVersion}>Schema v1</span>. Saving
               creates and activates an immutable version.
             </p>
           </div>
           <output
-            className={`editor-save-state editor-save-state--${saveState.toLowerCase().replace(' ', '-')}`}
+            className={`${styles.saveState} ${
+              saveState === 'Unsaved'
+                ? styles.saveStateUnsaved
+                : saveState === 'Saving'
+                  ? styles.saveStateSaving
+                  : saveState === 'Validation error'
+                    ? styles.saveStateValidationError
+                    : ''
+            }`}
             aria-live="polite"
           >
             {saveState}
@@ -194,9 +204,9 @@ function LoadedTaxonomyEditor({
           </PageNotice>
         )}
 
-        <div className="configuration-toolbar taxonomy-toolbar">
+        <div className={styles.toolbar}>
           <TaxonomyModeSwitch mode={mode} onChange={setMode} />
-          <div className="configuration-toolbar__actions">
+          <div className={styles.toolbarActions}>
             <Button
               type="button"
               onClick={() =>
@@ -217,15 +227,12 @@ function LoadedTaxonomyEditor({
         </div>
 
         {mode === 'yaml' ? (
-          <section className="configuration-panel taxonomy-source-panel taxonomy-editor-surface">
-            <label
-              className="field taxonomy-source-field"
-              htmlFor="taxonomy-source"
-            >
+          <section className={styles.sourcePanel}>
+            <label className={styles.sourceField} htmlFor="taxonomy-source">
               <span className="visually-hidden">Taxonomy YAML</span>
               <textarea
                 id="taxonomy-source"
-                className="code-textarea"
+                className={styles.sourceTextarea}
                 value={source}
                 onChange={(event) => changeSource(event.target.value)}
                 spellCheck={false}
@@ -234,8 +241,10 @@ function LoadedTaxonomyEditor({
                 aria-invalid={Boolean(error)}
               />
             </label>
-            <p id="taxonomy-yaml-help" className="taxonomy-source-help">
-              <span>YAML · schema version 1</span>
+            <p id="taxonomy-yaml-help" className={styles.sourceHelp}>
+              <span className={styles.sourceHelpMeta}>
+                YAML · schema version 1
+              </span>
               <span>
                 Ctrl+S saves valid changes. Invalid source stays local and
                 cannot replace the saved version.

@@ -7,6 +7,7 @@ import {
   IconButton,
   MoveButtons,
 } from './TaxonomyEditorControls'
+import styles from './TaxonomyLabelCard.module.css'
 
 function optionalText<T extends AnnotationLabel>(
   item: T,
@@ -32,10 +33,10 @@ function ScopeButtons({
 }) {
   const identity = labelDisplayName(label)
   return (
-    <div className="taxonomy-scope-field">
-      <span className="taxonomy-field-label">Scope *</span>
+    <div className={styles.scopeField}>
+      <span className={styles.fieldLabel}>Scope *</span>
       <div
-        className="taxonomy-toggle-group"
+        className={styles.toggleGroup}
         role="group"
         aria-label={`Scopes for ${identity}`}
       >
@@ -45,7 +46,7 @@ function ScopeButtons({
             <Button
               size="compact"
               key={scope}
-              className="compact-toggle-button"
+              className={styles.toggleButton}
               type="button"
               aria-pressed={pressed}
               onClick={() =>
@@ -63,7 +64,7 @@ function ScopeButtons({
         })}
       </div>
       {label.scopes.length === 0 && (
-        <small className="taxonomy-field-error" role="status">
+        <small className={styles.fieldError} role="status">
           Select Region, Clip, or both.
         </small>
       )}
@@ -117,13 +118,15 @@ export function LabelCard({
 
   return (
     <article
-      className={`taxonomy-label-card taxonomy-drag-item${dragging ? ' is-dragging' : ''}${dragOver ? ' is-drag-over' : ''}`}
+      className={`${styles.root}${dragging ? ` ${styles.dragging}` : ''}${
+        dragOver ? ` ${styles.dragOver}` : ''
+      }`}
       data-label-ui-id={uiId}
       onDragOver={onDragOver}
       onDrop={onDrop}
     >
-      <header className="taxonomy-card-header" onClick={toggleFromHeaderClick}>
-        <div className="taxonomy-card-identity">
+      <header className={styles.header} onClick={toggleFromHeaderClick}>
+        <div className={styles.identity}>
           <DragHandle
             label={`Drag ${identity} to reorder`}
             onDragStart={onDragStart}
@@ -134,18 +137,26 @@ export function LabelCard({
             label={`Choose header color for ${identity}`}
             onChange={(color) => onChange(optionalText(label, 'color', color))}
           />
-          <div>
-            <strong>{identity}</strong>
-            <small>{label.id || 'Stable ID required'}</small>
+          <div className={styles.identityText}>
+            <strong className={styles.identityName}>{identity}</strong>
+            <small className={styles.identityId}>
+              {label.id || 'Stable ID required'}
+            </small>
           </div>
         </div>
-        <div className="taxonomy-card-summary">
-          <div className="taxonomy-card-badges" aria-label="Active scopes">
-            {label.scopes.includes('region') && <span>Region</span>}
-            {label.scopes.includes('clip') && <span>Clip</span>}
+        <div className={styles.summary}>
+          <div className={styles.badges} aria-label="Active scopes">
+            {label.scopes.includes('region') && (
+              <span className={styles.badge}>Region</span>
+            )}
+            {label.scopes.includes('clip') && (
+              <span className={styles.badge}>Clip</span>
+            )}
           </div>
           {label.shortcut && (
-            <kbd title="Keyboard shortcut">{label.shortcut}</kbd>
+            <kbd className={styles.shortcut} title="Keyboard shortcut">
+              {label.shortcut}
+            </kbd>
           )}
           <IconButton
             label={`${expanded ? 'Collapse' : 'Expand'} ${identity}`}
@@ -164,11 +175,12 @@ export function LabelCard({
         </div>
       </header>
 
-      <div id={bodyId} className="taxonomy-card-body" hidden={!expanded}>
-        <div className="taxonomy-label-identity-row">
-          <label className="field taxonomy-field--name">
-            <span>Name *</span>
+      <div id={bodyId} className={styles.body} hidden={!expanded}>
+        <div className={styles.identityRow}>
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>Name *</span>
             <input
+              className={styles.identityInput}
               value={label.name}
               aria-label={`Name for ${identity}`}
               aria-invalid={!label.name.trim()}
@@ -177,14 +189,13 @@ export function LabelCard({
               }
             />
             {!label.name.trim() && (
-              <small className="taxonomy-field-error">
-                Enter a display name.
-              </small>
+              <small className={styles.fieldError}>Enter a display name.</small>
             )}
           </label>
-          <label className="field taxonomy-field--stable-id">
-            <span>Stable ID *</span>
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>Stable ID *</span>
             <input
+              className={styles.identityInput}
               value={label.id}
               aria-label={`Stable ID for ${identity}`}
               aria-invalid={!label.id.trim()}
@@ -193,14 +204,15 @@ export function LabelCard({
               }
             />
             {!label.id.trim() && (
-              <small className="taxonomy-field-error">Enter a stable ID.</small>
+              <small className={styles.fieldError}>Enter a stable ID.</small>
             )}
           </label>
         </div>
 
-        <label className="field taxonomy-field--description">
-          <span>Description</span>
+        <label className={styles.field}>
+          <span className={styles.fieldLabel}>Description</span>
           <textarea
+            className={`${styles.standardInput} ${styles.descriptionTextarea}`}
             rows={4}
             value={label.description ?? ''}
             aria-label={`Description for ${identity}`}
@@ -210,13 +222,14 @@ export function LabelCard({
           />
         </label>
 
-        <div className="taxonomy-label-details-row">
+        <div className={styles.detailsRow}>
           <ScopeButtons label={label} onChange={onChange} />
 
-          <div className="taxonomy-color-field">
-            <span className="taxonomy-field-label">Color</span>
-            <div className="taxonomy-color-control">
+          <div className={styles.colorField}>
+            <span className={styles.fieldLabel}>Color</span>
+            <div className={styles.colorControl}>
               <ColorSwatchInput
+                className={styles.detailSwatch}
                 value={label.color}
                 label={`Choose color for ${identity}`}
                 onChange={(color) =>
@@ -225,6 +238,7 @@ export function LabelCard({
               />
               <input
                 type="text"
+                className={styles.colorInput}
                 placeholder="#4f8cff"
                 value={label.color ?? ''}
                 aria-label={`Color value for ${identity}`}
@@ -235,16 +249,16 @@ export function LabelCard({
               />
             </div>
             {!validColor && (
-              <small className="taxonomy-field-error">
+              <small className={styles.fieldError}>
                 Use a six-digit hex color, such as #4f8cff.
               </small>
             )}
           </div>
 
-          <label className="field taxonomy-field--shortcut">
-            <span>Shortcut</span>
+          <label className={`${styles.field} ${styles.shortcutField}`}>
+            <span className={styles.fieldLabel}>Shortcut</span>
             <input
-              className="taxonomy-shortcut-input"
+              className={styles.shortcutInput}
               maxLength={1}
               value={label.shortcut ?? ''}
               aria-label={`Shortcut for ${identity}`}
@@ -255,9 +269,9 @@ export function LabelCard({
           </label>
         </div>
 
-        <div className="taxonomy-keyboard-reorder">
-          <span className="taxonomy-field-label">Reorder</span>
-          <div className="taxonomy-keyboard-reorder__controls">
+        <div className={styles.reorder}>
+          <span className={styles.fieldLabel}>Reorder</span>
+          <div className={styles.reorderControls}>
             <MoveButtons
               identity={identity}
               kind="label"
