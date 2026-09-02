@@ -15,6 +15,11 @@ const ProjectCreate = lazy(() =>
     default: module.ProjectCreate,
   })),
 )
+const ProjectRestore = lazy(() =>
+  import('./features/projects/ProjectRestore').then((module) => ({
+    default: module.ProjectRestore,
+  })),
+)
 const ProjectDetail = lazy(() =>
   import('./features/projects/ProjectDetail').then((module) => ({
     default: module.ProjectDetail,
@@ -55,6 +60,7 @@ export function RouterApplication() {
             <Route index element={<ProjectDashboard />} />
             <Route path="projects" element={<ProjectDashboard />} />
             <Route path="projects/new" element={<ProjectCreate />} />
+            <Route path="projects/restore" element={<ProjectRestore />} />
             <Route path="projects/:projectId" element={<ProjectDetail />} />
             <Route path="projects/:projectId/edit" element={<ProjectEdit />} />
             <Route

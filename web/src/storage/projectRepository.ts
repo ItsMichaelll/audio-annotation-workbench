@@ -33,6 +33,10 @@ import {
   type WorkbenchDatabase,
   type WorkbenchDatabaseConnection,
 } from './database'
+import type {
+  ProjectBackup,
+  ProjectBackupRecords,
+} from '../domain/projectBackup'
 
 export interface CreateProjectInput {
   name: string
@@ -86,6 +90,11 @@ export interface ProjectRepository {
     selection: RelinkSelection,
   ): Promise<void>
   getAnnotation(taskId: string): Promise<AnnotationDocument | null>
+  getProjectBackupRecords(projectId: string): Promise<ProjectBackupRecords>
+  restoreProjectBackup(
+    backup: ProjectBackup,
+    replaceExisting?: boolean,
+  ): Promise<void>
   saveAnnotationDraft(
     annotation: AnnotationDocument,
   ): Promise<AnnotationDocument>
@@ -97,6 +106,14 @@ interface RepositoryDependencies {
   now?: () => string
   uuid?: () => string
   beforeCreateCommit?: () => void
+  beforeRestoreCommit?: () => void
+}
+
+export class ProjectRestoreCollisionError extends Error {
+  constructor(readonly projectId: string) {
+    super('A project with this backup ID already exists.')
+    this.name = 'ProjectRestoreCollisionError'
+  }
 }
 
 function cleanDescription(description: string | undefined): string | undefined {
@@ -134,6 +151,7 @@ export class IndexedDbProjectRepository implements ProjectRepository {
   private readonly now: () => string
   private readonly uuid: () => string
   private readonly beforeCreateCommit: (() => void) | undefined
+  private readonly beforeRestoreCommit: (() => void) | undefined
 
   constructor(
     private readonly database: WorkbenchDatabaseConnection,
@@ -142,6 +160,7 @@ export class IndexedDbProjectRepository implements ProjectRepository {
     this.now = dependencies.now ?? (() => new Date().toISOString())
     this.uuid = dependencies.uuid ?? (() => crypto.randomUUID())
     this.beforeCreateCommit = dependencies.beforeCreateCommit
+    this.beforeRestoreCommit = dependencies.beforeRestoreCommit
   }
 
   async createProject(input: CreateProjectInput): Promise<Project> {
@@ -599,6 +618,96 @@ export class IndexedDbProjectRepository implements ProjectRepository {
       taskId,
     )
     return annotation ? normalizeAnnotationCardinality(annotation) : null
+  }
+
+  async getProjectBackupRecords(
+    projectId: string,
+  ): Promise<ProjectBackupRecords> {
+    const transaction = this.database.transaction(
+      ['projects', 'taxonomyVersions', 'instructions', 'tasks', 'annotations'],
+      'readonly',
+    )
+    const project = await transaction.objectStore('projects').get(projectId)
+    if (!project) throw new Error('Project not found.')
+    const [taxonomyVersions, tasks, annotations, instructions] =
+      await Promise.all([
+        transaction
+          .objectStore('taxonomyVersions')
+          .index('by-project')
+          .getAll(projectId),
+        transaction.objectStore('tasks').index('by-project').getAll(projectId),
+        transaction
+          .objectStore('annotations')
+          .index('by-project')
+          .getAll(projectId),
+        project.instructionsId
+          ? transaction.objectStore('instructions').get(project.instructionsId)
+          : Promise.resolve(undefined),
+      ])
+    await transaction.done
+    return {
+      project,
+      taxonomyVersions,
+      instructions: instructions ?? null,
+      tasks,
+      annotations: annotations.map(normalizeAnnotationCardinality),
+    }
+  }
+
+  async restoreProjectBackup(
+    backup: ProjectBackup,
+    replaceExisting = false,
+  ): Promise<void> {
+    const transaction = this.database.transaction(
+      ['projects', 'taxonomyVersions', 'instructions', 'tasks', 'annotations'],
+      'readwrite',
+    ) as ProjectTransaction
+    try {
+      const existing = await transaction
+        .objectStore('projects')
+        .get(backup.project.id)
+      if (existing && !replaceExisting) {
+        throw new ProjectRestoreCollisionError(backup.project.id)
+      }
+      if (existing) {
+        await deleteAllByProject(
+          transaction,
+          'taxonomyVersions',
+          backup.project.id,
+        )
+        await deleteAllByProject(transaction, 'instructions', backup.project.id)
+        await deleteAllByProject(transaction, 'tasks', backup.project.id)
+        await deleteAllByProject(transaction, 'annotations', backup.project.id)
+        await transaction.objectStore('projects').delete(backup.project.id)
+      }
+      await transaction.objectStore('projects').add(backup.project)
+      for (const taxonomy of backup.taxonomyVersions) {
+        await transaction.objectStore('taxonomyVersions').add(taxonomy)
+      }
+      if (backup.instructions) {
+        await transaction.objectStore('instructions').add(backup.instructions)
+      }
+      for (const task of backup.tasks) {
+        await transaction.objectStore('tasks').add(task)
+      }
+      for (const annotation of backup.annotations) {
+        await transaction.objectStore('annotations').add(annotation)
+      }
+      this.beforeRestoreCommit?.()
+      await transaction.done
+    } catch (error) {
+      try {
+        transaction.abort()
+      } catch {
+        /* already aborted */
+      }
+      await transaction.done.catch(() => undefined)
+      if (error instanceof ProjectRestoreCollisionError) throw error
+      throw new Error(
+        'Project restoration failed; existing project data was not changed.',
+        { cause: error },
+      )
+    }
   }
 
   async saveAnnotationDraft(

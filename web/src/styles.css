@@ -186,7 +186,11 @@ select option {
 }
 
 .custom-select__listbox:focus {
-  outline: 2px solid var(--accent);
+  outline: none;
+}
+
+.custom-select__listbox:focus-visible {
+  outline: none;
 }
 
 .custom-select__listbox [role='option'] {
@@ -203,7 +207,7 @@ select option {
 
 .custom-select__listbox [role='option'][aria-selected='true'] {
   background: var(--accent-dim);
-  color: #fff;
+  color: var(--text);
 }
 
 .app-shell.annotation-shell {

@@ -116,6 +116,100 @@
   justify-content: space-between;
 }
 
+.instructions-section,
+.portability-section,
+.restore-panel,
+.restore-preview {
+  display: grid;
+  gap: 14px;
+}
+
+.restore-panel > p {
+  margin: 0;
+}
+
+.portability-section > p {
+  margin: 0;
+}
+
+.portability-actions,
+.export-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: center;
+}
+
+.export-options {
+  margin: 16px 0 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+}
+
+fieldset.export-options > label > input[type='radio'] {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  appearance: none;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  background: #0b0d0e;
+}
+
+fieldset.export-options > label > input[type='radio']:hover {
+  background: rgb(255 255 255 / 10%);
+}
+
+fieldset.export-options > label > input[type='radio']:checked {
+  border-color: var(--accent);
+  padding: 1px;
+  background: var(--accent);
+  background-clip: content-box;
+}
+
+fieldset.export-options > label > input[type='radio']:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.export-options label {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+}
+
+fieldset.export-options {
+  margin-bottom: 16px;
+}
+
+.restore-counts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.restore-file-button {
+  border-radius: 4px !important;
+  justify-self: start;
+}
+
+.restore-counts div {
+  padding: 10px;
+  border: 1px solid var(--border);
+}
+
+.restore-counts dt {
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.restore-counts dd {
+  margin: 4px 0 0;
+  font-weight: 700;
+}
+
 .page-heading {
   margin-bottom: 28px;
 }
@@ -125,6 +219,17 @@
   color: #778187;
   font-family: Consolas, 'SFMono-Regular', monospace;
   font-size: 10px;
+}
+
+.storage-request-action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.storage-request-error {
+  color: var(--danger);
+  font-size: 11px;
 }
 
 .page-heading h1,
@@ -229,7 +334,7 @@
   padding: 13px 15px;
   margin-bottom: 20px;
   border: 1px solid var(--border);
-  border-left: 3px solid var(--accent);
+  border-left: 6px solid var(--accent);
   border-radius: 4px;
   background: var(--panel);
   font-size: 12px;
@@ -249,9 +354,13 @@
 }
 
 .page-notice p {
-  margin: 0 0 9px;
+  margin: 0;
   color: var(--muted);
   line-height: 1.5;
+}
+
+.page-notice .storage-request-action {
+  margin-top: 14px;
 }
 
 .state-panel {
@@ -639,8 +748,8 @@
 }
 
 .task-empty-state {
-  padding: 45px 18px;
-  text-align: center;
+  padding: 0;
+  margin: 0;
 }
 
 .task-empty-state h3 {
@@ -651,7 +760,7 @@
 .task-empty-state p,
 .muted-copy {
   max-width: 510px;
-  margin: 0 auto;
+  margin: 0;
   color: var(--muted);
   font-size: 11px;
   line-height: 1.55;
@@ -790,7 +899,7 @@
 }
 
 .task-controls input,
-.task-controls .custom-select__trigger {
+.task-controls .custom-select .custom-select__trigger {
   min-height: 32px;
   padding: 6px 9px;
   border: 1px solid var(--border);
@@ -803,7 +912,6 @@
 
 .task-controls .custom-select {
   min-width: 150px;
-  --custom-select-row-height: 32px;
   font-size: 11px;
 }
 
@@ -816,6 +924,10 @@
 .task-controls input {
   width: clamp(220px, 38vw, 420px);
   flex: 1 1 220px;
+}
+
+.task-controls__actions button {
+  border-radius: 4px !important;
 }
 
 .task-table {
@@ -976,7 +1088,7 @@
 }
 
 .history-table {
-  margin-top: 12px;
+  margin-top: 14px;
   font-size: 11px;
 }
 
@@ -1710,7 +1822,7 @@
   display: flex;
   justify-content: flex-end;
   gap: 7px;
-  margin-top: 16px;
+  margin-top: 14px;
 }
 
 .project-app-shell .compact-icon-button {

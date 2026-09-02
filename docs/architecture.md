@@ -1,7 +1,7 @@
 # Frontend architecture
 
-Audio Annotation Workbench is a browser-only React application with two current
-product layers: durable project management, a persisted annotation workspace,
+Audio Annotation Workbench is a browser-only React application with three
+product areas: durable project management, a persisted annotation workspace,
 and the standalone audio editor. No project or audio data is sent over a network.
 
 ## Application boundaries
@@ -31,7 +31,7 @@ stale async updates. Forms prepare and validate files before repository writes.
 ## Routing
 
 React Router provides `/`, `/projects`, `/projects/new`, project detail and edit
-paths, dedicated taxonomy and instructions editor paths,
+paths, dedicated taxonomy and instructions editor paths, `/projects/restore`,
 `/projects/:projectId/tasks/:taskId/annotate`, and `/editor`. Navigation uses links and route parameters rather than
 component-local page state. Unknown routes and missing IndexedDB projects render
 distinct states. Browser back and forward navigation follows URL history.
@@ -71,9 +71,30 @@ Operations that must preserve cross-store integrity are transactional:
 - first draft + task transition to `draft`
 - submission revision + task transition to `submitted`
 - task deletion + associated annotation deletion
+- project backup replacement and restoration across every store
 
 Creation aborts without partial records. Deletion uses project-scoped indexes and
 never performs filesystem operations.
+
+## Portability and recovery
+
+`domain/projectBackup.ts` owns backup format version 1 independently from the
+IndexedDB and entity schema versions. It strictly parses untrusted JSON,
+validates supported entity versions and the complete project relationship graph,
+and deterministically orders records. Task media becomes unresolved while safe
+relative identity remains; file handles, permissions, absolute paths, audio, and
+derived analysis state are excluded.
+
+`domain/annotationExport.ts` generates versioned JSONL task records and flattened
+CSV assignment rows without React or IndexedDB dependencies. JSONL carries the
+pinned taxonomy label interpretation. CSV represents region and clip assignments
+and uses a task-only row for all-task exports with no assignments.
+
+The repository reads complete project snapshots and restores a validated backup
+in one transaction over all five stores. Existing project IDs are never
+overwritten by default. Explicit replacement deletes only the colliding
+project's scoped records and inserts the backup in the same transaction, so an
+error preserves the prior project and every unrelated project.
 
 ## Project and taxonomy model
 
@@ -167,5 +188,5 @@ offline file/selection rendering remain observational and never modify playback.
 `pnpm validate` runs Prettier checking, ESLint, strict TypeScript, Vitest, and the
 Vite production build. Tests cover the IndexedDB schema and transactions, project
 lifecycle, taxonomy parsing/hashing/versioning, instruction security and
-lifecycle, progress derivation, routes, and the existing editor domain and
-analysis behavior.
+lifecycle, progress derivation, routes, backup validation and atomic recovery,
+JSONL/CSV exports, and the existing editor domain and analysis behavior.

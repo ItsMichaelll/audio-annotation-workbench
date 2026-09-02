@@ -23,6 +23,8 @@ existing audio workbench:
 - Taxonomy-driven region and clip labels, configured scales, notes, and shortcuts
 - Debounced local drafts, unified annotation undo/redo, validation, and submission
 - Stable task ordering with skip, submit-next, read-only submission, and reopening
+- Versioned project backups with strict preview, atomic restore, and media relinking
+- Versioned JSONL and flattened CSV annotation exports
 - Browser storage durability reporting
 - A transitional standalone editor at `/editor`
 
@@ -42,7 +44,7 @@ testing without creating a project.
 
 ## Application structure
 
-The completed product is organized into four primary areas:
+The completed local-first workflow is organized into five primary areas:
 
 1. **Projects dashboard** — active and archived projects, progress, timestamps,
    and project navigation.
@@ -53,6 +55,8 @@ The completed product is organized into four primary areas:
 4. **Annotation workspace** — the existing waveform and analysis tools combined
    with task navigation, taxonomy-driven labels, instructions, validation,
    autosaved drafts, and submission controls.
+5. **Data portability** — deterministic project backups, validated atomic
+   restoration, and submitted-only or all-task annotation exports.
 
 ## Routes
 
@@ -60,6 +64,7 @@ The completed product is organized into four primary areas:
 | --- | --- |
 | `/` and `/projects` | Projects dashboard |
 | `/projects/new` | Project creation |
+| `/projects/restore` | Backup validation, preview, and restoration |
 | `/projects/:projectId` | Project detail |
 | `/projects/:projectId/edit` | Project editing |
 | `/projects/:projectId/taxonomy` | YAML and structured taxonomy editor |
@@ -98,10 +103,35 @@ Browser storage belongs to the current browser profile. A browser may evict
 best-effort storage, private browsing can shorten its lifetime, and clearing site
 data removes projects. The dashboard reports storage durability and can request
 persistent storage, but persistence is not a replacement for project backup.
-Lossless backup and restoration arrive in a later milestone.
+Download backups regularly and store them somewhere appropriate for the
+dataset.
 
 See [frontend architecture](docs/architecture.md) and
 [ADR 0004](docs/adr/0004-project-persistence-and-routing.md).
+
+## Backup, restore, and annotation export
+
+Project detail includes a deterministic JSON backup for one complete project.
+Backup format `audio-annotation-workbench-project` version 1 contains the project
+record, every immutable taxonomy version and raw source, optional Markdown
+instructions, every task, and all draft and submitted annotations. Every
+persisted entity currently uses entity schema version 1; these versions are
+independent of both backup format version 1 and IndexedDB schema version 4.
+
+Backups never contain audio bytes, object URLs, absolute filesystem paths,
+waveform peaks, spectrogram or analysis data, browser file handles, or
+session-only permissions. Media identities are converted to portable unresolved
+references. Restore accepts JSON files up to 10 MB, validates every entity and
+relationship before writing, previews the export date and record counts, and
+uses one transaction across all stores. A project ID collision requires explicit
+replacement confirmation; replacement affects only that project and rolls back
+completely on failure. Every restored media source requires relinking.
+
+Annotation export supports versioned JSONL and flattened CSV in submitted-only
+or all-task mode. JSONL writes one record per included task with its nullable
+annotation and pinned taxonomy interpretation. CSV writes one row per region or
+clip assignment; all-task mode writes an explicit task-only row when no
+assignments exist. Task and assignment order and metadata JSON are deterministic.
 
 ## Taxonomy versions
 
@@ -344,13 +374,14 @@ measurement details.
 - Markdown instructions editing with safe rendered preview and removal
 - Unsaved-change protection, `Ctrl+S`, and local YAML/Markdown downloads
 
-### 5. Export, backup, and recovery
+### 5. Export, backup, and recovery — implemented
 
 - Canonical lossless project JSON
 - JSONL annotation export and optional flattened CSV
 - Submitted-only and all-task export modes
 - Stable schema and entity versions
 - Project backup import, validation, and restoration
+- Atomic collision replacement and portable unresolved media recovery
 
 ### Later capabilities
 
