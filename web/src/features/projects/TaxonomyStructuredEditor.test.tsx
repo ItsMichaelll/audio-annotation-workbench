@@ -62,10 +62,10 @@ describe('taxonomy structured editor', () => {
       <TaxonomyModeSwitch mode="structured" onChange={() => undefined} />,
     )
 
-    expect(yaml).toContain('aria-pressed="true">YAML')
-    expect(yaml).toContain('aria-pressed="false">Structured')
-    expect(structured).toContain('aria-pressed="false">YAML')
-    expect(structured).toContain('aria-pressed="true">Structured')
+    expect(yaml).toMatch(/aria-pressed="true"[^>]*>YAML/)
+    expect(yaml).toMatch(/aria-pressed="false"[^>]*>Structured/)
+    expect(structured).toMatch(/aria-pressed="false"[^>]*>YAML/)
+    expect(structured).toMatch(/aria-pressed="true"[^>]*>Structured/)
     expect(yaml).not.toContain('is-active')
     expect(structured).not.toContain('is-active')
   })
@@ -134,8 +134,8 @@ describe('taxonomy structured editor', () => {
     expect(html.indexOf('taxonomy-field--shortcut')).toBeLessThan(
       html.indexOf('taxonomy-keyboard-reorder'),
     )
-    expect(html).toContain('aria-pressed="true">Region')
-    expect(html).toContain('aria-pressed="true">Clip')
+    expect(html).toMatch(/aria-pressed="true"[^>]*>Region/)
+    expect(html).toMatch(/aria-pressed="true"[^>]*>Clip/)
     expect(html).not.toContain('type="checkbox"')
     expect(html).toContain('<h3>Severity</h3>')
     expect(html).toContain('<h3>Confidence</h3>')

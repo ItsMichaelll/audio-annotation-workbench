@@ -1,5 +1,6 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
+import { Button, ButtonLink } from '../../components/Button'
 import type { ProjectAggregate } from '../../domain/models'
 import type {
   PreparedInstructions,
@@ -159,7 +160,7 @@ function LoadedProjectEdit({ aggregate }: { aggregate: ProjectAggregate }) {
               content creates a new version.
             </p>
           </div>
-          <button
+          <Button
             type="button"
             onClick={() => void toggleArchive()}
             disabled={saving}
@@ -167,7 +168,7 @@ function LoadedProjectEdit({ aggregate }: { aggregate: ProjectAggregate }) {
             {project.status === 'active'
               ? 'Archive project'
               : 'Restore project'}
-          </button>
+          </Button>
         </div>
 
         <form className="project-form" onSubmit={(event) => void submit(event)}>
@@ -179,9 +180,9 @@ function LoadedProjectEdit({ aggregate }: { aggregate: ProjectAggregate }) {
           {notice && (
             <PageNotice title="Taxonomy already exists">
               <p>{notice}</p>
-              <Link className="button-link" to={projectPath(project.id)}>
+              <ButtonLink to={projectPath(project.id)}>
                 Return to project
-              </Link>
+              </ButtonLink>
             </PageNotice>
           )}
 
@@ -236,23 +237,23 @@ function LoadedProjectEdit({ aggregate }: { aggregate: ProjectAggregate }) {
               }}
             />
             <div className="form-section__actions">
-              <button
+              <Button
                 type="button"
                 onClick={() => taxonomyInput.current?.click()}
               >
                 Upload replacement taxonomy
-              </button>
-              <Link className="button-link" to={taxonomyEditorPath(project.id)}>
+              </Button>
+              <ButtonLink to={taxonomyEditorPath(project.id)}>
                 Edit taxonomy in browser
-              </Link>
+              </ButtonLink>
             </div>
             {taxonomy && (
               <div className="file-selection">
                 <strong>{taxonomy.sourceFilename}</strong>
                 <span>Pending new version</span>
-                <button type="button" onClick={() => setTaxonomy(null)}>
+                <Button type="button" onClick={() => setTaxonomy(null)}>
                   Clear
-                </button>
+                </Button>
               </div>
             )}
             {taxonomyError && <p className="field-error">{taxonomyError}</p>}
@@ -287,31 +288,29 @@ function LoadedProjectEdit({ aggregate }: { aggregate: ProjectAggregate }) {
               }}
             />
             <div className="form-section__actions">
-              <button
+              <Button
                 type="button"
                 onClick={() => instructionsInput.current?.click()}
               >
                 {pendingInstructionsName
                   ? 'Upload replacement instructions'
                   : 'Add instructions'}
-              </button>
-              <Link
-                className="button-link"
-                to={instructionsEditorPath(project.id)}
-              >
+              </Button>
+              <ButtonLink to={instructionsEditorPath(project.id)}>
                 Edit instructions in browser
-              </Link>
+              </ButtonLink>
             </div>
             {pendingInstructionsName && (
               <div className="file-selection">
                 <strong>{pendingInstructionsName}</strong>
-                <button
-                  className="danger-button"
+                <Button
+                  variant="danger"
+                  className="file-selection__remove"
                   type="button"
                   onClick={() => setInstructionsChange({ kind: 'remove' })}
                 >
                   Remove
-                </button>
+                </Button>
               </div>
             )}
             {!pendingInstructionsName &&
@@ -326,11 +325,9 @@ function LoadedProjectEdit({ aggregate }: { aggregate: ProjectAggregate }) {
           </section>
 
           <div className="form-actions">
-            <Link className="button-link" to={projectPath(project.id)}>
-              Cancel
-            </Link>
-            <button
-              className="primary-button"
+            <ButtonLink to={projectPath(project.id)}>Cancel</ButtonLink>
+            <Button
+              variant="primary"
               type="submit"
               disabled={
                 !name.trim() ||
@@ -339,7 +336,7 @@ function LoadedProjectEdit({ aggregate }: { aggregate: ProjectAggregate }) {
               }
             >
               {saving ? 'Saving…' : 'Save changes'}
-            </button>
+            </Button>
           </div>
         </form>
       </main>

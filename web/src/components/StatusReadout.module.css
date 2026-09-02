@@ -1,0 +1,36 @@
+.root {
+  display: grid;
+  grid-template-columns: minmax(200px, 1.6fr) repeat(8, minmax(82px, 0.7fr));
+  min-height: 49px;
+  border-bottom: 1px solid var(--border-default);
+  background: var(--surface-panel);
+}
+
+.file,
+.readout {
+  min-width: 0;
+  padding: 7px 10px 6px;
+  border-right: 1px solid #252a2d;
+}
+
+.label {
+  display: block;
+  margin-bottom: 3px;
+  color: #768087;
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.value {
+  display: block;
+  overflow: hidden;
+  color: #e0e6e8;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

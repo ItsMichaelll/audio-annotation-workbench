@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
+import { ButtonLink } from '../../components/Button'
 
 interface ProjectLayoutProps {
   children: ReactNode
@@ -68,9 +69,9 @@ export function ProjectPageState({
         <div className="state-panel">
           <h1>{title}</h1>
           <p>{message}</p>
-          <Link className="button-link button-link--primary" to="/projects">
+          <ButtonLink variant="primary" to="/projects">
             Back to projects
-          </Link>
+          </ButtonLink>
         </div>
       </main>
     </ProjectLayout>

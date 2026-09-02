@@ -1,5 +1,6 @@
 import type { RegionMetadata } from '../domain/region'
 import { formatTime } from '../domain/transport'
+import styles from './StatusReadout.module.css'
 
 interface StatusReadoutProps {
   fileName: string | null
@@ -13,9 +14,9 @@ interface StatusReadoutProps {
 
 function Readout({ label, value }: { label: string; value: string }) {
   return (
-    <div className="readout">
-      <span>{label}</span>
-      <output>{value}</output>
+    <div className={styles.readout}>
+      <span className={styles.label}>{label}</span>
+      <output className={styles.value}>{value}</output>
     </div>
   )
 }
@@ -30,10 +31,12 @@ export function StatusReadout({
   selectedRegion,
 }: StatusReadoutProps) {
   return (
-    <section className="status-strip" aria-label="Audio and selection status">
-      <div className="file-readout" title={fileName ?? 'No audio loaded'}>
-        <span>File</span>
-        <strong>{fileName ?? 'No audio loaded'}</strong>
+    <section className={styles.root} aria-label="Audio and selection status">
+      <div className={styles.file} title={fileName ?? 'No audio loaded'}>
+        <span className={styles.label}>File</span>
+        <strong className={styles.value}>
+          {fileName ?? 'No audio loaded'}
+        </strong>
       </div>
       <Readout label="Position" value={formatTime(currentTime)} />
       <Readout label="Duration" value={formatTime(duration)} />

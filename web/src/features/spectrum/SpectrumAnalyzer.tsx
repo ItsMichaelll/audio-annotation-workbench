@@ -497,6 +497,7 @@ export function SpectrumAnalyzer({
           </button>
           <CustomSelectField
             label="Response"
+            variant="spectrum"
             value={response}
             options={Object.entries(SPECTRUM_RESPONSES).map(
               ([value, preset]) => ({ value, label: preset.label }),

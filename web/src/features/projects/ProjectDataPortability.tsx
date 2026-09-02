@@ -1,5 +1,11 @@
 import { useId, useState } from 'react'
-import { Modal } from '../../components/Modal'
+import { Button } from '../../components/Button'
+import {
+  Modal,
+  ModalActions,
+  ModalDescription,
+  ModalTitle,
+} from '../../components/Modal'
 import {
   serializeAnnotationCsv,
   serializeAnnotationJsonl,
@@ -93,16 +99,16 @@ export function ProjectDataPortability({
         audio is never included and must be relinked after restoration.
       </p>
       <div className="portability-actions">
-        <button
+        <Button
           type="button"
           disabled={busy}
           onClick={() => void downloadBackup()}
         >
           {busy ? 'Preparing…' : 'Download backup'}
-        </button>
-        <button type="button" disabled={busy} onClick={() => setOpen(true)}>
+        </Button>
+        <Button type="button" disabled={busy} onClick={() => setOpen(true)}>
           Export annotations
-        </button>
+        </Button>
       </div>
       {status && <p role="status">{status}</p>}
 
@@ -112,10 +118,10 @@ export function ProjectDataPortability({
         descriptionId={descriptionId}
         onClose={() => !busy && setOpen(false)}
       >
-        <h2 id={titleId}>Export annotations</h2>
-        <p id={descriptionId}>
+        <ModalTitle id={titleId}>Export annotations</ModalTitle>
+        <ModalDescription id={descriptionId}>
           Choose a versioned machine-readable export. Audio is not included.
-        </p>
+        </ModalDescription>
         <fieldset className="export-options">
           <legend>Format</legend>
           <label>
@@ -165,19 +171,19 @@ export function ProjectDataPortability({
           </label>
         </fieldset>
         {status && <p role="status">{status}</p>}
-        <div className="modal-actions">
-          <button type="button" disabled={busy} onClick={() => setOpen(false)}>
+        <ModalActions>
+          <Button type="button" disabled={busy} onClick={() => setOpen(false)}>
             Cancel
-          </button>
-          <button
-            className="primary-button"
+          </Button>
+          <Button
+            variant="primary"
             type="button"
             disabled={busy}
             onClick={() => void downloadAnnotations()}
           >
             {busy ? 'Preparing…' : `Download ${format.toUpperCase()}`}
-          </button>
-        </div>
+          </Button>
+        </ModalActions>
       </Modal>
     </section>
   )

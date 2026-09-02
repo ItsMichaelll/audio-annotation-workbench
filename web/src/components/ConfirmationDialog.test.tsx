@@ -22,7 +22,7 @@ describe('shared confirmation dialog', () => {
     expect(html).toContain('aria-describedby=')
     expect(html).toContain('Delete selected tasks?')
     expect(html).toContain('This cannot be undone.')
-    expect(html).toContain('class="danger-button"')
+    expect(html).toContain('data-button-variant="danger"')
     expect(html).toContain('>Cancel<')
     expect(html).toContain('>Delete tasks<')
   })

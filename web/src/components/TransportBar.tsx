@@ -1,3 +1,5 @@
+import styles from './TransportBar.module.css'
+
 interface TransportBarProps {
   isLoaded: boolean
   isPlaying: boolean
@@ -50,9 +52,9 @@ export function TransportBar({
   onToggleMeter,
 }: TransportBarProps) {
   return (
-    <nav className="transport" aria-label="Transport and editing controls">
+    <nav className={styles.root} aria-label="Transport and editing controls">
       <button
-        className="transport__primary"
+        className={`${styles.control} ${styles.primary}`}
         type="button"
         onClick={onPlayPause}
         disabled={!isLoaded}
@@ -82,10 +84,11 @@ export function TransportBar({
         )}
         {isPlaying ? 'Pause' : 'Play'}
       </button>
-      <span className="transport__divider" aria-hidden="true" />
+      <span className={styles.divider} aria-hidden="true" />
       {onPreviousRegion && onNextRegion && (
         <>
           <button
+            className={styles.control}
             type="button"
             onClick={onPreviousRegion}
             disabled={!isLoaded || !canPreviousRegion}
@@ -94,6 +97,7 @@ export function TransportBar({
             Previous Region
           </button>
           <button
+            className={styles.control}
             type="button"
             onClick={onNextRegion}
             disabled={!isLoaded || !canNextRegion}
@@ -101,10 +105,11 @@ export function TransportBar({
           >
             Next Region
           </button>
-          <span className="transport__divider" aria-hidden="true" />
+          <span className={styles.divider} aria-hidden="true" />
         </>
       )}
       <button
+        className={styles.control}
         type="button"
         onClick={onFit}
         disabled={!isLoaded}
@@ -113,6 +118,7 @@ export function TransportBar({
         Fit
       </button>
       <button
+        className={styles.control}
         type="button"
         onClick={onZoomOut}
         disabled={!isLoaded}
@@ -122,6 +128,7 @@ export function TransportBar({
         −
       </button>
       <button
+        className={styles.control}
         type="button"
         onClick={onZoomIn}
         disabled={!isLoaded}
@@ -131,6 +138,7 @@ export function TransportBar({
         +
       </button>
       <button
+        className={styles.control}
         type="button"
         onClick={onResetVerticalScale}
         disabled={!isLoaded || Math.abs(verticalScale - 1) < 0.001}
@@ -138,10 +146,10 @@ export function TransportBar({
       >
         Reset V-Scale
       </button>
-      <span className="transport__divider" aria-hidden="true" />
+      <span className={styles.divider} aria-hidden="true" />
       <button
         type="button"
-        className={loopEnabled ? 'is-active' : undefined}
+        className={styles.control}
         aria-pressed={loopEnabled}
         onClick={onToggleLoop}
         disabled={!hasSelection}
@@ -150,6 +158,7 @@ export function TransportBar({
         Loop
       </button>
       <button
+        className={styles.control}
         type="button"
         onClick={onDelete}
         disabled={!canDelete}
@@ -157,10 +166,10 @@ export function TransportBar({
       >
         Delete
       </button>
-      <span className="transport__divider" aria-hidden="true" />
+      <span className={styles.divider} aria-hidden="true" />
       <button
         type="button"
-        className={`transport__view-toggle${spectrogramEnabled ? ' is-active' : ''}`}
+        className={`${styles.control} ${styles.viewToggle}`}
         aria-pressed={spectrogramEnabled}
         onClick={onToggleSpectrogram}
         disabled={!isLoaded}
@@ -170,7 +179,7 @@ export function TransportBar({
       </button>
       <button
         type="button"
-        className={`transport__view-toggle${spectrumEnabled ? ' is-active' : ''}`}
+        className={`${styles.control} ${styles.viewToggle}`}
         aria-pressed={spectrumEnabled}
         onClick={onToggleSpectrum}
         disabled={!isLoaded}
@@ -180,7 +189,7 @@ export function TransportBar({
       </button>
       <button
         type="button"
-        className={`transport__view-toggle${meterEnabled ? ' is-active' : ''}`}
+        className={`${styles.control} ${styles.viewToggle}`}
         aria-pressed={meterEnabled}
         onClick={onToggleMeter}
         disabled={!isLoaded}

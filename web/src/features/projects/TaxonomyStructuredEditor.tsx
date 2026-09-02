@@ -1,4 +1,5 @@
 import { useId, useRef, useState } from 'react'
+import { Button } from '../../components/Button'
 import type {
   AnnotationLabel,
   AnnotationScale,
@@ -38,20 +39,20 @@ export function TaxonomyModeSwitch({
       role="group"
       aria-label="Taxonomy editor mode"
     >
-      <button
+      <Button
         type="button"
         aria-pressed={mode === 'yaml'}
         onClick={() => onChange('yaml')}
       >
         YAML
-      </button>
-      <button
+      </Button>
+      <Button
         type="button"
         aria-pressed={mode === 'structured'}
         onClick={() => onChange('structured')}
       >
         Structured
-      </button>
+      </Button>
     </div>
   )
 }

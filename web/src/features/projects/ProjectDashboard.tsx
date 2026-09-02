@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
+import { Button, ButtonLink } from '../../components/Button'
 import type { ProjectStatus } from '../../domain/models'
 import {
   requestPersistentStorage,
@@ -57,15 +58,11 @@ export function ProjectDashboard() {
     <ProjectLayout
       actions={
         <>
-          <Link className="button-link" to="/editor">
-            Standalone editor
-          </Link>
-          <Link className="button-link" to="/projects/restore">
-            Restore backup
-          </Link>
-          <Link className="button-link button-link--primary" to="/projects/new">
+          <ButtonLink to="/editor">Standalone editor</ButtonLink>
+          <ButtonLink to="/projects/restore">Restore backup</ButtonLink>
+          <ButtonLink variant="primary" to="/projects/new">
             New Project
-          </Link>
+          </ButtonLink>
         </>
       }
     >
@@ -77,20 +74,20 @@ export function ProjectDashboard() {
             <p>View and manage your projects.</p>
           </div>
           <div className="segmented-control" aria-label="Project status filter">
-            <button
+            <Button
               type="button"
               aria-pressed={status === 'active'}
               onClick={() => setSearchParams({})}
             >
               Active
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               aria-pressed={status === 'archived'}
               onClick={() => setSearchParams({ view: 'archived' })}
             >
               Archived
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -113,13 +110,13 @@ export function ProjectDashboard() {
               backups regularly.
             </p>
             <div className="storage-request-action">
-              <button
+              <Button
                 type="button"
                 onClick={() => void requestDurability()}
                 disabled={requestingStorage}
               >
                 {requestingStorage ? 'Requesting…' : 'Request durable storage'}
-              </button>
+              </Button>
               {storageError && (
                 <span className="storage-request-error" role="alert">
                   {storageError}
@@ -132,9 +129,9 @@ export function ProjectDashboard() {
         {projects.error && (
           <PageNotice title="Projects could not be loaded" tone="error">
             <p>{projects.error}</p>
-            <button type="button" onClick={projects.refresh}>
+            <Button type="button" onClick={projects.refresh}>
               Try again
-            </button>
+            </Button>
           </PageNotice>
         )}
 
@@ -152,12 +149,9 @@ export function ProjectDashboard() {
                 : 'Archived projects remain available here and can be restored at any time.'}
             </p>
             {status === 'active' && (
-              <Link
-                className="button-link button-link--primary"
-                to="/projects/new"
-              >
+              <ButtonLink variant="primary" to="/projects/new">
                 New Project
-              </Link>
+              </ButtonLink>
             )}
           </div>
         ) : (

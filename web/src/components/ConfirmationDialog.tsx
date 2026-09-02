@@ -10,7 +10,9 @@ import {
   ConfirmationContext,
   type ConfirmationOptions,
 } from './confirmationContext'
-import { Modal } from './Modal'
+import { Button } from './Button'
+import styles from './ConfirmationDialog.module.css'
+import { Modal, ModalActions, ModalDescription, ModalTitle } from './Modal'
 
 interface ConfirmationRequest {
   options: ConfirmationOptions
@@ -29,27 +31,27 @@ export function ConfirmationDialog({
   return (
     <Modal
       open
-      className={`confirmation-dialog--shared${request.tone === 'danger' ? ' confirmation-dialog--danger' : ''}`}
+      className={request.tone === 'danger' ? styles.danger : undefined}
       titleId={`${id}-title`}
       descriptionId={`${id}-message`}
       onClose={() => onResult(false)}
     >
-      <h2 id={`${id}-title`}>{request.title}</h2>
-      <p id={`${id}-message`}>{request.message}</p>
-      <div className="modal-actions">
-        <button type="button" onClick={() => onResult(false)}>
+      <ModalTitle id={`${id}-title`}>{request.title}</ModalTitle>
+      <ModalDescription id={`${id}-message`}>
+        {request.message}
+      </ModalDescription>
+      <ModalActions>
+        <Button type="button" onClick={() => onResult(false)}>
           {request.cancelLabel ?? 'Cancel'}
-        </button>
-        <button
-          className={
-            request.tone === 'danger' ? 'danger-button' : 'primary-button'
-          }
+        </Button>
+        <Button
+          variant={request.tone === 'danger' ? 'danger' : 'primary'}
           type="button"
           onClick={() => onResult(true)}
         >
           {request.confirmLabel ?? 'Continue'}
-        </button>
-      </div>
+        </Button>
+      </ModalActions>
     </Modal>
   )
 }

@@ -1,3 +1,5 @@
+import styles from './ShortcutPanel.module.css'
+
 interface ShortcutPanelProps {
   collapsed: boolean
   onToggle(): void
@@ -44,9 +46,11 @@ const shortcutGroups = [
 
 export function ShortcutPanel({ collapsed, onToggle }: ShortcutPanelProps) {
   return (
-    <aside className={collapsed ? 'shortcuts is-collapsed' : 'shortcuts'}>
+    <aside
+      className={`${styles.root}${collapsed ? ` ${styles.collapsed}` : ''}`}
+    >
       <button
-        className="shortcuts__toggle"
+        className={styles.toggle}
         type="button"
         onClick={onToggle}
         aria-expanded={!collapsed}
@@ -55,19 +59,21 @@ export function ShortcutPanel({ collapsed, onToggle }: ShortcutPanelProps) {
           collapsed ? 'Show keyboard reference' : 'Hide keyboard reference'
         }
       >
-        <span aria-hidden="true">⌨</span>
+        <span className={styles.icon} aria-hidden="true">
+          ⌨
+        </span>
         {!collapsed && <span>Shortcuts</span>}
       </button>
       {!collapsed && (
-        <div id="shortcut-reference" className="shortcuts__content">
+        <div id="shortcut-reference" className={styles.content}>
           {shortcutGroups.map((group) => (
-            <section key={group.title}>
-              <h2>{group.title}</h2>
-              <dl>
+            <section className={styles.group} key={group.title}>
+              <h2 className={styles.heading}>{group.title}</h2>
+              <dl className={styles.list}>
                 {group.items.map(([keys, action]) => (
-                  <div key={keys}>
-                    <dt>{keys}</dt>
-                    <dd>{action}</dd>
+                  <div className={styles.item} key={keys}>
+                    <dt className={styles.keys}>{keys}</dt>
+                    <dd className={styles.action}>{action}</dd>
                   </div>
                 ))}
               </dl>
