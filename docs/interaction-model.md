@@ -1,5 +1,26 @@
 # Interaction model
 
+## Project configuration editors
+
+The taxonomy route provides YAML and Structured modes over one working source.
+Valid YAML refreshes the structured form; invalid YAML remains untouched and
+blocks saving. Switching modes does not rewrite source. The first structured
+mutation confirms canonicalization before comments, formatting, or fields not
+recognized by schema version one are removed. Label and scale-option controls
+support add, remove, edit, and explicit up/down ordering.
+
+The instructions route pairs a Markdown textarea with the existing safe rendered
+preview. An empty saved source removes instructions. Both editors expose Saved,
+Unsaved, Saving, and Validation error states, intercept `Ctrl+S`/`Command+S`,
+warn before unloading or following an in-app link with unsaved changes, and
+download the current working source without network access.
+
+In-app confirmations use one modal interaction model with contained focus,
+Escape and backdrop cancellation, and blocked background interaction.
+Refreshes, tab closure, and other document unloads continue to use the
+browser-controlled leave-page warning without an additional application modal.
+Short route and local-data loading transitions do not show a loading panel.
+
 These controls apply to the standalone editor at `/editor` and the project-task
 annotation workspace. The dashboard and project screens use conventional links,
 forms, and browser history.

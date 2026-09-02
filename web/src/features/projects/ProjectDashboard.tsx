@@ -80,7 +80,6 @@ export function ProjectDashboard() {
           <div className="segmented-control" aria-label="Project status filter">
             <button
               type="button"
-              className={status === 'active' ? 'is-active' : undefined}
               aria-pressed={status === 'active'}
               onClick={() => setSearchParams({})}
             >
@@ -88,7 +87,6 @@ export function ProjectDashboard() {
             </button>
             <button
               type="button"
-              className={status === 'archived' ? 'is-active' : undefined}
               aria-pressed={status === 'archived'}
               onClick={() => setSearchParams({ view: 'archived' })}
             >
@@ -139,11 +137,8 @@ export function ProjectDashboard() {
           </PageNotice>
         )}
 
-        {projects.loading ? (
-          <div className="state-panel" role="status">
-            Loading projects…
-          </div>
-        ) : projects.data.length === 0 && !projects.error ? (
+        {projects.loading ? null : projects.data.length === 0 &&
+          !projects.error ? (
           <div className="state-panel state-panel--empty">
             <h2>
               {status === 'active'

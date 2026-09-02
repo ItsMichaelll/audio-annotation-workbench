@@ -23,7 +23,11 @@ import {
   taskFromCandidate,
   type ImportCandidate,
 } from '../domain/taskIngestion'
-import type { PreparedInstructions, PreparedTaxonomy } from '../domain/uploads'
+import {
+  canonicalTaxonomyContent,
+  type PreparedInstructions,
+  type PreparedTaxonomy,
+} from '../domain/uploads'
 import {
   openWorkbenchDatabase,
   type WorkbenchDatabase,
@@ -332,10 +336,20 @@ export class IndexedDbProjectRepository implements ProjectRepository {
     const project = await projectStore.get(projectId)
     if (!project) throw new Error('Project not found.')
     const existing = await taxonomyStore.index('by-project').getAll(projectId)
+    const taxonomyContent = canonicalTaxonomyContent(taxonomy.document)
     const duplicate = existing.find(
-      (version) => version.contentHash === taxonomy.contentHash,
+      (version) =>
+        version.contentHash === taxonomy.contentHash ||
+        canonicalTaxonomyContent(version.document) === taxonomyContent,
     )
     if (duplicate) {
+      if (project.activeTaxonomyVersionId !== duplicate.id) {
+        await projectStore.put({
+          ...project,
+          activeTaxonomyVersionId: duplicate.id,
+          updatedAt: this.now(),
+        })
+      }
       await transaction.done
       return { taxonomy: duplicate, created: false }
     }

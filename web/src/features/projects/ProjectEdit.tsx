@@ -9,7 +9,11 @@ import {
   prepareInstructionsFile,
   prepareTaxonomyFile,
 } from '../../domain/uploads'
-import { projectPath } from '../../routes'
+import {
+  instructionsEditorPath,
+  projectPath,
+  taxonomyEditorPath,
+} from '../../routes'
 import {
   addProjectTaxonomy,
   clearProjectInstructions,
@@ -231,12 +235,17 @@ function LoadedProjectEdit({ aggregate }: { aggregate: ProjectAggregate }) {
                 void selectTaxonomy(file)
               }}
             />
-            <button
-              type="button"
-              onClick={() => taxonomyInput.current?.click()}
-            >
-              Upload replacement taxonomy
-            </button>
+            <div className="form-section__actions">
+              <button
+                type="button"
+                onClick={() => taxonomyInput.current?.click()}
+              >
+                Upload replacement taxonomy
+              </button>
+              <Link className="button-link" to={taxonomyEditorPath(project.id)}>
+                Edit taxonomy in browser
+              </Link>
+            </div>
             {taxonomy && (
               <div className="file-selection">
                 <strong>{taxonomy.sourceFilename}</strong>
@@ -277,18 +286,27 @@ function LoadedProjectEdit({ aggregate }: { aggregate: ProjectAggregate }) {
                 void selectInstructions(file)
               }}
             />
-            <button
-              type="button"
-              onClick={() => instructionsInput.current?.click()}
-            >
-              {pendingInstructionsName
-                ? 'Replace instructions'
-                : 'Add instructions'}
-            </button>
+            <div className="form-section__actions">
+              <button
+                type="button"
+                onClick={() => instructionsInput.current?.click()}
+              >
+                {pendingInstructionsName
+                  ? 'Upload replacement instructions'
+                  : 'Add instructions'}
+              </button>
+              <Link
+                className="button-link"
+                to={instructionsEditorPath(project.id)}
+              >
+                Edit instructions in browser
+              </Link>
+            </div>
             {pendingInstructionsName && (
               <div className="file-selection">
                 <strong>{pendingInstructionsName}</strong>
                 <button
+                  className="danger-button"
                   type="button"
                   onClick={() => setInstructionsChange({ kind: 'remove' })}
                 >
@@ -333,15 +351,7 @@ export function ProjectEdit() {
   const { projectId } = useParams()
   const state = useProject(projectId)
   if (state.loading) {
-    return (
-      <ProjectLayout>
-        <main className="project-page">
-          <div className="state-panel" role="status">
-            Loading project…
-          </div>
-        </main>
-      </ProjectLayout>
-    )
+    return <ProjectLayout>{null}</ProjectLayout>
   }
   if (state.error) {
     return (

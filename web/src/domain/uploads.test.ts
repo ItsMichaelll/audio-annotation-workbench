@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   hashText,
+  prepareInstructionsSource,
+  prepareTaxonomySource,
   parseTaxonomySource,
   prepareTaxonomyFile,
   UploadValidationError,
@@ -63,6 +65,26 @@ describe('taxonomy uploads', () => {
     })
     await expect(prepareTaxonomyFile(file)).rejects.toThrow(
       'labels must be a non-empty array',
+    )
+  })
+
+  it('hashes validated taxonomy content independently of YAML formatting', async () => {
+    const compact = await prepareTaxonomySource(
+      'schemaVersion: 1\nlabels: [{id: noise, name: Noise}]\n',
+    )
+    const expanded = await prepareTaxonomySource(
+      'schemaVersion: 1\nlabels:\n  - id: noise\n    name: Noise\n',
+    )
+    expect(compact.contentHash).toBe(expanded.contentHash)
+  })
+
+  it('validates editor-authored instructions with upload size rules', () => {
+    expect(prepareInstructionsSource('# Guide')).toEqual({
+      sourceFilename: 'instructions.md',
+      rawMarkdown: '# Guide',
+    })
+    expect(() => prepareInstructionsSource('x'.repeat(512 * 1024 + 1))).toThrow(
+      '512 KB or smaller',
     )
   })
 })

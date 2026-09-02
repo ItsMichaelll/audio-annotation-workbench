@@ -1,6 +1,11 @@
 import { matchRoutes } from 'react-router'
 import { describe, expect, it } from 'vitest'
-import { annotationPath, APP_ROUTES } from './routes'
+import {
+  annotationPath,
+  APP_ROUTES,
+  instructionsEditorPath,
+  taxonomyEditorPath,
+} from './routes'
 
 const routePatterns = Object.entries(APP_ROUTES).map(([id, path]) => ({
   id,
@@ -14,6 +19,8 @@ describe('application routes', () => {
     ['/projects/new', 'newProject'],
     ['/projects/project-123', 'project'],
     ['/projects/project-123/edit', 'editProject'],
+    ['/projects/project-123/taxonomy', 'editTaxonomy'],
+    ['/projects/project-123/instructions', 'editInstructions'],
     ['/projects/project-123/tasks/task-456/annotate', 'annotation'],
     ['/editor', 'editor'],
   ])('matches %s as %s', (pathname, routeId) => {
@@ -23,6 +30,15 @@ describe('application routes', () => {
   it('builds encoded annotation paths', () => {
     expect(annotationPath('project one', 'task/two')).toBe(
       '/projects/project%20one/tasks/task%2Ftwo/annotate',
+    )
+  })
+
+  it('builds encoded configuration editor paths', () => {
+    expect(taxonomyEditorPath('project one')).toBe(
+      '/projects/project%20one/taxonomy',
+    )
+    expect(instructionsEditorPath('project/one')).toBe(
+      '/projects/project%2Fone/instructions',
     )
   })
 
