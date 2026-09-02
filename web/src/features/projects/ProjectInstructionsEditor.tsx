@@ -139,7 +139,9 @@ function LoadedInstructionsEditor({
         )}
 
         <div className="configuration-toolbar">
-          <span className="muted-copy">{filename} · 512 KB maximum file size</span>
+          <span className="muted-copy">
+            {filename} · 512 KB maximum file size
+          </span>
           <div className="configuration-toolbar__actions">
             <button
               type="button"

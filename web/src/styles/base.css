@@ -1,0 +1,98 @@
+:root {
+  color-scheme: dark;
+  font-family: var(--font-sans);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  overflow: hidden;
+  background: var(--surface-canvas);
+  color: var(--text-primary);
+}
+
+:where(a) {
+  color: inherit;
+}
+
+button {
+  min-height: var(--control-height-sm);
+  padding: 0 12px;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: var(--radius-md);
+  background: rgb(255 255 255 / 4%);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 12px;
+  transition:
+    background-color var(--duration-fast) var(--easing-standard),
+    border-color var(--duration-fast) var(--easing-standard),
+    color var(--duration-fast) var(--easing-standard),
+    box-shadow var(--duration-fast) var(--easing-standard);
+}
+
+button:hover:not(:disabled) {
+  background: rgb(255 255 255 / 10%);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+}
+
+button:focus-visible {
+  border-color: rgb(var(--accent-rgb) / 70%);
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--focus-ring-offset-color),
+    0 0 0 3px var(--focus-ring-color);
+}
+
+:where(input, textarea, select, a):focus-visible {
+  outline: 2px solid var(--focus-ring-color);
+  outline-offset: 2px;
+}
+
+input[type='checkbox'] {
+  accent-color: var(--accent);
+}
+
+select {
+  padding-right: 28px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  appearance: none;
+  background-color: var(--surface-control);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='m1 1 5 5 5-5' fill='none' stroke='%239aa4aa' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position: right 9px center;
+  background-repeat: no-repeat;
+  color: var(--text-primary);
+  color-scheme: dark;
+  cursor: pointer;
+}
+
+select:hover:not(:disabled) {
+  border-color: rgb(255 255 255 / 24%);
+  background-color: var(--surface-control-hover);
+}
+
+select:focus-visible {
+  border-color: var(--focus-ring-color);
+}
+
+select:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+select option {
+  background: var(--surface-control);
+  color: var(--text-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(button) {
+    animation: none;
+    transition: none;
+  }
+}
