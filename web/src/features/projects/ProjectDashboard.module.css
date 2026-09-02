@@ -1,0 +1,191 @@
+.segmentedControl {
+  --segment-pad: 2px;
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: var(--segment-pad);
+  isolation: isolate;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-pill);
+  background: #ffffff05;
+}
+
+.segmentedControl::before {
+  position: absolute;
+  z-index: 0;
+  inset: var(--segment-pad);
+  width: calc(50% - var(--segment-pad));
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  content: '';
+  pointer-events: none;
+  transition: transform var(--duration-normal) var(--easing-standard);
+}
+
+.segmentedControl:has(.segment:last-child[aria-pressed='true'])::before {
+  transform: translateX(100%);
+}
+
+.segment {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+}
+
+.segment[aria-pressed='true'] {
+  background: transparent;
+  color: var(--text-inverse);
+}
+
+.segment:focus-visible {
+  border-color: transparent;
+  box-shadow:
+    0 0 0 2px var(--surface-waveform),
+    0 0 0 3px var(--accent);
+}
+
+.segment:active:not(:disabled) {
+  border-color: transparent;
+  background: transparent;
+}
+
+.storageState {
+  margin: -15px 0 22px;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.storageRequestAction {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.storageRequestError {
+  color: var(--text-danger);
+  font-size: 11px;
+}
+
+.statePanel {
+  padding: 68px 36px;
+  text-align: center;
+}
+
+.statePanelDescription {
+  margin: 0 auto 22px;
+}
+
+.projectGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  min-height: 270px;
+  flex-direction: column;
+  padding: 18px;
+  border: 1px solid var(--border-default);
+  border-radius: 5px;
+  background: var(--surface-panel);
+  transition: border-color var(--duration-fast) var(--easing-standard);
+}
+
+.card:hover,
+.card:focus-within {
+  border-color: var(--border-strong);
+  background: var(--surface-panel-raised);
+  transition:
+    border-color 250ms var(--easing-standard),
+    background-color 250ms var(--easing-standard);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.cardTitle {
+  margin: 23px 0 8px;
+  font-size: 18px;
+  font-weight: 620;
+}
+
+.cardDescription {
+  flex: 1;
+  margin: 0 0 22px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.cardMetadata {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 12px;
+  padding: 12px 0;
+  margin: 0;
+  border-top: 1px solid var(--border-default);
+}
+
+.cardMetadata dt {
+  margin-bottom: 3px;
+  color: var(--text-tertiary);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cardMetadata dd {
+  margin: 0;
+  color: #d7dcde;
+  font-size: 11px;
+}
+
+.cardOpen {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  color: var(--accent);
+  font-size: 11px;
+  text-decoration: none;
+}
+
+.cardOpen::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+}
+
+.card:hover .cardOpen,
+.card:focus-within .cardOpen {
+  color: color-mix(in srgb, var(--accent) 75%, #ffffff);
+  transition: color 250ms var(--easing-standard);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .segmentedControl::before {
+    transition: none;
+  }
+}
+
+@media (max-width: 1120px) {
+  .projectGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

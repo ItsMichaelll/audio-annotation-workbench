@@ -9,7 +9,10 @@ import {
 } from '../../storage/persistence'
 import { formatTimestamp, truncateDescription } from './format'
 import { PageNotice, ProjectLayout } from './ProjectLayout'
+import layoutStyles from './ProjectLayout.module.css'
+import styles from './ProjectDashboard.module.css'
 import { useProjectList } from './projectHooks'
+import statusStyles from './ProjectStatus.module.css'
 
 function progressLabel(total: number, completed: number): string {
   if (total === 0) return '0 tasks'
@@ -66,15 +69,21 @@ export function ProjectDashboard() {
         </>
       }
     >
-      <main className="project-page dashboard-page">
-        <div className="page-heading">
+      <main className={layoutStyles.page}>
+        <div className={layoutStyles.pageHeading}>
           <div>
-            <p className="eyebrow">Project library</p>
-            <h1>Projects</h1>
-            <p>View and manage your projects.</p>
+            <p className={layoutStyles.eyebrow}>Project library</p>
+            <h1 className={layoutStyles.pageHeadingTitle}>Projects</h1>
+            <p className={layoutStyles.pageHeadingDescription}>
+              View and manage your projects.
+            </p>
           </div>
-          <div className="segmented-control" aria-label="Project status filter">
+          <div
+            className={styles.segmentedControl}
+            aria-label="Project status filter"
+          >
             <Button
+              className={styles.segment}
               type="button"
               aria-pressed={status === 'active'}
               onClick={() => setSearchParams({})}
@@ -82,6 +91,7 @@ export function ProjectDashboard() {
               Active
             </Button>
             <Button
+              className={styles.segment}
               type="button"
               aria-pressed={status === 'archived'}
               onClick={() => setSearchParams({ view: 'archived' })}
@@ -92,7 +102,7 @@ export function ProjectDashboard() {
         </div>
 
         {durability && (
-          <p className="storage-state">
+          <p className={styles.storageState}>
             Project storage:{' '}
             {durability === 'persistent'
               ? 'durable browser storage granted'
@@ -109,7 +119,7 @@ export function ProjectDashboard() {
               Browser persistence is not a substitute for downloading project
               backups regularly.
             </p>
-            <div className="storage-request-action">
+            <div className={styles.storageRequestAction}>
               <Button
                 type="button"
                 onClick={() => void requestDurability()}
@@ -118,7 +128,7 @@ export function ProjectDashboard() {
                 {requestingStorage ? 'Requesting…' : 'Request durable storage'}
               </Button>
               {storageError && (
-                <span className="storage-request-error" role="alert">
+                <span className={styles.storageRequestError} role="alert">
                   {storageError}
                 </span>
               )}
@@ -137,13 +147,15 @@ export function ProjectDashboard() {
 
         {projects.loading ? null : projects.data.length === 0 &&
           !projects.error ? (
-          <div className="state-panel state-panel--empty">
-            <h2>
+          <div className={`${layoutStyles.statePanel} ${styles.statePanel}`}>
+            <h2 className={layoutStyles.statePanelTitle}>
               {status === 'active'
                 ? 'Create a project to get started'
                 : 'No archived projects'}
             </h2>
-            <p>
+            <p
+              className={`${layoutStyles.statePanelDescription} ${styles.statePanelDescription}`}
+            >
               {status === 'active'
                 ? 'Create a project or restore a validated backup to continue a local-first annotation workflow.'
                 : 'Archived projects remain available here and can be restored at any time.'}
@@ -155,25 +167,32 @@ export function ProjectDashboard() {
             )}
           </div>
         ) : (
-          <section className="project-grid" aria-label={`${status} projects`}>
+          <section
+            className={styles.projectGrid}
+            aria-label={`${status} projects`}
+          >
             {projects.data.map(
               ({ project, activeTaxonomyVersion, progress }) => (
-                <article className="project-card" key={project.id}>
-                  <div className="project-card__header">
+                <article className={styles.card} key={project.id}>
+                  <div className={styles.cardHeader}>
                     <span
-                      className={`status-badge status-badge--${project.status}`}
+                      className={`${statusStyles.badge} ${
+                        project.status === 'archived'
+                          ? statusStyles.archived
+                          : ''
+                      }`}
                     >
                       {project.status}
                     </span>
                     <span>Taxonomy v{activeTaxonomyVersion.version}</span>
                   </div>
-                  <h2>{project.name}</h2>
-                  <p className="project-card__description">
+                  <h2 className={styles.cardTitle}>{project.name}</h2>
+                  <p className={styles.cardDescription}>
                     {project.description
                       ? truncateDescription(project.description)
                       : 'No description provided.'}
                   </p>
-                  <dl className="project-card__metadata">
+                  <dl className={styles.cardMetadata}>
                     <div>
                       <dt>Progress</dt>
                       <dd>
@@ -186,7 +205,7 @@ export function ProjectDashboard() {
                     </div>
                   </dl>
                   <Link
-                    className="project-card__open"
+                    className={styles.cardOpen}
                     to={`/projects/${project.id}`}
                   >
                     Open project <span aria-hidden="true">→</span>

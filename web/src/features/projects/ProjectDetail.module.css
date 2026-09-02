@@ -1,0 +1,290 @@
+.hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 12px 0 26px;
+}
+
+.heroStatus {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.heroTitle {
+  margin: 3px 0 7px;
+  font-size: 34px;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+}
+
+.heroDescription,
+.dangerDescription {
+  max-width: 750px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.heroActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.heroAction {
+  padding: 0 12px;
+  font-size: 12px;
+}
+
+.metadata {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.4fr;
+  gap: 20px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+  border: 1px solid var(--border-default);
+  border-radius: 5px;
+  background: var(--surface-panel);
+}
+
+.metadataItem {
+  min-width: 0;
+}
+
+.metadataLabel,
+.metadataValue {
+  display: block;
+}
+
+.metadataLabel {
+  margin-bottom: 4px;
+  color: var(--text-tertiary);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.metadataValue {
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: var(--font-weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.75fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.section {
+  padding: 20px;
+  margin-bottom: 16px;
+  border: 1px solid var(--border-default);
+  border-radius: 5px;
+  background: var(--surface-panel);
+}
+
+.grid > .section {
+  margin-bottom: 0;
+}
+
+.sectionWide {
+  display: grid;
+  gap: 14px;
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.sectionHeadingEyebrow {
+  margin-bottom: 4px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 630;
+}
+
+.headingActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.headingFilename {
+  max-width: 220px;
+  margin-right: 12px;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.countBadge {
+  display: grid;
+  min-width: 28px;
+  height: 24px;
+  place-items: center;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  color: #dce5e8;
+  font-family: var(--font-mono);
+}
+
+.progressSummary,
+.mutedCopy {
+  max-width: 680px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.emptyState {
+  padding: 0;
+  margin: 0;
+}
+
+.emptyStateTitle {
+  margin: 0 0 7px;
+  font-size: 14px;
+}
+
+.emptyStateDescription {
+  max-width: 510px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.activeTaxonomySummary {
+  display: grid;
+  gap: 16px;
+  padding-top: 16px;
+}
+
+.taxonomyNameLabel,
+.metricLabel {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.taxonomyName {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+.taxonomyFilename {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 9px;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.metric {
+  padding: 9px;
+  border: 1px solid var(--border-default);
+  background: var(--surface-control);
+}
+
+.metricValue {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 14px;
+}
+
+.labelPreview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+
+.labelPreviewItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.labelPreviewSwatch {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.taxonomyVersionNote {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.history {
+  margin-top: 14px;
+  font-size: 11px;
+}
+
+.historyRow {
+  display: grid;
+  grid-template-columns: 90px 1.4fr 1fr 90px;
+  gap: 12px;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: #cbd2d5;
+}
+
+.historyHeader {
+  color: var(--text-tertiary);
+  font-size: 9px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.dangerZone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  border: 1px solid rgb(255 70 70 / 50%);
+  border-radius: 5px;
+  background: var(--surface-panel);
+}
+
+.dangerTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 630;
+}

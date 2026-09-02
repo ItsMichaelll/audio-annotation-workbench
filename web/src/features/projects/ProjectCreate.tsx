@@ -12,6 +12,8 @@ import {
 import { projectPath } from '../../routes'
 import { createProject } from './projectActions'
 import { PageNotice, ProjectLayout } from './ProjectLayout'
+import formStyles from './ProjectForm.module.css'
+import layoutStyles from './ProjectLayout.module.css'
 import { TaskImport } from './TaskImport'
 import type { ImportCandidate } from '../../domain/taskIngestion'
 
@@ -101,38 +103,43 @@ export function ProjectCreate() {
 
   return (
     <ProjectLayout>
-      <main className="project-page project-page--form">
-        <div className="breadcrumbs">
+      <main className={`${layoutStyles.page} ${layoutStyles.pageForm}`}>
+        <div className={layoutStyles.breadcrumbs}>
           <Link to="/projects">Projects</Link>
           <span aria-hidden="true">/</span>
           <span>New project</span>
         </div>
-        <div className="page-heading">
+        <div className={layoutStyles.pageHeading}>
           <div>
-            <p className="eyebrow">Project foundation</p>
-            <h1>Create project</h1>
-            <p>
+            <p className={layoutStyles.eyebrow}>Project foundation</p>
+            <h1 className={layoutStyles.pageHeadingTitle}>Create project</h1>
+            <p className={layoutStyles.pageHeadingDescription}>
               Define the project and taxonomy, then optionally preflight tasks.
             </p>
           </div>
         </div>
 
-        <form className="project-form" onSubmit={(event) => void submit(event)}>
+        <form
+          className={formStyles.form}
+          onSubmit={(event) => void submit(event)}
+        >
           {submitError && (
             <PageNotice title="Project was not created" tone="error">
               <p>{submitError}</p>
             </PageNotice>
           )}
 
-          <section className="form-section">
-            <div className="form-section__heading">
-              <span>01</span>
+          <section className={formStyles.section}>
+            <div className={formStyles.sectionHeading}>
+              <span className={formStyles.sectionNumber}>01</span>
               <div>
-                <h2>Project details</h2>
-                <p>Names are display values; projects use independent UUIDs.</p>
+                <h2 className={formStyles.sectionTitle}>Project details</h2>
+                <p className={formStyles.sectionDescription}>
+                  Names are display values; projects use independent UUIDs.
+                </p>
               </div>
             </div>
-            <label className="field">
+            <label className={formStyles.field}>
               <span>Project name *</span>
               <input
                 value={name}
@@ -142,7 +149,7 @@ export function ProjectCreate() {
                 required
               />
             </label>
-            <label className="field">
+            <label className={formStyles.field}>
               <span>Description</span>
               <textarea
                 value={description}
@@ -153,19 +160,19 @@ export function ProjectCreate() {
             </label>
           </section>
 
-          <section className="form-section">
-            <div className="form-section__heading">
-              <span>04</span>
+          <section className={formStyles.section}>
+            <div className={formStyles.sectionHeading}>
+              <span className={formStyles.sectionNumber}>04</span>
               <div>
-                <h2>Initial tasks</h2>
-                <p>
+                <h2 className={formStyles.sectionTitle}>Initial tasks</h2>
+                <p className={formStyles.sectionDescription}>
                   Optional. Review the preview before task records are written.
                 </p>
               </div>
             </div>
             <TaskImport onReady={setTasks} />
             {tasks.length > 0 && (
-              <div className="file-selection">
+              <div className={formStyles.fileSelection}>
                 <strong>{tasks.length} tasks ready for creation</strong>
                 <Button type="button" onClick={() => setTasks([])}>
                   Clear
@@ -174,12 +181,12 @@ export function ProjectCreate() {
             )}
           </section>
 
-          <section className="form-section">
-            <div className="form-section__heading">
-              <span>02</span>
+          <section className={formStyles.section}>
+            <div className={formStyles.sectionHeading}>
+              <span className={formStyles.sectionNumber}>02</span>
               <div>
-                <h2>Taxonomy *</h2>
-                <p>
+                <h2 className={formStyles.sectionTitle}>Taxonomy *</h2>
+                <p className={formStyles.sectionDescription}>
                   JSON or YAML, up to 1 MB. Annotation schema version one and at
                   least one stable label are required.
                 </p>
@@ -203,23 +210,27 @@ export function ProjectCreate() {
               {taxonomy ? 'Replace taxonomy file' : 'Upload taxonomy file'}
             </Button>
             {taxonomy && (
-              <div className="file-selection">
+              <div className={formStyles.fileSelection}>
                 <strong>{taxonomy.sourceFilename}</strong>
-                <span>
+                <span className={formStyles.fileSelectionName}>
                   {taxonomy.sourceFormat.toUpperCase()} · SHA-256{' '}
                   {taxonomy.contentHash.slice(0, 12)}…
                 </span>
               </div>
             )}
-            {taxonomyError && <p className="field-error">{taxonomyError}</p>}
+            {taxonomyError && (
+              <p className={formStyles.fieldError}>{taxonomyError}</p>
+            )}
           </section>
 
-          <section className="form-section">
-            <div className="form-section__heading">
-              <span>03</span>
+          <section className={formStyles.section}>
+            <div className={formStyles.sectionHeading}>
+              <span className={formStyles.sectionNumber}>03</span>
               <div>
-                <h2>Annotation instructions</h2>
-                <p>
+                <h2 className={formStyles.sectionTitle}>
+                  Annotation instructions
+                </h2>
+                <p className={formStyles.sectionDescription}>
                   Optional Markdown, up to 512 KB. Raw HTML is not rendered.
                 </p>
               </div>
@@ -242,7 +253,7 @@ export function ProjectCreate() {
               {instructions ? 'Replace instructions' : 'Upload Markdown file'}
             </Button>
             {instructions && (
-              <div className="file-selection">
+              <div className={formStyles.fileSelection}>
                 <strong>{instructions.sourceFilename}</strong>
                 <Button type="button" onClick={() => setInstructions(null)}>
                   Remove
@@ -250,16 +261,20 @@ export function ProjectCreate() {
               </div>
             )}
             {instructionsError && (
-              <p className="field-error">{instructionsError}</p>
+              <p className={formStyles.fieldError}>{instructionsError}</p>
             )}
           </section>
 
-          <section className="validation-summary" aria-live="polite">
-            <h2>Validation summary</h2>
+          <section className={formStyles.validationSummary} aria-live="polite">
+            <h2 className={formStyles.validationSummaryTitle}>
+              Validation summary
+            </h2>
             {problems.length === 0 ? (
-              <p className="validation-summary__ready">Ready to create.</p>
+              <p className={formStyles.validationSummaryReady}>
+                Ready to create.
+              </p>
             ) : (
-              <ul>
+              <ul className={formStyles.validationSummaryList}>
                 {problems.map((problem) => (
                   <li key={problem}>{problem}</li>
                 ))}
@@ -267,7 +282,7 @@ export function ProjectCreate() {
             )}
           </section>
 
-          <div className="form-actions">
+          <div className={formStyles.actions}>
             <ButtonLink to="/projects">Cancel</ButtonLink>
             <Button
               variant="primary"

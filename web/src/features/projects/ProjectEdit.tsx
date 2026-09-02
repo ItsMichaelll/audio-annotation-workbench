@@ -24,6 +24,8 @@ import {
 } from './projectActions'
 import { formatTimestamp } from './format'
 import { PageNotice, ProjectLayout, ProjectPageState } from './ProjectLayout'
+import formStyles from './ProjectForm.module.css'
+import layoutStyles from './ProjectLayout.module.css'
 import { useProject } from './projectHooks'
 
 function messageFrom(error: unknown): string {
@@ -143,19 +145,19 @@ function LoadedProjectEdit({ aggregate }: { aggregate: ProjectAggregate }) {
 
   return (
     <ProjectLayout>
-      <main className="project-page project-page--form">
-        <div className="breadcrumbs">
+      <main className={`${layoutStyles.page} ${layoutStyles.pageForm}`}>
+        <div className={layoutStyles.breadcrumbs}>
           <Link to="/projects">Projects</Link>
           <span aria-hidden="true">/</span>
           <Link to={projectPath(project.id)}>{project.name}</Link>
           <span aria-hidden="true">/</span>
           <span>Edit</span>
         </div>
-        <div className="page-heading">
+        <div className={layoutStyles.pageHeading}>
           <div>
-            <p className="eyebrow">Project settings</p>
-            <h1>Edit project</h1>
-            <p>
+            <p className={layoutStyles.eyebrow}>Project settings</p>
+            <h1 className={layoutStyles.pageHeadingTitle}>Edit project</h1>
+            <p className={layoutStyles.pageHeadingDescription}>
               Metadata can change. Taxonomy history remains immutable and new
               content creates a new version.
             </p>
@@ -171,7 +173,10 @@ function LoadedProjectEdit({ aggregate }: { aggregate: ProjectAggregate }) {
           </Button>
         </div>
 
-        <form className="project-form" onSubmit={(event) => void submit(event)}>
+        <form
+          className={formStyles.form}
+          onSubmit={(event) => void submit(event)}
+        >
           {saveError && (
             <PageNotice title="Project could not be saved" tone="error">
               <p>{saveError}</p>
@@ -186,15 +191,17 @@ function LoadedProjectEdit({ aggregate }: { aggregate: ProjectAggregate }) {
             </PageNotice>
           )}
 
-          <section className="form-section">
-            <div className="form-section__heading">
-              <span>01</span>
+          <section className={formStyles.section}>
+            <div className={formStyles.sectionHeading}>
+              <span className={formStyles.sectionNumber}>01</span>
               <div>
-                <h2>Project details</h2>
-                <p>Renaming does not change the stable project ID.</p>
+                <h2 className={formStyles.sectionTitle}>Project details</h2>
+                <p className={formStyles.sectionDescription}>
+                  Renaming does not change the stable project ID.
+                </p>
               </div>
             </div>
-            <label className="field">
+            <label className={formStyles.field}>
               <span>Project name *</span>
               <input
                 value={name}
@@ -203,7 +210,7 @@ function LoadedProjectEdit({ aggregate }: { aggregate: ProjectAggregate }) {
                 required
               />
             </label>
-            <label className="field">
+            <label className={formStyles.field}>
               <span>Description</span>
               <textarea
                 value={description}
@@ -214,12 +221,12 @@ function LoadedProjectEdit({ aggregate }: { aggregate: ProjectAggregate }) {
             </label>
           </section>
 
-          <section className="form-section">
-            <div className="form-section__heading">
-              <span>02</span>
+          <section className={formStyles.section}>
+            <div className={formStyles.sectionHeading}>
+              <span className={formStyles.sectionNumber}>02</span>
               <div>
-                <h2>Taxonomy version</h2>
-                <p>
+                <h2 className={formStyles.sectionTitle}>Taxonomy version</h2>
+                <p className={formStyles.sectionDescription}>
                   Current: v{activeTaxonomyVersion.version} ·{' '}
                   {activeTaxonomyVersion.sourceFilename}
                 </p>
@@ -236,7 +243,7 @@ function LoadedProjectEdit({ aggregate }: { aggregate: ProjectAggregate }) {
                 void selectTaxonomy(file)
               }}
             />
-            <div className="form-section__actions">
+            <div className={formStyles.sectionActions}>
               <Button
                 type="button"
                 onClick={() => taxonomyInput.current?.click()}
@@ -248,18 +255,22 @@ function LoadedProjectEdit({ aggregate }: { aggregate: ProjectAggregate }) {
               </ButtonLink>
             </div>
             {taxonomy && (
-              <div className="file-selection">
+              <div className={formStyles.fileSelection}>
                 <strong>{taxonomy.sourceFilename}</strong>
-                <span>Pending new version</span>
+                <span className={formStyles.fileSelectionName}>
+                  Pending new version
+                </span>
                 <Button type="button" onClick={() => setTaxonomy(null)}>
                   Clear
                 </Button>
               </div>
             )}
-            {taxonomyError && <p className="field-error">{taxonomyError}</p>}
-            <div className="compact-history">
+            {taxonomyError && (
+              <p className={formStyles.fieldError}>{taxonomyError}</p>
+            )}
+            <div className={formStyles.compactHistory}>
               {taxonomyVersions.map((version) => (
-                <div key={version.id}>
+                <div className={formStyles.historyRow} key={version.id}>
                   <strong>v{version.version}</strong>
                   <span>{version.sourceFilename}</span>
                   <span>{formatTimestamp(version.createdAt)}</span>
@@ -268,12 +279,16 @@ function LoadedProjectEdit({ aggregate }: { aggregate: ProjectAggregate }) {
             </div>
           </section>
 
-          <section className="form-section">
-            <div className="form-section__heading">
-              <span>03</span>
+          <section className={formStyles.section}>
+            <div className={formStyles.sectionHeading}>
+              <span className={formStyles.sectionNumber}>03</span>
               <div>
-                <h2>Annotation instructions</h2>
-                <p>Replace or remove the project Markdown instructions.</p>
+                <h2 className={formStyles.sectionTitle}>
+                  Annotation instructions
+                </h2>
+                <p className={formStyles.sectionDescription}>
+                  Replace or remove the project Markdown instructions.
+                </p>
               </div>
             </div>
             <input
@@ -287,7 +302,7 @@ function LoadedProjectEdit({ aggregate }: { aggregate: ProjectAggregate }) {
                 void selectInstructions(file)
               }}
             />
-            <div className="form-section__actions">
+            <div className={formStyles.sectionActions}>
               <Button
                 type="button"
                 onClick={() => instructionsInput.current?.click()}
@@ -301,11 +316,11 @@ function LoadedProjectEdit({ aggregate }: { aggregate: ProjectAggregate }) {
               </ButtonLink>
             </div>
             {pendingInstructionsName && (
-              <div className="file-selection">
+              <div className={formStyles.fileSelection}>
                 <strong>{pendingInstructionsName}</strong>
                 <Button
                   variant="danger"
-                  className="file-selection__remove"
+                  className={formStyles.fileSelectionRemove}
                   type="button"
                   onClick={() => setInstructionsChange({ kind: 'remove' })}
                 >
@@ -315,16 +330,16 @@ function LoadedProjectEdit({ aggregate }: { aggregate: ProjectAggregate }) {
             )}
             {!pendingInstructionsName &&
               instructionsChange.kind === 'remove' && (
-                <p className="muted-copy">
+                <p className={formStyles.mutedCopy}>
                   Instructions will be removed on save.
                 </p>
               )}
             {instructionsError && (
-              <p className="field-error">{instructionsError}</p>
+              <p className={formStyles.fieldError}>{instructionsError}</p>
             )}
           </section>
 
-          <div className="form-actions">
+          <div className={formStyles.actions}>
             <ButtonLink to={projectPath(project.id)}>Cancel</ButtonLink>
             <Button
               variant="primary"

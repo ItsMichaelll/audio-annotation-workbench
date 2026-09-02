@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import { ButtonLink } from '../../components/Button'
+import styles from './ProjectLayout.module.css'
 
 interface ProjectLayoutProps {
   children: ReactNode
@@ -9,25 +10,27 @@ interface ProjectLayoutProps {
 
 export function ProjectLayout({ children, actions }: ProjectLayoutProps) {
   return (
-    <div className="project-app-shell">
-      <header className="project-header">
+    <div className={`${styles.shell} project-app-shell`}>
+      <header className={styles.header}>
         <Link
-          className="brand brand--link"
+          className={`${styles.brand} ${styles.brandLink}`}
           to="/"
           aria-label="Projects dashboard"
         >
-          <span className="brand__mark" aria-hidden="true">
+          <span className={styles.brandMark} aria-hidden="true">
             AAW
           </span>
           <div>
-            <span className="brand__title">Audio Annotation Workbench</span>
-            <span className="brand__subtitle">
+            <span className={styles.brandTitle}>
+              Audio Annotation Workbench
+            </span>
+            <span className={styles.brandSubtitle}>
               A minimalistic audio annotation tool
             </span>
           </div>
         </Link>
-        <div className="project-header__actions">
-          <span className="privacy-note">Data stays in this browser</span>
+        <div className={styles.headerActions}>
+          <span className={styles.privacyNote}>Data stays in this browser</span>
           {actions}
         </div>
       </header>
@@ -47,11 +50,17 @@ export function PageNotice({
 }) {
   return (
     <div
-      className={`page-notice page-notice--${tone}`}
+      className={`${styles.notice} ${
+        tone === 'warning'
+          ? styles.noticeWarning
+          : tone === 'error'
+            ? styles.noticeError
+            : ''
+      }`}
       role={tone === 'error' ? 'alert' : undefined}
     >
-      <strong>{title}</strong>
-      <div>{children}</div>
+      <strong className={styles.noticeTitle}>{title}</strong>
+      <div className={styles.noticeBody}>{children}</div>
     </div>
   )
 }
@@ -65,10 +74,10 @@ export function ProjectPageState({
 }) {
   return (
     <ProjectLayout>
-      <main className="project-page project-page--narrow">
-        <div className="state-panel">
-          <h1>{title}</h1>
-          <p>{message}</p>
+      <main className={`${styles.page} ${styles.pageNarrow}`}>
+        <div className={styles.statePanel}>
+          <h1 className={styles.statePanelTitle}>{title}</h1>
+          <p className={styles.statePanelDescription}>{message}</p>
           <ButtonLink variant="primary" to="/projects">
             Back to projects
           </ButtonLink>

@@ -8,6 +8,7 @@ import {
 } from '../../domain/taskIngestion'
 import type { TaskRecord } from '../../domain/models'
 import { registerCurrentSessionFile } from '../../domain/mediaSources'
+import styles from './TaskImport.module.css'
 
 const AUDIO = /\.(wav|mp3|flac|ogg|m4a|aac|aiff?)$/i
 
@@ -74,7 +75,7 @@ export function TaskImport({
     }
   }
   return (
-    <section className="task-import">
+    <section className={styles.root}>
       <input
         ref={input}
         className="visually-hidden"
@@ -110,26 +111,38 @@ export function TaskImport({
           event.target.value = ''
         }}
       />
-      <div className="task-import__source-controls">
-        <div className="task-import__actions">
-          <Button type="button" onClick={() => input.current?.click()}>
+      <div className={styles.sourceControls}>
+        <div className={styles.actions}>
+          <Button
+            className={styles.action}
+            type="button"
+            onClick={() => input.current?.click()}
+          >
             Select audio files
           </Button>
-          <Button type="button" onClick={() => directoryInput.current?.click()}>
+          <Button
+            className={styles.action}
+            type="button"
+            onClick={() => directoryInput.current?.click()}
+          >
             Select directory
           </Button>
-          <Button type="button" onClick={() => manifestInput.current?.click()}>
+          <Button
+            className={styles.action}
+            type="button"
+            onClick={() => manifestInput.current?.click()}
+          >
             Select JSON/JSONL manifest
           </Button>
         </div>
-        <p className="task-import__helper">
+        <p className={styles.helper}>
           Audio stays in its original location. Browser file selections are
           session-only and may need relinking after restart.
         </p>
       </div>
-      {error && <p className="field-error">{error}</p>}
+      {error && <p className={styles.error}>{error}</p>}
       {plan && (
-        <div className="import-preview" aria-live="polite">
+        <div className={styles.preview} aria-live="polite">
           <strong>Import preview</strong>
           <span>
             {plan.candidates} candidates · {plan.valid.length} valid new ·{' '}
@@ -139,11 +152,12 @@ export function TaskImport({
             unsupported
           </span>
           {plan.invalid.map((message) => (
-            <p className="field-error" key={message}>
+            <p className={styles.error} key={message}>
               {message}
             </p>
           ))}
           <Button
+            className={styles.previewAction}
             variant="primary"
             type="button"
             disabled={!plan.valid.length}

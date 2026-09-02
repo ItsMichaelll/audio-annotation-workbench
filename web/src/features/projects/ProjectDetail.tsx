@@ -27,9 +27,13 @@ import {
 import { formatTimestamp } from './format'
 import { MarkdownInstructions } from './MarkdownInstructions'
 import { PageNotice, ProjectLayout, ProjectPageState } from './ProjectLayout'
+import detailStyles from './ProjectDetail.module.css'
+import formStyles from './ProjectForm.module.css'
+import layoutStyles from './ProjectLayout.module.css'
 import { useProject } from './projectHooks'
 import { TaskImport } from './TaskImport'
 import { ProjectDataPortability } from './ProjectDataPortability'
+import statusStyles from './ProjectStatus.module.css'
 
 function messageFrom(error: unknown): string {
   return error instanceof Error ? error.message : 'The operation failed.'
@@ -184,8 +188,8 @@ export function ProjectDetail() {
 
   return (
     <ProjectLayout>
-      <main className="project-page detail-page">
-        <div className="breadcrumbs">
+      <main className={layoutStyles.page}>
+        <div className={layoutStyles.breadcrumbs}>
           <Link to="/projects">Projects</Link>
           <span aria-hidden="true">/</span>
           <span>{project.name}</span>
@@ -205,20 +209,29 @@ export function ProjectDetail() {
           </PageNotice>
         )}
 
-        <header className="detail-hero">
+        <header className={detailStyles.hero}>
           <div>
-            <div className="detail-hero__status">
-              <span className={`status-badge status-badge--${project.status}`}>
+            <div className={detailStyles.heroStatus}>
+              <span
+                className={`${statusStyles.badge} ${
+                  project.status === 'archived' ? statusStyles.archived : ''
+                }`}
+              >
                 {project.status}
               </span>
               <span>Taxonomy v{activeTaxonomyVersion.version}</span>
             </div>
-            <h1>{project.name}</h1>
-            {project.description && <p>{project.description}</p>}
+            <h1 className={detailStyles.heroTitle}>{project.name}</h1>
+            {project.description && (
+              <p className={detailStyles.heroDescription}>
+                {project.description}
+              </p>
+            )}
           </div>
-          <div className="detail-hero__actions">
+          <div className={detailStyles.heroActions}>
             {nextTask && !taxonomyError && project.status === 'active' ? (
               <ButtonLink
+                className={detailStyles.heroAction}
                 variant="primary"
                 to={annotationPath(project.id, nextTask.id)}
               >
@@ -226,6 +239,7 @@ export function ProjectDetail() {
               </ButtonLink>
             ) : (
               <Button
+                className={detailStyles.heroAction}
                 type="button"
                 disabled
                 title={
@@ -239,10 +253,14 @@ export function ProjectDetail() {
                 Start Labeling
               </Button>
             )}
-            <ButtonLink to={editProjectPath(project.id)}>
+            <ButtonLink
+              className={detailStyles.heroAction}
+              to={editProjectPath(project.id)}
+            >
               Edit project
             </ButtonLink>
             <Button
+              className={detailStyles.heroAction}
               type="button"
               onClick={() => void toggleArchive()}
               disabled={acting}
@@ -266,31 +284,41 @@ export function ProjectDetail() {
           </PageNotice>
         )}
 
-        <section className="detail-metadata" aria-label="Project dates">
-          <div>
-            <span>Created</span>
-            <strong>{formatTimestamp(project.createdAt)}</strong>
+        <section className={detailStyles.metadata} aria-label="Project dates">
+          <div className={detailStyles.metadataItem}>
+            <span className={detailStyles.metadataLabel}>Created</span>
+            <strong className={detailStyles.metadataValue}>
+              {formatTimestamp(project.createdAt)}
+            </strong>
           </div>
-          <div>
-            <span>Last updated</span>
-            <strong>{formatTimestamp(project.updatedAt)}</strong>
+          <div className={detailStyles.metadataItem}>
+            <span className={detailStyles.metadataLabel}>Last updated</span>
+            <strong className={detailStyles.metadataValue}>
+              {formatTimestamp(project.updatedAt)}
+            </strong>
           </div>
-          <div>
-            <span>Project ID</span>
-            <strong>{project.id}</strong>
+          <div className={detailStyles.metadataItem}>
+            <span className={detailStyles.metadataLabel}>Project ID</span>
+            <strong className={detailStyles.metadataValue}>{project.id}</strong>
           </div>
         </section>
 
-        <div className="detail-grid">
-          <section className="detail-section detail-section--wide">
-            <div className="section-heading">
+        <div className={detailStyles.grid}>
+          <section
+            className={`${detailStyles.section} ${detailStyles.sectionWide}`}
+          >
+            <div className={detailStyles.sectionHeading}>
               <div>
-                <p className="eyebrow">Task manager</p>
-                <h2>Audio tasks</h2>
+                <p
+                  className={`${layoutStyles.eyebrow} ${detailStyles.sectionHeadingEyebrow}`}
+                >
+                  Task manager
+                </p>
+                <h2 className={detailStyles.sectionTitle}>Audio tasks</h2>
               </div>
-              <span className="count-badge">{progress.total}</span>
+              <span className={detailStyles.countBadge}>{progress.total}</span>
             </div>
-            <p className="task-progress-summary">
+            <p className={detailStyles.progressSummary}>
               {progress.submitted} submitted of {progress.total} tasks ·{' '}
               {progress.unstarted} unstarted · {progress.blocked} blocked
             </p>
@@ -303,9 +331,11 @@ export function ProjectDetail() {
               }
             />
             {tasks.length === 0 ? (
-              <div className="task-empty-state">
-                <h3>No tasks imported</h3>
-                <p>
+              <div className={detailStyles.emptyState}>
+                <h3 className={detailStyles.emptyStateTitle}>
+                  No tasks imported
+                </h3>
+                <p className={detailStyles.emptyStateDescription}>
                   Add audio files or a JSON/JSONL manifest. Manifest-only tasks
                   remain unresolved until linked.
                 </p>
@@ -524,46 +554,64 @@ export function ProjectDetail() {
             )}
           </section>
 
-          <section className="detail-section">
-            <div className="section-heading">
+          <section className={detailStyles.section}>
+            <div className={detailStyles.sectionHeading}>
               <div>
-                <p className="eyebrow">Labeling configuration</p>
-                <h2>Active taxonomy</h2>
+                <p
+                  className={`${layoutStyles.eyebrow} ${detailStyles.sectionHeadingEyebrow}`}
+                >
+                  Labeling configuration
+                </p>
+                <h2 className={detailStyles.sectionTitle}>Active taxonomy</h2>
               </div>
-              <span className="count-badge">
+              <span className={detailStyles.countBadge}>
                 v{activeTaxonomyVersion.version}
               </span>
             </div>
 
-            <div className="active-taxonomy-summary">
+            <div className={detailStyles.activeTaxonomySummary}>
               <div>
-                <span>Taxonomy</span>
-                <strong>
+                <span className={detailStyles.taxonomyNameLabel}>Taxonomy</span>
+                <strong className={detailStyles.taxonomyName}>
                   {activeTaxonomyVersion.metadata.name ?? 'Unnamed taxonomy'}
                 </strong>
-                <small>{activeTaxonomyVersion.sourceFilename}</small>
+                <small className={detailStyles.taxonomyFilename}>
+                  {activeTaxonomyVersion.sourceFilename}
+                </small>
               </div>
 
-              <div className="active-taxonomy-metrics">
-                <div>
-                  <strong>{regionLabels.length}</strong>
-                  <span>Region labels</span>
+              <div className={detailStyles.metrics}>
+                <div className={detailStyles.metric}>
+                  <strong className={detailStyles.metricValue}>
+                    {regionLabels.length}
+                  </strong>
+                  <span className={detailStyles.metricLabel}>
+                    Region labels
+                  </span>
                 </div>
-                <div>
-                  <strong>{clipLabels.length}</strong>
-                  <span>Clip labels</span>
+                <div className={detailStyles.metric}>
+                  <strong className={detailStyles.metricValue}>
+                    {clipLabels.length}
+                  </strong>
+                  <span className={detailStyles.metricLabel}>Clip labels</span>
                 </div>
-                <div>
-                  <strong>{scaleCount}</strong>
-                  <span>Scales</span>
+                <div className={detailStyles.metric}>
+                  <strong className={detailStyles.metricValue}>
+                    {scaleCount}
+                  </strong>
+                  <span className={detailStyles.metricLabel}>Scales</span>
                 </div>
               </div>
 
               {regionLabels.length > 0 && (
-                <div className="taxonomy-label-preview">
+                <div className={detailStyles.labelPreview}>
                   {regionLabels.map((label) => (
-                    <span key={label.id}>
+                    <span
+                      className={detailStyles.labelPreviewItem}
+                      key={label.id}
+                    >
                       <i
+                        className={detailStyles.labelPreviewSwatch}
                         aria-hidden="true"
                         style={{
                           backgroundColor: label.color ?? 'var(--accent)',
@@ -575,7 +623,7 @@ export function ProjectDetail() {
                 </div>
               )}
 
-              <p className="taxonomy-version-note">
+              <p className={detailStyles.taxonomyVersionNote}>
                 New annotations use this version. Existing drafts remain pinned
                 to the version they were created with.
               </p>
@@ -587,21 +635,27 @@ export function ProjectDetail() {
           </section>
         </div>
 
-        <section className="detail-section">
-          <div className="section-heading">
+        <section className={detailStyles.section}>
+          <div className={detailStyles.sectionHeading}>
             <div>
-              <p className="eyebrow">Immutable history</p>
-              <h2>Taxonomy versions</h2>
+              <p
+                className={`${layoutStyles.eyebrow} ${detailStyles.sectionHeadingEyebrow}`}
+              >
+                Immutable history
+              </p>
+              <h2 className={detailStyles.sectionTitle}>Taxonomy versions</h2>
             </div>
-            <span className="count-badge">{taxonomyVersions.length}</span>
+            <span className={detailStyles.countBadge}>
+              {taxonomyVersions.length}
+            </span>
           </div>
           <div
-            className="history-table"
+            className={detailStyles.history}
             role="table"
             aria-label="Taxonomy history"
           >
             <div
-              className="history-table__row history-table__header"
+              className={`${detailStyles.historyRow} ${detailStyles.historyHeader}`}
               role="row"
             >
               <span role="columnheader">Version</span>
@@ -610,7 +664,11 @@ export function ProjectDetail() {
               <span role="columnheader">State</span>
             </div>
             {taxonomyVersions.map((taxonomy) => (
-              <div className="history-table__row" role="row" key={taxonomy.id}>
+              <div
+                className={detailStyles.historyRow}
+                role="row"
+                key={taxonomy.id}
+              >
                 <strong role="cell">v{taxonomy.version}</strong>
                 <span role="cell">{taxonomy.sourceFilename}</span>
                 <span role="cell">{formatTimestamp(taxonomy.createdAt)}</span>
@@ -624,16 +682,22 @@ export function ProjectDetail() {
           </div>
         </section>
 
-        <section className="detail-section instructions-section">
-          <div className="section-heading">
+        <section className={detailStyles.section}>
+          <div className={detailStyles.sectionHeading}>
             <div>
-              <p className="eyebrow">Reference</p>
-              <h2>Annotation instructions</h2>
+              <p
+                className={`${layoutStyles.eyebrow} ${detailStyles.sectionHeadingEyebrow}`}
+              >
+                Reference
+              </p>
+              <h2 className={detailStyles.sectionTitle}>
+                Annotation instructions
+              </h2>
             </div>
-            <div className="section-heading__actions">
+            <div className={detailStyles.headingActions}>
               {instructions && (
                 <span
-                  className="section-heading__filename"
+                  className={detailStyles.headingFilename}
                   title={instructions.sourceFilename}
                 >
                   {instructions.sourceFilename}
@@ -650,9 +714,11 @@ export function ProjectDetail() {
           {instructions ? (
             <MarkdownInstructions markdown={instructions.rawMarkdown} />
           ) : (
-            <div className="task-empty-state">
-              <h3>No instructions have been added.</h3>
-              <p className="muted-copy">
+            <div className={detailStyles.emptyState}>
+              <h3 className={detailStyles.emptyStateTitle}>
+                No instructions have been added.
+              </h3>
+              <p className={detailStyles.emptyStateDescription}>
                 Add instructions to help annotators understand the project and
                 the tasks.
               </p>
@@ -665,10 +731,10 @@ export function ProjectDetail() {
           projectName={project.name}
         />
 
-        <section className="danger-zone">
+        <section className={detailStyles.dangerZone}>
           <div>
-            <h2>Delete project</h2>
-            <p>
+            <h2 className={detailStyles.dangerTitle}>Delete project</h2>
+            <p className={detailStyles.dangerDescription}>
               Deletes project metadata, taxonomy history, instructions, and task
               records from this browser. Source audio is never deleted.
             </p>
@@ -686,7 +752,6 @@ export function ProjectDetail() {
 
       <Modal
         open={deleteOpen}
-        className="project-delete-dialog"
         titleId="delete-title"
         descriptionId="delete-description"
         initialFocusRef={deleteProjectInputRef}
@@ -702,7 +767,7 @@ export function ProjectDetail() {
           This cannot be undone without a future project backup. Source audio
           files remain untouched.
         </ModalDescription>
-        <label className="field">
+        <label className={formStyles.field}>
           <span>Type the project name to confirm</span>
           <input
             ref={deleteProjectInputRef}
@@ -710,7 +775,7 @@ export function ProjectDetail() {
             onChange={(event) => setConfirmation(event.target.value)}
           />
         </label>
-        <ModalActions className="form-actions">
+        <ModalActions className={formStyles.actions}>
           <Button type="button" onClick={closeDeleteProject} disabled={acting}>
             Cancel
           </Button>
