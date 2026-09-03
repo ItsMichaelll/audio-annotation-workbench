@@ -23,18 +23,18 @@
 }
 
 .primary svg {
-  color: var(--accent);
+  color: var(--color-blue-500);
 }
 
 .control[aria-pressed='true'] {
-  border-color: rgb(var(--accent-rgb) / 46%);
-  background: rgb(var(--accent-rgb) / 14%);
-  color: color-mix(in srgb, var(--accent) 25%, white);
+  border-color: rgb(var(--color-blue-500-rgb) / 46%);
+  background: rgb(var(--color-blue-500-rgb) / 14%);
+  color: color-mix(in srgb, var(--color-blue-500) 25%, white);
 }
 
 .viewToggle[aria-pressed='true'] {
-  border-color: var(--accent);
-  background: var(--accent);
+  border-color: var(--color-blue-500);
+  background: var(--color-blue-500);
   color: var(--text-inverse);
   font-weight: var(--font-weight-medium);
 }

@@ -178,7 +178,7 @@ export function ProjectRestore() {
           <input
             ref={backupInput}
             id="backup-file"
-            className="visually-hidden"
+            className="u-visually-hidden"
             type="file"
             accept=".json,application/json"
             disabled={busy}

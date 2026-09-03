@@ -78,7 +78,7 @@ export function TaskImport({
     <section className={styles.root}>
       <input
         ref={input}
-        className="visually-hidden"
+        className="u-visually-hidden"
         type="file"
         multiple
         accept="audio/*,.wav,.flac"
@@ -92,7 +92,7 @@ export function TaskImport({
           directoryInput.current = node
           node?.setAttribute('webkitdirectory', '')
         }}
-        className="visually-hidden"
+        className="u-visually-hidden"
         type="file"
         multiple
         accept="audio/*,.wav,.flac"
@@ -103,7 +103,7 @@ export function TaskImport({
       />
       <input
         ref={manifestInput}
-        className="visually-hidden"
+        className="u-visually-hidden"
         type="file"
         accept=".json,.jsonl,application/json"
         onChange={(event) => {

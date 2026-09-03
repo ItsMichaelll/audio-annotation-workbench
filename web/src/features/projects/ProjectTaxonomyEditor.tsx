@@ -229,7 +229,7 @@ function LoadedTaxonomyEditor({
         {mode === 'yaml' ? (
           <section className={styles.sourcePanel}>
             <label className={styles.sourceField} htmlFor="taxonomy-source">
-              <span className="visually-hidden">Taxonomy YAML</span>
+              <span className="u-visually-hidden">Taxonomy YAML</span>
               <textarea
                 id="taxonomy-source"
                 className={styles.sourceTextarea}

@@ -622,7 +622,8 @@ export function ProjectDetail() {
                         className={detailStyles.labelPreviewSwatch}
                         aria-hidden="true"
                         style={{
-                          backgroundColor: label.color ?? 'var(--accent)',
+                          backgroundColor:
+                            label.color ?? 'var(--color-blue-500)',
                         }}
                       />
                       {label.name}

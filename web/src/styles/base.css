@@ -41,7 +41,7 @@ button:disabled {
 }
 
 button:focus-visible {
-  border-color: rgb(var(--accent-rgb) / 70%);
+  border-color: rgb(var(--color-blue-500-rgb) / 70%);
   outline: none;
   box-shadow:
     0 0 0 2px var(--focus-ring-offset-color),
@@ -54,7 +54,7 @@ button:focus-visible {
 }
 
 input[type='checkbox'] {
-  accent-color: var(--accent);
+  accent-color: var(--color-blue-500);
 }
 
 select {

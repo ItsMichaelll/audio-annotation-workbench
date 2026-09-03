@@ -16,7 +16,7 @@
   inset: var(--segment-pad);
   width: calc(50% - var(--segment-pad));
   border-radius: var(--radius-pill);
-  background: var(--accent);
+  background: var(--color-blue-500);
   content: '';
   pointer-events: none;
   transition: transform var(--duration-normal) var(--easing-standard);
@@ -46,7 +46,7 @@
   border-color: transparent;
   box-shadow:
     0 0 0 2px var(--surface-waveform),
-    0 0 0 3px var(--accent);
+    0 0 0 3px var(--color-blue-500);
 }
 
 .segment:active:not(:disabled) {
@@ -161,7 +161,7 @@
   align-items: center;
   justify-content: space-between;
   padding-top: 12px;
-  color: var(--accent);
+  color: var(--color-blue-500);
   font-size: 11px;
   text-decoration: none;
 }
@@ -174,7 +174,7 @@
 
 .card:hover .cardOpen,
 .card:focus-within .cardOpen {
-  color: color-mix(in srgb, var(--accent) 75%, #ffffff);
+  color: color-mix(in srgb, var(--color-blue-500) 75%, #fff);
   transition: color 250ms var(--easing-standard);
 }
 
