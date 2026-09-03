@@ -16,6 +16,7 @@ import {
   WaveformEditor,
   type WaveformEditorHandle,
 } from './features/waveform/WaveformEditor'
+import styles from './App.module.css'
 
 type LoadStatus = 'idle' | 'loading' | 'ready' | 'error'
 
@@ -256,23 +257,25 @@ export function StandaloneEditor() {
   ])
 
   return (
-    <div className="app-shell">
-      <header className="app-header">
+    <div className={styles.shell}>
+      <header className={styles.header}>
         <Link
-          className="brand brand--link"
+          className={`${styles.brand} ${styles.brandLink}`}
           to="/"
           aria-label="Projects dashboard"
         >
-          <span className="brand__mark" aria-hidden="true">
+          <span className={styles.brandMark} aria-hidden="true">
             AAW
           </span>
           <div>
-            <h1>Audio Annotation Workbench</h1>
-            <p>A minimalistic audio annotation tool</p>
+            <h1 className={styles.brandTitle}>Audio Annotation Workbench</h1>
+            <p className={styles.brandSubtitle}>
+              A minimalistic audio annotation tool
+            </p>
           </div>
         </Link>
-        <div className="header-actions">
-          <span className="privacy-note">Data stays in this browser</span>
+        <div className={styles.headerActions}>
+          <span className={styles.privacyNote}>Data stays in this browser</span>
           <input
             ref={fileInputRef}
             className="visually-hidden"
@@ -281,7 +284,7 @@ export function StandaloneEditor() {
             onChange={(event) => handleFile(event.target.files?.[0])}
           />
           <button
-            className="load-button"
+            className={styles.uploadButton}
             type="button"
             onClick={() => fileInputRef.current?.click()}
           >
@@ -333,14 +336,15 @@ export function StandaloneEditor() {
         }}
       />
 
-      <main className="workspace">
-        <section className="editor" aria-label="Waveform editor">
+      <main className={styles.workspace}>
+        <section className={styles.editor} aria-label="Waveform editor">
           {error && (
-            <div className="error-banner" role="alert">
-              <strong>Audio notice</strong>
+            <div className={styles.errorBanner} role="alert">
+              <strong className={styles.errorTitle}>Audio notice</strong>
               <span>{error}</span>
               <button
                 type="button"
+                className={styles.errorDismiss}
                 onClick={() => setError(null)}
                 aria-label="Dismiss error"
               >
@@ -350,10 +354,11 @@ export function StandaloneEditor() {
           )}
 
           {!audioUrl ? (
-            <div className="empty-state">
-              <div className="empty-state__wave" aria-hidden="true">
+            <div className={styles.emptyState}>
+              <div className={styles.emptyWave} aria-hidden="true">
                 {EMPTY_STATE_WAVE_HEIGHTS.map((height, index) => (
                   <i
+                    className={styles.emptyWaveBar}
                     key={index}
                     style={{
                       height: `${height}%`,
@@ -362,12 +367,15 @@ export function StandaloneEditor() {
                   />
                 ))}
               </div>
-              <h2>Upload an audio file to begin</h2>
-              <p>
+              <h2 className={styles.emptyTitle}>
+                Upload an audio file to begin
+              </h2>
+              <p className={styles.emptyDescription}>
                 Supported formats: AAC, AIF, AIFF, FLAC, M4A, MP3, OGA, OGG,
                 OPUS, WAV, WAVE, WEBM
               </p>
               <button
+                className={styles.emptyAction}
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
               >
@@ -375,10 +383,13 @@ export function StandaloneEditor() {
               </button>
             </div>
           ) : (
-            <div className="editor__surface">
+            <div className={styles.editorSurface}>
               {loadStatus === 'loading' && (
-                <div className="loading-overlay" role="status">
-                  <span className="loading-indicator" aria-hidden="true" />
+                <div className={styles.loadingOverlay} role="status">
+                  <span
+                    className={styles.loadingIndicator}
+                    aria-hidden="true"
+                  />
                   Decoding waveform…
                 </div>
               )}
@@ -420,7 +431,7 @@ export function StandaloneEditor() {
             </div>
           )}
 
-          <footer className="editor-footer">
+          <footer className={styles.editorFooter}>
             <span>
               {regions.length} {regions.length === 1 ? 'region' : 'regions'}
             </span>

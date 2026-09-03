@@ -343,11 +343,12 @@ export function ProjectDetail() {
             ) : (
               <>
                 <div
-                  className="task-controls"
+                  className={detailStyles.taskControls}
                   aria-label="Task filters and bulk actions"
                 >
-                  <div className="task-controls__filters">
+                  <div className={detailStyles.taskFilters}>
                     <input
+                      className={detailStyles.taskSearch}
                       aria-label="Search tasks"
                       value={query}
                       placeholder="Search name, ID, or path"
@@ -377,7 +378,7 @@ export function ProjectDetail() {
                       }}
                     />
                   </div>
-                  <div className="task-controls__actions">
+                  <div className={detailStyles.taskActions}>
                     <Button
                       size="square"
                       type="button"
@@ -402,12 +403,12 @@ export function ProjectDetail() {
                   </div>
                 </div>
                 <div
-                  className="task-table"
+                  className={detailStyles.taskTable}
                   role="table"
                   aria-label="Project tasks"
                 >
                   <div
-                    className="task-table__row task-table__header"
+                    className={`${detailStyles.taskRow} ${detailStyles.taskHeader}`}
                     role="row"
                   >
                     <span>
@@ -441,7 +442,11 @@ export function ProjectDetail() {
                     const name =
                       task.displayName ?? task.primaryMedia.displayName
                     return (
-                      <div className="task-table__row" role="row" key={task.id}>
+                      <div
+                        className={detailStyles.taskRow}
+                        role="row"
+                        key={task.id}
+                      >
                         <span>
                           <input
                             aria-label={`Select ${name}`}
@@ -457,8 +462,10 @@ export function ProjectDetail() {
                           />
                         </span>
                         <span>
-                          <strong>{name}</strong>
-                          <small>
+                          <strong className={detailStyles.taskName}>
+                            {name}
+                          </strong>
+                          <small className={detailStyles.taskPath}>
                             {task.relativePath ?? task.primaryMedia.displayName}
                           </small>
                         </span>
@@ -472,7 +479,7 @@ export function ProjectDetail() {
                               : 'Available'}
                         </span>
                         <span>{formatTimestamp(task.updatedAt)}</span>
-                        <span className="task-table__action">
+                        <span className={detailStyles.taskAction}>
                           {((project.status === 'active' &&
                             (task.status === 'unstarted' ||
                               task.status === 'draft' ||
@@ -510,6 +517,7 @@ export function ProjectDetail() {
                           )}
                           {task.status === 'submitted' && (
                             <Button
+                              size="compact"
                               type="button"
                               disabled={acting}
                               onClick={() =>
@@ -530,7 +538,7 @@ export function ProjectDetail() {
                     )
                   })}
                 </div>
-                <div className="task-pagination">
+                <div className={detailStyles.taskPagination}>
                   <Button
                     type="button"
                     disabled={page === 0}
@@ -682,7 +690,9 @@ export function ProjectDetail() {
           </div>
         </section>
 
-        <section className={detailStyles.section}>
+        <section
+          className={`${detailStyles.section} ${detailStyles.instructionsSection}`}
+        >
           <div className={detailStyles.sectionHeading}>
             <div>
               <p

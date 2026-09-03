@@ -60,8 +60,10 @@ import {
   ProjectLayout,
   ProjectPageState,
 } from '../projects/ProjectLayout'
+import layoutStyles from '../projects/ProjectLayout.module.css'
 import { useProject } from '../projects/projectHooks'
 import { AnnotationInspector } from './AnnotationInspector'
+import styles from './AnnotationWorkspace.module.css'
 
 type SaveState = 'Unsaved' | 'Saving' | 'Saved' | 'Save failed'
 type AudioState =
@@ -156,10 +158,10 @@ function LoadedAnnotationRoute({
   if (loaded.kind === 'error') {
     return (
       <ProjectLayout>
-        <main className="project-page">
+        <main className={layoutStyles.page}>
           <PageNotice title="Task cannot be opened" tone="error">
             <p>{loaded.message}</p>
-            <div className="form-actions">
+            <div className={styles.recoveryActions}>
               <ButtonLink to={projectPath(aggregate.project.id)}>
                 Return to project
               </ButtonLink>
@@ -744,23 +746,33 @@ function ActiveAnnotationWorkspace({
   }
 
   return (
-    <div className="app-shell annotation-shell">
-      <header className="annotation-header">
-        <div className="annotation-header__identity">
-          <span>{aggregate.project.name}</span>
-          <strong>{task.displayName ?? task.primaryMedia.displayName}</strong>
-          <small>
+    <div className={styles.shell}>
+      <header className={styles.header}>
+        <div className={styles.identity}>
+          <span className={styles.projectName}>{aggregate.project.name}</span>
+          <strong className={styles.taskName}>
+            {task.displayName ?? task.primaryMedia.displayName}
+          </strong>
+          <small className={styles.taskMeta}>
             Task {position} of {ordered.length} · Taxonomy v
             {taxonomyVersion.version}
           </small>
         </div>
         <output
-          className={`save-state save-state--${saveState.toLowerCase().replace(' ', '-')}`}
+          className={`${styles.saveState} ${
+            saveState === 'Unsaved'
+              ? styles.unsaved
+              : saveState === 'Saving'
+                ? styles.saving
+                : saveState === 'Save failed'
+                  ? styles.saveFailed
+                  : ''
+          }`}
           aria-live="polite"
         >
           {saveState}
         </output>
-        <div className="annotation-header__actions">
+        <div className={styles.headerActions}>
           <Button type="button" onClick={() => void returnToProject()}>
             Return to Project
           </Button>
@@ -785,16 +797,16 @@ function ActiveAnnotationWorkspace({
           )}
         </div>
       </header>
-      <div className="annotation-notices">
+      <div className={styles.notices}>
         {readOnly && (
-          <div className="workspace-notice">
+          <div className={styles.workspaceNotice}>
             Submitted task · read-only. Reopen it from the project page to make
             changes.
           </div>
         )}
         {(workflowError || saveError) && (
-          <div className="error-banner" role="alert">
-            <strong>Annotation notice</strong>
+          <div className={styles.errorBanner} role="alert">
+            <strong className={styles.errorTitle}>Annotation notice</strong>
             <span>{workflowError ?? saveError}</span>
           </div>
         )}
@@ -845,42 +857,56 @@ function ActiveAnnotationWorkspace({
           if (enabled) waveformRef.current?.activateMeter()
         }}
       />
-      <main className="annotation-workspace">
-        <section className="editor" aria-label="Task waveform editor">
+      <main className={styles.workspace}>
+        <section className={styles.editor} aria-label="Task waveform editor">
           {audioState.kind !== 'ready' ? (
             <div
-              className={`source-recovery${audioState.kind === 'loading' ? '' : ' source-recovery--error'}`}
+              className={`${styles.sourceRecovery}${
+                audioState.kind === 'loading'
+                  ? ''
+                  : ` ${styles.sourceRecoveryError}`
+              }`}
               role="status"
             >
-              <h2>
+              <h2 className={styles.sourceRecoveryTitle}>
                 {audioState.kind === 'loading'
                   ? 'Loading task audio'
                   : 'Error: Audio file not found'}
               </h2>
               {audioState.kind === 'mismatch' ? (
-                <div className="source-recovery__copy">
-                  <p>The uploaded file doesn't match the original.</p>
-                  <p>{audioState.message}</p>
-                  <p>Please re-upload the original file to continue.</p>
+                <div>
+                  <p className={styles.sourceRecoveryDescription}>
+                    The uploaded file doesn't match the original.
+                  </p>
+                  <p className={styles.sourceRecoveryDescription}>
+                    {audioState.message}
+                  </p>
+                  <p className={styles.sourceRecoveryDescription}>
+                    Please re-upload the original file to continue.
+                  </p>
                 </div>
               ) : audioState.kind === 'error' ? (
-                <div className="source-recovery__copy">
-                  <p>{audioState.message}</p>
-                  <p>
+                <div>
+                  <p className={styles.sourceRecoveryDescription}>
+                    {audioState.message}
+                  </p>
+                  <p className={styles.sourceRecoveryDescription}>
                     This often happens when you close the browser tab or refresh
                     the page.
                   </p>
-                  <p>
+                  <p className={styles.sourceRecoveryDescription}>
                     Don't worry; your task progress is saved locally and should
                     be preserved.
                   </p>
-                  <p>
+                  <p className={styles.sourceRecoveryDescription}>
                     Just re-upload the original file below to pick up where you
                     left off.
                   </p>
                 </div>
               ) : (
-                <p>{audioState.message}</p>
+                <p className={styles.sourceRecoveryDescription}>
+                  {audioState.message}
+                </p>
               )}
               <input
                 ref={relinkInputRef}
@@ -893,7 +919,7 @@ function ActiveAnnotationWorkspace({
                   void relink(file)
                 }}
               />
-              <div className="form-actions">
+              <div className={styles.sourceRecoveryActions}>
                 {audioState.kind === 'permission' && (
                   <Button type="button" onClick={() => void grantPermission()}>
                     Grant file permission
@@ -908,16 +934,19 @@ function ActiveAnnotationWorkspace({
               </div>
             </div>
           ) : (
-            <div className="editor__surface">
+            <div className={styles.editorSurface}>
               {loadStatus === 'loading' && (
-                <div className="loading-overlay" role="status">
-                  <span className="loading-indicator" aria-hidden="true" />
+                <div className={styles.loadingOverlay} role="status">
+                  <span
+                    className={styles.loadingIndicator}
+                    aria-hidden="true"
+                  />
                   Decoding waveform…
                 </div>
               )}
               {audioError && (
-                <div className="error-banner" role="alert">
-                  <strong>Audio notice</strong>
+                <div className={styles.errorBanner} role="alert">
+                  <strong className={styles.errorTitle}>Audio notice</strong>
                   <span>{audioError}</span>
                 </div>
               )}
@@ -996,7 +1025,7 @@ function ActiveAnnotationWorkspace({
               />
             </div>
           )}
-          <footer className="editor-footer">
+          <footer className={styles.editorFooter}>
             <span>
               {regions.length} {regions.length === 1 ? 'region' : 'regions'}
             </span>

@@ -49,12 +49,9 @@
 }
 
 .danger {
-  min-height: var(--control-height-md);
   border-color: transparent;
   background: transparent;
   color: var(--text-danger);
-  font-size: 15px;
-  font-weight: var(--font-weight-medium);
 }
 
 .danger:hover:not(:disabled) {
@@ -87,7 +84,6 @@
 
 a.root {
   display: inline-flex;
-  min-height: var(--control-height-md);
   align-items: center;
   justify-content: center;
   text-decoration: none;
