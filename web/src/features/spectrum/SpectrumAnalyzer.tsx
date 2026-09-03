@@ -20,6 +20,7 @@ import {
   xToFrequency,
   yToDb,
 } from './spectrumMath'
+import styles from './SpectrumAnalyzer.module.css'
 
 interface SpectrumAnalyzerProps {
   analyserNode: AnalyserNode | null
@@ -472,16 +473,13 @@ export function SpectrumAnalyzer({
   }
 
   return (
-    <section
-      className="spectrum-analyzer"
-      aria-label="Real-time spectrum analyzer"
-    >
-      <header className="spectrum-analyzer__header">
-        <h2>Spectrum Analyzer</h2>
-        <div className="spectrum-analyzer__controls">
+    <section className={styles.root} aria-label="Real-time spectrum analyzer">
+      <header className={styles.header}>
+        <h2 className={styles.title}>Spectrum Analyzer</h2>
+        <div className={styles.controls}>
           <button
             type="button"
-            className={frozen ? 'is-active' : undefined}
+            className={styles.control}
             aria-pressed={frozen}
             onClick={toggleFreeze}
           >
@@ -489,7 +487,7 @@ export function SpectrumAnalyzer({
           </button>
           <button
             type="button"
-            className={peakHoldEnabled ? 'is-active' : undefined}
+            className={styles.control}
             aria-pressed={peakHoldEnabled}
             onClick={togglePeakHold}
           >
@@ -508,15 +506,22 @@ export function SpectrumAnalyzer({
               }
             }}
           />
-          <output title="Fast Fourier transform size">
+          <output
+            className={styles.fftSize}
+            title="Fast Fourier transform size"
+          >
             FFT {fftSize.toLocaleString()}
           </output>
-          <button type="button" onClick={resetAnalyzer}>
+          <button
+            className={styles.control}
+            type="button"
+            onClick={resetAnalyzer}
+          >
             Reset
           </button>
           <button
             type="button"
-            className="spectrum-analyzer__close"
+            className={`${styles.control} ${styles.close}`}
             onClick={onClose}
             aria-label="Hide spectrum analyzer"
             title="Hide spectrum analyzer"
@@ -527,7 +532,7 @@ export function SpectrumAnalyzer({
       </header>
       <canvas
         ref={canvasRef}
-        className="spectrum-analyzer__canvas"
+        className={styles.canvas}
         role="img"
         aria-label="Logarithmic spectrum from 20 hertz to Nyquist and minus 100 to 0 decibels"
         onPointerMove={(event) => {
