@@ -16,9 +16,14 @@ function buttonClassName({
   size = 'regular',
   className,
 }: SharedButtonProps) {
-  return `${styles.root} ${styles[variant]} ${styles[size]}${
-    className ? ` ${className}` : ''
-  }`
+  return [
+    styles.root,
+    variant === 'secondary' ? undefined : styles[variant],
+    size === 'regular' ? undefined : styles[size],
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ')
 }
 
 export const Button = forwardRef<

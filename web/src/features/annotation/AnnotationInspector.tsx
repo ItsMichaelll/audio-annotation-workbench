@@ -12,6 +12,7 @@ import type {
 } from '../../domain/annotationTaxonomy'
 import { formatTime } from '../../domain/transport'
 import { MarkdownInstructions } from '../projects/MarkdownInstructions'
+import styles from './AnnotationInspector.module.css'
 
 type InspectorTab = 'labels' | 'instructions' | 'shortcuts'
 
@@ -43,7 +44,7 @@ function AssignmentScales({
   onChange(values: Pick<LabelAssignment, 'severity' | 'confidence'>): void
 }) {
   return (
-    <div className="assignment-scales">
+    <div className={styles.assignmentScales}>
       {(['severity', 'confidence'] as const).map((name) => {
         const scale = taxonomy.scales[name]
         if (!scale) return null
@@ -52,12 +53,16 @@ function AssignmentScales({
             key={name}
             label={
               <>
-                {name} {scale.required && <em>required</em>}
+                {name}{' '}
+                {scale.required && (
+                  <em className={styles.required}>required</em>
+                )}
               </>
             }
             value={assignment[name] ?? ''}
             disabled={disabled}
             invalid={scale.required && !assignment[name]}
+            {...(disabled ? { className: styles.readOnlySelect } : {})}
             variant="inspector"
             options={[
               { value: '', label: 'Select…' },
@@ -119,13 +124,15 @@ function LabelControls({
   ): void
 }) {
   return (
-    <section className="inspector-section">
-      <h3>{title}</h3>
+    <section className={styles.inspectorSection}>
+      <h3 className={styles.sectionTitle}>{title}</h3>
       {labels.length === 0 ? (
-        <p className="muted-copy">No taxonomy labels support this target.</p>
+        <p className={styles.mutedCopy}>
+          No taxonomy labels support this target.
+        </p>
       ) : (
         <div
-          className="label-list"
+          className={styles.labelList}
           role={target === 'region' ? 'radiogroup' : undefined}
           aria-label={target === 'region' ? title : undefined}
         >
@@ -135,13 +142,12 @@ function LabelControls({
             )
             return (
               <div
-                className={
-                  assignment ? 'label-control is-assigned' : 'label-control'
-                }
+                className={`${styles.labelControl}${assignment ? ` ${styles.assigned}` : ''}`}
                 key={`${target}-${label.id}`}
               >
-                <label>
+                <label className={styles.labelRow}>
                   <input
+                    className={styles.labelInput}
                     type={target === 'region' ? 'radio' : 'checkbox'}
                     name={target === 'region' ? 'region-label' : undefined}
                     checked={Boolean(assignment)}
@@ -149,14 +155,21 @@ function LabelControls({
                     onChange={() => onToggle(label.id)}
                   />
                   <i
+                    className={styles.swatch}
                     style={{ background: label.color ?? 'var(--accent)' }}
                     aria-hidden="true"
                   />
-                  <span>
-                    <strong>{label.name}</strong>
-                    {label.description && <small>{label.description}</small>}
+                  <span className={styles.labelCopy}>
+                    <strong className={styles.labelName}>{label.name}</strong>
+                    {label.description && (
+                      <small className={styles.labelDescription}>
+                        {label.description}
+                      </small>
+                    )}
                   </span>
-                  {label.shortcut && <kbd>{label.shortcut}</kbd>}
+                  {label.shortcut && (
+                    <kbd className={styles.shortcutKey}>{label.shortcut}</kbd>
+                  )}
                 </label>
                 {assignment && (
                   <AssignmentScales
@@ -213,11 +226,11 @@ export function AnnotationInspector(props: AnnotationInspectorProps) {
   return (
     <aside
       ref={inspectorRef}
-      className="annotation-inspector"
+      className={`${styles.root}${props.readOnly ? ` ${styles.readOnly}` : ''}`}
       aria-label="Annotation inspector"
     >
       <div
-        className="annotation-inspector__resize-handle"
+        className={styles.resizeHandle}
         role="separator"
         aria-label="Resize annotation inspector"
         aria-orientation="vertical"
@@ -256,13 +269,14 @@ export function AnnotationInspector(props: AnnotationInspectorProps) {
         }}
       />
       <div
-        className="inspector-tabs"
+        className={styles.tabs}
         role="tablist"
         aria-label="Inspector sections"
       >
         {(['labels', 'instructions', 'shortcuts'] as const).map((name) => (
           <button
             type="button"
+            className={styles.tab}
             role="tab"
             id={`${tabId}-${name}-tab`}
             aria-controls={`${tabId}-${name}-panel`}
@@ -298,7 +312,7 @@ export function AnnotationInspector(props: AnnotationInspectorProps) {
           </button>
         ))}
       </div>
-      <div className="inspector-scroll">
+      <div className={styles.scroll}>
         {tab === 'labels' && (
           <div
             role="tabpanel"
@@ -307,7 +321,7 @@ export function AnnotationInspector(props: AnnotationInspectorProps) {
           >
             {props.taxonomy.labels.length > 8 && (
               <input
-                className="inspector-search"
+                className={styles.search}
                 type="search"
                 aria-label="Filter taxonomy labels"
                 placeholder="Filter labels"
@@ -317,9 +331,9 @@ export function AnnotationInspector(props: AnnotationInspectorProps) {
             )}
             {selectedRegion ? (
               <>
-                <div className="selected-region-summary">
+                <div className={styles.selectedRegionSummary}>
                   <span>Selected region</span>
-                  <strong>
+                  <strong className={styles.selectedRegionTime}>
                     {formatTime(selectedRegion.start)} –{' '}
                     {formatTime(selectedRegion.end)}
                   </strong>
@@ -338,9 +352,10 @@ export function AnnotationInspector(props: AnnotationInspectorProps) {
                     props.onAssignmentChange('region', labelId, values)
                   }
                 />
-                <label className="inspector-notes">
-                  <span>Region notes</span>
+                <label className={styles.notes}>
+                  <span className={styles.notesLabel}>Region notes</span>
                   <textarea
+                    className={styles.notesInput}
                     rows={3}
                     value={selectedRegion.notes ?? ''}
                     disabled={props.readOnly}
@@ -351,9 +366,11 @@ export function AnnotationInspector(props: AnnotationInspectorProps) {
                 </label>
               </>
             ) : (
-              <div className="inspector-empty">
-                <strong>No region selected</strong>
-                <p>
+              <div className={styles.emptyState}>
+                <strong className={styles.emptyTitle}>
+                  No region selected
+                </strong>
+                <p className={styles.emptyDescription}>
                   Create or select a region to apply region labels. Shortcut
                   labels apply to the clip while no region is selected.
                 </p>
@@ -373,9 +390,10 @@ export function AnnotationInspector(props: AnnotationInspectorProps) {
                 props.onAssignmentChange('clip', labelId, values)
               }
             />
-            <label className="inspector-notes">
-              <span>Task notes</span>
+            <label className={styles.notes}>
+              <span className={styles.notesLabel}>Task notes</span>
               <textarea
+                className={styles.notesInput}
                 rows={4}
                 value={props.annotation.taskNotes ?? ''}
                 disabled={props.readOnly}
@@ -395,9 +413,11 @@ export function AnnotationInspector(props: AnnotationInspectorProps) {
             {props.instructions ? (
               <MarkdownInstructions markdown={props.instructions} />
             ) : (
-              <div className="inspector-empty">
-                <strong>No instructions</strong>
-                <p>This project does not include annotation instructions.</p>
+              <div className={styles.emptyState}>
+                <strong className={styles.emptyTitle}>No instructions</strong>
+                <p className={styles.emptyDescription}>
+                  This project does not include annotation instructions.
+                </p>
               </div>
             )}
           </div>
@@ -407,59 +427,65 @@ export function AnnotationInspector(props: AnnotationInspectorProps) {
             role="tabpanel"
             id={`${tabId}-shortcuts-panel`}
             aria-labelledby={`${tabId}-shortcuts-tab`}
-            className="shortcut-reference"
+            className={styles.shortcutReference}
           >
-            <h3>Transport and regions</h3>
-            <dl>
-              <div>
-                <dt>Space</dt>
-                <dd>Play / pause</dd>
+            <h3 className={styles.shortcutTitle}>Transport and regions</h3>
+            <dl className={styles.shortcutList}>
+              <div className={styles.shortcutItem}>
+                <dt className={styles.shortcutKeys}>Space</dt>
+                <dd className={styles.shortcutAction}>Play / pause</dd>
               </div>
-              <div>
-                <dt>← / →</dt>
-                <dd>Step playhead</dd>
+              <div className={styles.shortcutItem}>
+                <dt className={styles.shortcutKeys}>← / →</dt>
+                <dd className={styles.shortcutAction}>Step playhead</dd>
               </div>
-              <div>
-                <dt>Ctrl + ← / →</dt>
-                <dd>Previous / next region</dd>
+              <div className={styles.shortcutItem}>
+                <dt className={styles.shortcutKeys}>Ctrl + ← / →</dt>
+                <dd className={styles.shortcutAction}>
+                  Previous / next region
+                </dd>
               </div>
-              <div>
-                <dt>F</dt>
-                <dd>Fit file</dd>
+              <div className={styles.shortcutItem}>
+                <dt className={styles.shortcutKeys}>F</dt>
+                <dd className={styles.shortcutAction}>Fit file</dd>
               </div>
-              <div>
-                <dt>+ / −</dt>
-                <dd>Zoom</dd>
+              <div className={styles.shortcutItem}>
+                <dt className={styles.shortcutKeys}>+ / −</dt>
+                <dd className={styles.shortcutAction}>Zoom</dd>
               </div>
-              <div>
-                <dt>L</dt>
-                <dd>Toggle loop</dd>
+              <div className={styles.shortcutItem}>
+                <dt className={styles.shortcutKeys}>L</dt>
+                <dd className={styles.shortcutAction}>Toggle loop</dd>
               </div>
-              <div>
-                <dt>Delete</dt>
-                <dd>Delete selected region</dd>
+              <div className={styles.shortcutItem}>
+                <dt className={styles.shortcutKeys}>Delete</dt>
+                <dd className={styles.shortcutAction}>
+                  Delete selected region
+                </dd>
               </div>
-              <div>
-                <dt>Ctrl + Z / Y</dt>
-                <dd>Undo / redo</dd>
+              <div className={styles.shortcutItem}>
+                <dt className={styles.shortcutKeys}>Ctrl + Z / Y</dt>
+                <dd className={styles.shortcutAction}>Undo / redo</dd>
               </div>
             </dl>
-            <h3>Workflow</h3>
-            <dl>
-              <div>
-                <dt>Ctrl + Enter</dt>
-                <dd>Submit and next</dd>
+            <h3 className={styles.shortcutTitle}>Workflow</h3>
+            <dl className={styles.shortcutList}>
+              <div className={styles.shortcutItem}>
+                <dt className={styles.shortcutKeys}>Ctrl + Enter</dt>
+                <dd className={styles.shortcutAction}>Submit and next</dd>
               </div>
-              <div>
-                <dt>Ctrl + Shift + Enter</dt>
-                <dd>Skip and next</dd>
+              <div className={styles.shortcutItem}>
+                <dt className={styles.shortcutKeys}>Ctrl + Shift + Enter</dt>
+                <dd className={styles.shortcutAction}>Skip and next</dd>
               </div>
               {props.taxonomy.labels
                 .filter((label) => label.shortcut)
                 .map((label) => (
-                  <div key={label.id}>
-                    <dt>{label.shortcut}</dt>
-                    <dd>Select or toggle {label.name}</dd>
+                  <div className={styles.shortcutItem} key={label.id}>
+                    <dt className={styles.shortcutKeys}>{label.shortcut}</dt>
+                    <dd className={styles.shortcutAction}>
+                      Select or toggle {label.name}
+                    </dd>
                   </div>
                 ))}
             </dl>

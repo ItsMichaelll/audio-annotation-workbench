@@ -27,7 +27,11 @@
 }
 
 .description {
+  max-width: 510px;
   margin: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.55;
 }
 
 .actions {

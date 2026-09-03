@@ -1,6 +1,7 @@
 .root {
   position: relative;
   min-width: 0;
+  --custom-select-listbox-max-height: 220px;
   --custom-select-row-height: var(--control-height-sm);
   font-size: 12px;
 }
@@ -55,7 +56,7 @@
   top: calc(100% + 4px);
   right: 0;
   left: 0;
-  max-height: 220px;
+  max-height: var(--custom-select-listbox-max-height);
   overflow-y: auto;
   margin: 0;
   border: 1px solid var(--border-strong);
@@ -151,6 +152,7 @@
 
 .taskFilter {
   min-width: 150px;
+  --custom-select-listbox-max-height: 226px;
   --custom-select-row-height: var(--control-height-md);
   font-size: 11px;
 }

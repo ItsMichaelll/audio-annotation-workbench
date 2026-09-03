@@ -70,6 +70,7 @@ export function ProjectRestorePreview({
         </div>
       </dl>
       <Button
+        className={styles.restoreAction}
         variant="primary"
         type="button"
         disabled={busy}
