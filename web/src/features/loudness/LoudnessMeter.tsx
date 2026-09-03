@@ -6,6 +6,7 @@ import {
   type TargetRange,
   validateTargetRange,
 } from './loudnessMath'
+import styles from './LoudnessMeter.module.css'
 import type { LoudnessScope } from './loudnessTypes'
 import { useOfflineLoudness } from './useOfflineLoudness'
 
@@ -62,13 +63,14 @@ export function LoudnessMeter({
   }, [target, targetError])
 
   return (
-    <aside className="loudness-meter" aria-label="Loudness and true-peak meter">
-      <header className="loudness-meter__header">
+    <aside className={styles.root} aria-label="Loudness and true-peak meter">
+      <header className={styles.header}>
         <div>
-          <h2>Loudness Meter</h2>
-          <span>BS.1770 / EBU mode</span>
+          <h2 className={styles.headerTitle}>Loudness Meter</h2>
+          <span className={styles.headerSubtitle}>BS.1770 / EBU mode</span>
         </div>
         <button
+          className={styles.close}
           type="button"
           onClick={onClose}
           aria-label="Hide loudness meter"
@@ -77,56 +79,59 @@ export function LoudnessMeter({
         </button>
       </header>
 
-      <div
-        className="loudness-meter__scope"
-        aria-label="Aggregate analysis scope"
-      >
+      <div className={styles.scope} aria-label="Aggregate analysis scope">
         <span>Scope</span>
         <button
-          className={scope === 'file' ? 'is-active' : undefined}
+          className={styles.scopeButton}
           type="button"
+          aria-pressed={scope === 'file'}
           onClick={() => setScope('file')}
         >
           File
         </button>
         <button
-          className={scope === 'selection' ? 'is-active' : undefined}
+          className={styles.scopeButton}
           type="button"
+          aria-pressed={scope === 'selection'}
           onClick={() => setScope('selection')}
         >
           Selection
         </button>
       </div>
 
-      <div className="loudness-meter__live">
+      <div className={styles.live}>
         <div
-          className="loudness-meter__scale"
+          className={styles.scale}
           aria-label="Live momentary loudness scale from minus 60 to 0 LUFS"
         >
           {SCALE_LABELS.map((label) => (
-            <span key={label} style={{ bottom: `${meterPosition(label)}%` }}>
+            <span
+              className={styles.scaleLabel}
+              key={label}
+              style={{ bottom: `${meterPosition(label)}%` }}
+            >
               {label}
             </span>
           ))}
-          <div className="loudness-meter__track">
+          <div className={styles.track}>
             {targetStyle && (
               <i
-                className="loudness-meter__target-bracket"
+                className={styles.targetBracket}
                 style={targetStyle}
                 title="QC target range"
               />
             )}
             <i
-              className="loudness-meter__bar"
+              className={styles.bar}
               style={{ height: `${meterPosition(momentary)}%` }}
             />
             <i
-              className="loudness-meter__short-marker"
+              className={styles.shortMarker}
               style={{ bottom: `${meterPosition(shortTerm)}%` }}
             />
             {live && (
               <i
-                className="loudness-meter__hold-marker"
+                className={styles.holdMarker}
                 style={{
                   bottom: `${meterPosition(live.maximumMomentaryLoudness)}%`,
                 }}
@@ -134,45 +139,49 @@ export function LoudnessMeter({
             )}
           </div>
         </div>
-        <div className="loudness-meter__readouts">
-          <output>
-            <span>Momentary</span>
-            <strong>{formatMeasurement(momentary)}</strong>
-            <small>LUFS</small>
+        <div className={styles.readouts}>
+          <output className={styles.readout}>
+            <span className={styles.readoutLabel}>Momentary</span>
+            <strong className={styles.readoutValue}>
+              {formatMeasurement(momentary)}
+            </strong>
+            <small className={styles.readoutUnit}>LUFS</small>
           </output>
-          <output>
-            <span>Short-term</span>
-            <strong>{formatMeasurement(shortTerm)}</strong>
-            <small>LUFS</small>
+          <output className={styles.readout}>
+            <span className={styles.readoutLabel}>Short-term</span>
+            <strong className={styles.readoutValue}>
+              {formatMeasurement(shortTerm)}
+            </strong>
+            <small className={styles.readoutUnit}>LUFS</small>
           </output>
-          <output>
-            <span>Current PSR</span>
-            <strong>{formatMeasurement(currentPsr)}</strong>
-            <small>LU</small>
+          <output className={styles.readout}>
+            <span className={styles.readoutLabel}>Current PSR</span>
+            <strong className={styles.readoutValue}>
+              {formatMeasurement(currentPsr)}
+            </strong>
+            <small className={styles.readoutUnit}>LU</small>
           </output>
           <output
-            className={
-              live && live.maximumTruePeakLevel >= 0 ? 'is-over' : undefined
-            }
+            className={`${styles.readout}${
+              live && live.maximumTruePeakLevel >= 0 ? ` ${styles.over}` : ''
+            }`}
           >
-            <span>TP max live</span>
-            <strong>
+            <span className={styles.readoutLabel}>TP max live</span>
+            <strong className={styles.readoutValue}>
               {formatMeasurement(live?.maximumTruePeakLevel ?? Number.NaN)}
             </strong>
-            <small>dBTP</small>
+            <small className={styles.readoutUnit}>dBTP</small>
           </output>
         </div>
       </div>
 
       {!live && (
-        <p className="loudness-meter__notice">
-          Play audio to begin live measurement.
-        </p>
+        <p className={styles.notice}>Play audio to begin live measurement.</p>
       )}
-      {error && <p className="loudness-meter__notice is-error">{error}</p>}
+      {error && <p className={`${styles.notice} ${styles.error}`}>{error}</p>}
 
-      <section className="loudness-meter__target">
-        <label>
+      <section className={styles.target}>
+        <label className={styles.targetToggle}>
           <input
             type="checkbox"
             checked={target.enabled}
@@ -186,10 +195,11 @@ export function LoudnessMeter({
           Target bracket
         </label>
         {target.enabled && (
-          <div>
-            <label>
+          <div className={styles.targetFields}>
+            <label className={styles.targetField}>
               Target{' '}
               <input
+                className={styles.targetInput}
                 type="number"
                 min="-70"
                 max="0"
@@ -204,9 +214,10 @@ export function LoudnessMeter({
               />{' '}
               LUFS
             </label>
-            <label>
+            <label className={styles.targetField}>
               ±{' '}
               <input
+                className={styles.targetInput}
                 type="number"
                 min="0.1"
                 max="30"
@@ -223,11 +234,16 @@ export function LoudnessMeter({
             </label>
           </div>
         )}
-        {target.enabled && targetError && <p role="alert">{targetError}</p>}
+        {target.enabled && targetError && (
+          <p className={styles.targetError} role="alert">
+            {targetError}
+          </p>
+        )}
       </section>
 
-      <section className="loudness-meter__statistics">
+      <section className={styles.statistics}>
         <button
+          className={styles.statisticsToggle}
           type="button"
           onClick={() => setStatisticsExpanded((value) => !value)}
           aria-expanded={statisticsExpanded}
@@ -236,69 +252,72 @@ export function LoudnessMeter({
         </button>
         {statisticsExpanded &&
           (offline.status === 'ready' ? (
-            <dl>
-              <div>
-                <dt>Integrated</dt>
-                <dd>
+            <dl className={styles.statisticsList}>
+              <div className={styles.statisticsRow}>
+                <dt className={styles.statisticsTerm}>Integrated</dt>
+                <dd className={styles.statisticsValue}>
                   {formatMeasurement(offline.statistics.integratedLoudness)}{' '}
-                  <small>LUFS</small>
+                  <small className={styles.statisticsUnit}>LUFS</small>
                 </dd>
               </div>
-              <div>
-                <dt>LRA</dt>
-                <dd>
+              <div className={styles.statisticsRow}>
+                <dt className={styles.statisticsTerm}>LRA</dt>
+                <dd className={styles.statisticsValue}>
                   {offline.statistics.lraAvailable
                     ? formatMeasurement(offline.statistics.loudnessRange)
                     : '—'}{' '}
-                  <small>LU</small>
+                  <small className={styles.statisticsUnit}>LU</small>
                 </dd>
               </div>
-              <div>
-                <dt>Momentary max</dt>
-                <dd>
+              <div className={styles.statisticsRow}>
+                <dt className={styles.statisticsTerm}>Momentary max</dt>
+                <dd className={styles.statisticsValue}>
                   {formatMeasurement(
                     offline.statistics.maximumMomentaryLoudness,
                   )}{' '}
-                  <small>LUFS</small>
+                  <small className={styles.statisticsUnit}>LUFS</small>
                 </dd>
               </div>
-              <div>
-                <dt>Short-term max</dt>
-                <dd>
+              <div className={styles.statisticsRow}>
+                <dt className={styles.statisticsTerm}>Short-term max</dt>
+                <dd className={styles.statisticsValue}>
                   {offline.statistics.shortTermAvailable
                     ? formatMeasurement(
                         offline.statistics.maximumShortTermLoudness,
                       )
                     : '—'}{' '}
-                  <small>LUFS</small>
+                  <small className={styles.statisticsUnit}>LUFS</small>
                 </dd>
               </div>
-              <div>
-                <dt>True-peak max</dt>
-                <dd>
+              <div className={styles.statisticsRow}>
+                <dt className={styles.statisticsTerm}>True-peak max</dt>
+                <dd className={styles.statisticsValue}>
                   {formatMeasurement(offline.statistics.maximumTruePeakLevel)}{' '}
-                  <small>dBTP</small>
+                  <small className={styles.statisticsUnit}>dBTP</small>
                 </dd>
               </div>
-              <div>
-                <dt>PSR</dt>
-                <dd>
+              <div className={styles.statisticsRow}>
+                <dt className={styles.statisticsTerm}>PSR</dt>
+                <dd className={styles.statisticsValue}>
                   {offline.statistics.shortTermAvailable
                     ? formatMeasurement(offline.statistics.psr)
                     : '—'}{' '}
-                  <small>LU</small>
+                  <small className={styles.statisticsUnit}>LU</small>
                 </dd>
               </div>
-              <div>
-                <dt>PLR</dt>
-                <dd>
-                  {formatMeasurement(offline.statistics.plr)} <small>LU</small>
+              <div className={styles.statisticsRow}>
+                <dt className={styles.statisticsTerm}>PLR</dt>
+                <dd className={styles.statisticsValue}>
+                  {formatMeasurement(offline.statistics.plr)}{' '}
+                  <small className={styles.statisticsUnit}>LU</small>
                 </dd>
               </div>
             </dl>
           ) : (
             <p
-              className={`loudness-meter__analysis-state${offline.status === 'error' ? ' is-error' : ''}`}
+              className={`${styles.analysisState}${
+                offline.status === 'error' ? ` ${styles.error}` : ''
+              }`}
             >
               {offline.status === 'analyzing'
                 ? 'Analyzing deterministic scope…'

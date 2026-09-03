@@ -1,0 +1,179 @@
+.root {
+  display: grid;
+  min-width: 0;
+  min-height: 100%;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.withMeter {
+  grid-template-columns: minmax(0, 1fr) 230px;
+}
+
+.stack {
+  min-height: 100%;
+  padding: 24px 18px 18px;
+}
+
+.surface {
+  border: 1px solid #252b2e;
+  background: var(--surface-waveform);
+  box-shadow: 0 1px 0 #050606;
+}
+
+/* WaveSurfer appends one generated shadow host directly under this wrapper. */
+.surface > :global(div)::part(scroll) {
+  scrollbar-width: none;
+}
+
+.panning > :global(div)::part(scroll) {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.minimap {
+  margin-top: 10px;
+  border: 1px solid #252b2e;
+  background: #0e1112;
+}
+
+.minimap > :global([part~='minimap']) {
+  cursor: grab;
+  touch-action: none;
+}
+
+.minimap > :global([part~='minimap']:active),
+.minimap > :global([part~='minimap'].is-minimap-panning) {
+  cursor: grabbing;
+}
+
+.scrollbar {
+  width: 100%;
+  height: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid #252b2e;
+  border-top: 0;
+  background: #0e1112;
+  scrollbar-color: #465158 #161a1c;
+  scrollbar-width: thin;
+}
+
+.scrollbarInactive {
+  overflow-x: hidden;
+  pointer-events: none;
+}
+
+.scrollbar:focus-visible {
+  outline: 1px solid var(--focus-ring-color);
+  outline-offset: 1px;
+}
+
+.scrollbar::-webkit-scrollbar {
+  height: 10px;
+}
+
+.scrollbar::-webkit-scrollbar-track {
+  background: #161a1c;
+}
+
+.scrollbar::-webkit-scrollbar-thumb {
+  border: 2px solid #161a1c;
+  border-radius: var(--radius-pill);
+  background: #465158;
+}
+
+.scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #59666e;
+}
+
+.scrollbarTrack {
+  height: 1px;
+}
+
+.spectrogram {
+  margin-top: 10px;
+  overflow: hidden;
+  border: 1px solid #252b2e;
+  background: #0e1112;
+}
+
+.spectrogramHeader {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 8px 5px 12px;
+  border-bottom: 1px solid #252b2e;
+  background: var(--surface-panel);
+}
+
+.spectrogramTitle {
+  margin: 0;
+  color: #cfd6d9;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.spectrogramClose {
+  min-width: 25px;
+  min-height: 25px;
+  padding: 2px 6px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.spectrogramDisplay,
+.spectrogramViewport {
+  position: relative;
+  width: 100%;
+  height: 150px;
+  overflow: hidden;
+}
+
+.spectrogramSurface {
+  position: relative;
+  min-height: 150px;
+  background: #0e1112;
+}
+
+.spectrogramAxis {
+  position: absolute;
+  z-index: var(--z-sticky-header);
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 55px;
+  border-right: 1px solid rgb(255 255 255 / 10%);
+  background: rgb(14 17 18 / 82%);
+  color: #d8dfe2;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  pointer-events: none;
+}
+
+.spectrogramAxisLabel {
+  position: absolute;
+  right: 5px;
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+
+.spectrogramAxisUnit {
+  color: var(--text-secondary);
+  font-size: 8px;
+}
+
+@media (max-height: 720px) {
+  .stack {
+    padding-top: 14px;
+  }
+
+  .surface > :global(div) {
+    max-height: 260px;
+  }
+}

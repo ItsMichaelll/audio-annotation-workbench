@@ -61,7 +61,8 @@
   margin: 0;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
-  background: var(--surface-control);
+  background: transparent;
+  backdrop-filter: blur(2px);
   box-shadow: 0 10px 24px rgb(0 0 0 / 55%);
   color: var(--text-primary);
   font-size: inherit;

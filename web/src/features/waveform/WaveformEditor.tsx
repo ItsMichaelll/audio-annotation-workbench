@@ -43,6 +43,7 @@ import {
   steppedVerticalScale,
   steppedZoom,
 } from '../../domain/zoom'
+import styles from './WaveformEditor.module.css'
 
 const REGION_COLOR = 'rgba(70, 144, 255, 0.28)'
 const WARNING_COLOR = '#ffa500'
@@ -59,6 +60,25 @@ function formatFrequencyLabel(frequency: number): string {
       : kilohertz.toFixed(1)
   }
   return Math.round(frequency).toString()
+}
+
+function applyRegionHandlePresentation(region: Region): void {
+  // RegionsPlugin writes these dimensions inline, so keep the established
+  // handle geometry at the same generated-DOM boundary without `!important`.
+  if (!region.element) return
+  for (const handle of region.element.querySelectorAll<HTMLElement>(
+    '[part~="region-handle"]',
+  )) {
+    handle.style.width = '10px'
+  }
+  const leftHandle = region.element.querySelector<HTMLElement>(
+    '[part~="region-handle-left"]',
+  )
+  const rightHandle = region.element.querySelector<HTMLElement>(
+    '[part~="region-handle-right"]',
+  )
+  if (leftHandle) leftHandle.style.borderLeft = 'none'
+  if (rightHandle) rightHandle.style.borderRight = 'none'
 }
 
 export interface WaveformEditorHandle {
@@ -660,6 +680,7 @@ export const WaveformEditor = forwardRef<
       return bounds ? clampRenderedRegion(region, bounds) : null
     }
     const unsubscribeCreated = regionsPlugin.on('region-created', (region) => {
+      applyRegionHandlePresentation(region)
       if (synchronizationRef.current) return
       const metadata = regionMetadata(region, wavesurfer.getDuration())
       if (!metadata) {
@@ -795,7 +816,7 @@ export const WaveformEditor = forwardRef<
       const maximumScroll = audioMaximumScroll()
       scrollbarTrack.style.width = `${contentWidth}px`
       const canScroll = maximumScroll > 1
-      scrollbar.classList.toggle('is-inactive', !canScroll)
+      scrollbar.classList.toggle(styles.scrollbarInactive!, !canScroll)
       scrollbar.setAttribute('aria-disabled', String(!canScroll))
       scrollbar.tabIndex = canScroll ? 0 : -1
       if (scrollContainer.scrollLeft > maximumScroll) {
@@ -1103,7 +1124,7 @@ export const WaveformEditor = forwardRef<
         startScroll: scrollContainer.scrollLeft,
       }
       scrollContainer.setPointerCapture(event.pointerId)
-      scrollContainer.classList.add('is-panning')
+      container.classList.add(styles.panning!)
     }
     const runRegionAutoScroll = () => {
       cancelAnimationFrame(regionDragFrame)
@@ -1223,7 +1244,7 @@ export const WaveformEditor = forwardRef<
         scrollContainer.releasePointerCapture(event.pointerId)
       }
       activePan = undefined
-      scrollContainer.classList.remove('is-panning')
+      container.classList.remove(styles.panning!)
     }
 
     scrollContainer?.addEventListener('wheel', handleWheel, {
@@ -1495,16 +1516,18 @@ export const WaveformEditor = forwardRef<
     regions.find((region) => region.id === selectedRegionId) ?? null
 
   return (
-    <div className={`analysis-workspace${meterEnabled ? ' has-meter' : ''}`}>
-      <div className="waveform-stack">
+    <div
+      className={`${styles.root}${meterEnabled ? ` ${styles.withMeter}` : ''}`}
+    >
+      <div className={styles.stack}>
         <div
-          className="waveform-surface"
+          className={styles.surface}
           ref={waveformElementRef}
           aria-label="Audio waveform. Drag empty space to create a region."
         />
-        <div className="waveform-minimap" ref={minimapElementRef} />
+        <div className={styles.minimap} ref={minimapElementRef} />
         <div
-          className="waveform-scrollbar is-inactive"
+          className={`${styles.scrollbar} ${styles.scrollbarInactive}`}
           ref={scrollbarElementRef}
           role="region"
           aria-label="Scroll waveform horizontally"
@@ -1512,16 +1535,17 @@ export const WaveformEditor = forwardRef<
           tabIndex={-1}
         >
           <div
-            className="waveform-scrollbar__track"
+            className={styles.scrollbarTrack}
             ref={scrollbarTrackElementRef}
             aria-hidden="true"
           />
         </div>
         {spectrogramEnabled && (
-          <section className="spectrogram-panel" aria-label="Spectrogram">
-            <header className="spectrogram-panel__header">
-              <h2>Spectrogram</h2>
+          <section className={styles.spectrogram} aria-label="Spectrogram">
+            <header className={styles.spectrogramHeader}>
+              <h2 className={styles.spectrogramTitle}>Spectrogram</h2>
               <button
+                className={styles.spectrogramClose}
                 type="button"
                 onClick={onHideSpectrogram}
                 aria-label="Hide spectrogram"
@@ -1530,17 +1554,17 @@ export const WaveformEditor = forwardRef<
                 ×
               </button>
             </header>
-            <div className="spectrogram-display">
+            <div className={styles.spectrogramDisplay}>
               <div
-                className="spectrogram-viewport"
+                className={styles.spectrogramViewport}
                 ref={spectrogramViewportElementRef}
               >
                 <div
-                  className="spectrogram-surface"
+                  className={styles.spectrogramSurface}
                   ref={spectrogramElementRef}
                 />
               </div>
-              <div className="spectrogram-axis" aria-hidden="true">
+              <div className={styles.spectrogramAxis} aria-hidden="true">
                 {spectrogramAxisLabels.map((frequency) => {
                   const position = logarithmicFrequencyY(
                     frequency,
@@ -1548,9 +1572,15 @@ export const WaveformEditor = forwardRef<
                   )
                   const top = Math.min(Math.max(position * 100, 6.7), 93.3)
                   return (
-                    <span key={frequency} style={{ top: `${top}%` }}>
+                    <span
+                      className={styles.spectrogramAxisLabel}
+                      key={frequency}
+                      style={{ top: `${top}%` }}
+                    >
                       {formatFrequencyLabel(frequency)}
-                      <small>{frequency >= 1_000 ? 'kHz' : 'Hz'}</small>
+                      <small className={styles.spectrogramAxisUnit}>
+                        {frequency >= 1_000 ? 'kHz' : 'Hz'}
+                      </small>
                     </span>
                   )
                 })}

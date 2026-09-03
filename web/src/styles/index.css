@@ -1,17 +1,12 @@
 /*
  * CSS architecture entry point.
  *
- * Legacy styles remain unlayered during the staged migration so their current
- * component and route styling keeps the existing cascade. Each later phase
- * moves one ownership boundary into a colocated CSS Module, then removes its
- * legacy rules.
+ * Application components own their presentation through colocated CSS
+ * Modules. This entry point contains only ordered global foundations.
  */
-@layer reset, tokens, base, utilities, integrations;
+@layer reset, tokens, base, utilities;
 
 @import './reset.css' layer(reset);
 @import './tokens.css' layer(tokens);
 @import './base.css' layer(base);
 @import './utilities.css' layer(utilities);
-@import './integrations/wavesurfer.css' layer(integrations);
-
-@import '../styles.css';
