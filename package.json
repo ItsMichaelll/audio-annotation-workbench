@@ -11,9 +11,10 @@
     "format": "pnpm --dir web format",
     "format:check": "pnpm --dir web format:check",
     "lint": "pnpm --dir web lint",
+    "lint:css": "pnpm --dir web lint:css",
     "typecheck": "pnpm --dir web typecheck",
     "test": "pnpm --dir web test",
     "build": "pnpm --dir web build",
-    "validate": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+    "validate": "pnpm format:check && pnpm lint && pnpm lint:css && pnpm typecheck && pnpm test && pnpm build"
   }
 }

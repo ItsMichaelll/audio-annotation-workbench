@@ -17,7 +17,7 @@
   inset: var(--segment-pad);
   width: calc(50% - var(--segment-pad));
   border-radius: var(--radius-pill);
-  background: var(--accent);
+  background: var(--color-blue-500);
   content: '';
   pointer-events: none;
   transition: transform var(--duration-normal) var(--easing-standard);
@@ -47,7 +47,7 @@
   border-color: transparent;
   box-shadow:
     0 0 0 2px #121618,
-    0 0 0 3px var(--accent);
+    0 0 0 3px var(--color-blue-500);
 }
 
 .modeButton:active:not(:disabled) {

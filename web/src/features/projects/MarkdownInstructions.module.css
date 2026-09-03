@@ -92,7 +92,7 @@
 .root blockquote {
   padding-left: 12px;
   margin: 7px 0;
-  border-left: 2px solid var(--accent-dim);
+  border-left: 2px solid var(--color-blue-600);
   color: var(--text-secondary);
 }
 

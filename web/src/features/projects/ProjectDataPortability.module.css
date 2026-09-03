@@ -73,13 +73,13 @@
 }
 
 .radio:checked {
-  border-color: var(--accent);
+  border-color: var(--color-blue-500);
   padding: 1px;
-  background: var(--accent);
+  background: var(--color-blue-500);
   background-clip: content-box;
 }
 
 .radio:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--color-blue-500);
   outline-offset: 2px;
 }

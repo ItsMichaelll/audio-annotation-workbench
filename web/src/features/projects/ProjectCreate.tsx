@@ -194,7 +194,7 @@ export function ProjectCreate() {
             </div>
             <input
               ref={taxonomyInput}
-              className="visually-hidden"
+              className="u-visually-hidden"
               type="file"
               accept=".json,.yaml,.yml,application/json,application/yaml,text/yaml"
               onChange={(event) => {
@@ -237,7 +237,7 @@ export function ProjectCreate() {
             </div>
             <input
               ref={instructionsInput}
-              className="visually-hidden"
+              className="u-visually-hidden"
               type="file"
               accept=".md,text/markdown"
               onChange={(event) => {

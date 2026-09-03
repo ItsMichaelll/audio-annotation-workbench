@@ -172,7 +172,7 @@ export function ScaleCard({
                 }}
               />
               <label className={styles.field}>
-                <span className="visually-hidden">Stored value *</span>
+                <span className="u-visually-hidden">Stored value *</span>
                 <input
                   className={styles.input}
                   value={option.value}
@@ -198,7 +198,7 @@ export function ScaleCard({
                 )}
               </label>
               <label className={styles.field}>
-                <span className="visually-hidden">Display label *</span>
+                <span className="u-visually-hidden">Display label *</span>
                 <input
                   className={styles.input}
                   value={option.label}

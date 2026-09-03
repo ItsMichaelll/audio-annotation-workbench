@@ -278,7 +278,7 @@ export function StandaloneEditor() {
           <span className={styles.privacyNote}>Data stays in this browser</span>
           <input
             ref={fileInputRef}
-            className="visually-hidden"
+            className="u-visually-hidden"
             type="file"
             accept="audio/*,.wav,.wave,.flac,.mp3,.m4a,.aac,.aif,.aiff,.ogg,.oga,.opus,.webm"
             onChange={(event) => handleFile(event.target.files?.[0])}

@@ -32,7 +32,7 @@
 .dangerButton:hover:not(:disabled),
 .dangerButton:focus-visible {
   border-color: var(--text-danger);
-  background: var(--danger);
+  background: var(--color-red-500);
   color: #fff;
 }
 
@@ -117,7 +117,7 @@
 }
 
 .colorPickerSurface:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--color-blue-500);
   outline-offset: 2px;
 }
 

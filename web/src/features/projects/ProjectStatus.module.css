@@ -2,7 +2,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  color: var(--status);
+  color: var(--color-green-500);
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.09em;

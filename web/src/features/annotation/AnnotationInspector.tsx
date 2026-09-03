@@ -156,7 +156,9 @@ function LabelControls({
                   />
                   <i
                     className={styles.swatch}
-                    style={{ background: label.color ?? 'var(--accent)' }}
+                    style={{
+                      background: label.color ?? 'var(--color-blue-500)',
+                    }}
                     aria-hidden="true"
                   />
                   <span className={styles.labelCopy}>

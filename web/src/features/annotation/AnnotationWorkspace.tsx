@@ -910,7 +910,7 @@ function ActiveAnnotationWorkspace({
               )}
               <input
                 ref={relinkInputRef}
-                className="visually-hidden"
+                className="u-visually-hidden"
                 type="file"
                 accept="audio/*,.wav,.wave,.flac,.mp3,.m4a,.aac,.aif,.aiff,.ogg,.oga,.opus,.webm"
                 onChange={(event) => {

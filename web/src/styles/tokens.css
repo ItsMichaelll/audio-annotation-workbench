@@ -6,6 +6,7 @@
   --color-neutral-850: #131618;
   --color-neutral-800: #191d20;
   --color-blue-500: #4690ff;
+  --color-blue-500-rgb: 70 144 255;
   --color-blue-600: #2f70cf;
   --color-green-500: #18f76e;
   --color-amber-500: #ffa500;
@@ -66,22 +67,4 @@
   --duration-fast: 140ms;
   --duration-normal: 180ms;
   --easing-standard: ease;
-
-  /*
-   * Legacy aliases are intentionally retained until component migrations
-   * replace their global consumers with semantic token names.
-   */
-  --bg: var(--surface-canvas);
-  --panel: var(--surface-panel);
-  --panel-raised: var(--surface-panel-raised);
-  --border: var(--border-default);
-  --text: var(--text-primary);
-  --muted: var(--text-secondary);
-  --text-inverted: var(--text-inverse);
-  --accent: var(--color-blue-500);
-  --accent-rgb: 70 144 255;
-  --accent-dim: var(--color-blue-600);
-  --status: var(--color-green-500);
-  --warning: var(--color-amber-500);
-  --danger: var(--color-red-500);
 }

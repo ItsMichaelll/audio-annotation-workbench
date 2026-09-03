@@ -234,7 +234,7 @@ function LoadedProjectEdit({ aggregate }: { aggregate: ProjectAggregate }) {
             </div>
             <input
               ref={taxonomyInput}
-              className="visually-hidden"
+              className="u-visually-hidden"
               type="file"
               accept=".json,.yaml,.yml,application/json,application/yaml,text/yaml"
               onChange={(event) => {
@@ -293,7 +293,7 @@ function LoadedProjectEdit({ aggregate }: { aggregate: ProjectAggregate }) {
             </div>
             <input
               ref={instructionsInput}
-              className="visually-hidden"
+              className="u-visually-hidden"
               type="file"
               accept=".md,text/markdown"
               onChange={(event) => {
