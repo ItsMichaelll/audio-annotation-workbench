@@ -45,8 +45,8 @@ import {
 } from '../../domain/zoom'
 import styles from './WaveformEditor.module.css'
 
-const REGION_COLOR = 'rgba(70, 144, 255, 0.28)'
-const WARNING_COLOR = '#ffa500'
+const REGION_COLOR = 'rgba(65, 102, 232, 0.18)'
+const WARNING_COLOR = '#f17439'
 const REGION_WHEEL_NUDGE_RATIO = 0.1
 const SPECTROGRAM_FREQUENCY_LABELS = [
   20_000, 10_000, 5_000, 2_000, 1_000, 500, 200, 100, 50, 20,
@@ -234,15 +234,26 @@ export const WaveformEditor = forwardRef<
   })
   const activateAudioAnalyzer = audioAnalyzer.activateSpectrum
   const activateLoudnessMeter = audioAnalyzer.activateMeter
-  const spectrogramAxisLabels = useMemo(
-    () => [
+  const spectrogramAxisLabels = useMemo(() => {
+    let previousPosition = -1
+    return [
       spectrogramMaxFrequency,
       ...SPECTROGRAM_FREQUENCY_LABELS.filter(
         (frequency) => frequency < spectrogramMaxFrequency * 0.9,
       ),
-    ],
-    [spectrogramMaxFrequency],
-  )
+    ].filter((frequency) => {
+      const position = Math.min(
+        Math.max(
+          logarithmicFrequencyY(frequency, spectrogramMaxFrequency),
+          0.067,
+        ),
+        0.933,
+      )
+      if (position - previousPosition < 14 / 150) return false
+      previousPosition = position
+      return true
+    })
+  }, [spectrogramMaxFrequency])
 
   callbacksRef.current = {
     onLoading,
@@ -408,18 +419,21 @@ export const WaveformEditor = forwardRef<
     const regionsPlugin = RegionsPlugin.create()
     const minimapPlugin = MinimapPlugin.create({
       container: minimapContainer,
-      height: 52,
-      waveColor: '#606b72',
-      progressColor: '#9ba7ad',
+      height: 42,
+      waveColor: '#9aace9',
+      progressColor: '#5675da',
       cursorColor: WARNING_COLOR,
       cursorWidth: 1,
       overlayColor: 'rgba(232, 240, 242, 0.12)',
     })
     const wavesurfer = WaveSurfer.create({
       container,
-      height: 300,
-      waveColor: '#aeb7bd',
-      progressColor: '#eef5f5',
+      height:
+        parseFloat(
+          getComputedStyle(container).getPropertyValue('--waveform-height'),
+        ) || 280,
+      waveColor: '#7893eb',
+      progressColor: '#4166e8',
       cursorColor: WARNING_COLOR,
       cursorWidth: 2,
       normalize: false,
@@ -434,9 +448,10 @@ export const WaveformEditor = forwardRef<
         regionsPlugin,
         TimelinePlugin.create({
           height: 24,
+          secondaryLabelOpacity: 0.8,
           insertPosition: 'afterend',
           style: {
-            color: '#8d979e',
+            color: '#586479',
             fontSize: '10px',
           },
           formatTimeCallback: (time) => formatTime(time).slice(0, -2),
@@ -445,7 +460,7 @@ export const WaveformEditor = forwardRef<
         HoverPlugin.create({
           lineColor: WARNING_COLOR,
           lineWidth: 1,
-          labelBackground: '#171a1d',
+          labelBackground: '#202a3d',
           labelColor: '#f4f7f7',
           labelSize: 11,
           formatTimeCallback: formatTime,
@@ -459,6 +474,19 @@ export const WaveformEditor = forwardRef<
       ],
     })
 
+    // CSS owns viewport density; update only when the responsive height changes.
+    let waveformHeight = wavesurfer.options.height
+    const heightObserver = new ResizeObserver(() => {
+      const height =
+        parseFloat(
+          getComputedStyle(container).getPropertyValue('--waveform-height'),
+        ) || 280
+      if (height !== waveformHeight) {
+        waveformHeight = height
+        wavesurfer.setOptions({ height })
+      }
+    })
+    heightObserver.observe(container)
     wavesurferRef.current = wavesurfer
     regionsPluginRef.current = regionsPlugin
     const wavesurferMediaElement = wavesurfer.getMediaElement()
@@ -592,11 +620,20 @@ export const WaveformEditor = forwardRef<
     const unsubscribeWaveformClick = wavesurfer.on('click', (relativeX) => {
       seekAfterClearingSelection(relativeX)
     })
+    let fittedToViewport = true
     const unsubscribeZoom = wavesurfer.on('zoom', (zoom) => {
+      const width = wavesurfer.getWrapper().parentElement?.clientWidth ?? 0
+      fittedToViewport =
+        Math.abs(zoom - fitZoom(wavesurfer.getDuration(), width)) < 0.1
       callbacksRef.current.onZoomChange(zoom)
     })
 
     const scrollContainer = wavesurfer.getWrapper().parentElement
+    if (scrollContainer) {
+      scrollContainer.tabIndex = 0
+      scrollContainer.setAttribute('role', 'group')
+      scrollContainer.setAttribute('aria-label', 'Waveform timeline viewport')
+    }
     const audioPixelsPerSecond = () => {
       const duration = wavesurfer.getDuration()
       if (!scrollContainer || duration <= 0) return 1
@@ -1271,7 +1308,22 @@ export const WaveformEditor = forwardRef<
       passive: true,
     })
     const unsubscribeRedraw = wavesurfer.on('redraw', scheduleScrollbarSync)
-    const unsubscribeResize = wavesurfer.on('resize', scheduleScrollbarSync)
+    let previousViewportWidth =
+      scrollContainer?.clientWidth ?? container.clientWidth
+    const unsubscribeResize = wavesurfer.on('resize', () => {
+      const width = scrollContainer?.clientWidth ?? container.clientWidth
+      const duration = wavesurfer.getDuration()
+      if (duration > 0 && width > 0 && width !== previousViewportWidth) {
+        previousViewportWidth = width
+        if (fittedToViewport) {
+          wavesurfer.zoom(fitZoom(duration, width))
+          wavesurfer.setScroll(0)
+        }
+      } else {
+        previousViewportWidth = width
+      }
+      scheduleScrollbarSync()
+    })
     const unsubscribeMinimapReady = minimapPlugin.on('ready', () => {
       connectMinimapNavigation()
       scheduleScrollbarSync()
@@ -1285,6 +1337,7 @@ export const WaveformEditor = forwardRef<
 
     return () => {
       disposed = true
+      heightObserver.disconnect()
       disableRegionCreation()
       unsubscribeReady()
       unsubscribeError()
@@ -1396,6 +1449,14 @@ export const WaveformEditor = forwardRef<
         if (!expected.has(renderedRegion.id)) renderedRegion.remove()
       }
 
+      const regionOrder = new Map(
+        [...normalizedRegions]
+          .sort(
+            (a, b) =>
+              a.start - b.start || a.end - b.end || a.id.localeCompare(b.id),
+          )
+          .map((region, index) => [region.id, index + 1]),
+      )
       for (const metadata of normalizedRegions) {
         lastValidRegionsRef.current.set(metadata.id, metadata)
         const renderedRegion = plugin
@@ -1404,14 +1465,16 @@ export const WaveformEditor = forwardRef<
         const visual = regionVisualColors(
           typeof metadata.data.color === 'string'
             ? metadata.data.color
-            : undefined,
+            : '#4166e8',
           metadata.id === selectedRegionId,
         )
+        const content = `${String(regionOrder.get(metadata.id)).padStart(2, '0')} · ${typeof metadata.data.label === 'string' ? metadata.data.label : 'Region'}`
         if (renderedRegion) {
           renderedRegion.setOptions({
             start: metadata.start,
             end: metadata.end,
             color: visual.fill,
+            content,
           })
           if (renderedRegion.element) {
             renderedRegion.element.style.border = `1px solid ${visual.border}`
@@ -1423,6 +1486,7 @@ export const WaveformEditor = forwardRef<
             start: metadata.start,
             end: metadata.end,
             color: visual.fill,
+            content,
             drag: !readOnly,
             resize: !readOnly,
             minLength: 0.001,
@@ -1523,8 +1587,18 @@ export const WaveformEditor = forwardRef<
         <div
           className={styles.surface}
           ref={waveformElementRef}
-          aria-label="Audio waveform. Drag empty space to create a region."
+          role="region"
+          tabIndex={-1}
+          aria-label={
+            readOnly
+              ? 'Audio waveform. Read-only annotation. Use Space to play and arrow keys to seek.'
+              : 'Audio waveform. Drag empty space to create a region. Use Space to play, arrow keys to seek, and Add region for keyboard annotation.'
+          }
         />
+        <div className={styles.overviewHeader}>
+          <span>FULL RECORDING</span>
+          <span>Drag to navigate</span>
+        </div>
         <div className={styles.minimap} ref={minimapElementRef} />
         <div
           className={`${styles.scrollbar} ${styles.scrollbarInactive}`}

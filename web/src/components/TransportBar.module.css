@@ -1,47 +1,238 @@
-.root {
+.toolbar {
+  position: sticky;
+  z-index: 10;
+  top: 0;
   display: flex;
-  min-height: 43px;
+  flex-wrap: wrap;
+  min-height: 44px;
   align-items: center;
-  gap: 5px;
-  padding: 6px 10px;
-  border-bottom: 1px solid var(--border-default);
-  background: #171a1d;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 6px 24px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface-canvas);
 }
 
-.control {
-  min-width: 42px;
-  padding: 0 10px;
+.surfaceTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.surfaceTitle > svg {
+  color: var(--accent-ink);
+}
+
+.surfaceTitle h2 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.gesture {
+  margin-left: 12px;
+  color: var(--text-tertiary);
   font-size: 11px;
 }
 
-.primary {
+.views {
   display: flex;
-  min-width: 78px;
   align-items: center;
-  justify-content: center;
-  gap: 7px;
+  gap: 4px;
 }
 
-.primary svg {
-  color: var(--color-blue-500);
+.viewLabel {
+  margin-right: 8px;
+  color: var(--text-tertiary);
+  font-size: 10px;
+}
+
+.control,
+.iconButton {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.control {
+  padding: 0 9px;
+}
+
+.iconButton {
+  width: 32px;
+  padding: 0;
 }
 
 .control[aria-pressed='true'] {
-  border-color: rgb(var(--color-blue-500-rgb) / 46%);
-  background: rgb(var(--color-blue-500-rgb) / 14%);
-  color: color-mix(in srgb, var(--color-blue-500) 25%, white);
+  border-color: var(--border-strong);
+  background: var(--accent-muted);
+  color: var(--accent-ink);
 }
 
-.viewToggle[aria-pressed='true'] {
-  border-color: var(--color-blue-500);
-  background: var(--color-blue-500);
+.root {
+  display: flex;
+  flex-wrap: wrap;
+  min-height: 72px;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 20px;
+  padding: 12px 24px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--surface-panel);
+}
+
+.playback,
+.selection,
+.zoom {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.play {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent-primary);
   color: var(--text-inverse);
-  font-weight: var(--font-weight-medium);
 }
 
-.divider {
-  width: 1px;
-  height: 23px;
-  margin: 0 3px;
-  background: var(--border-default);
+.play:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.play:active:not(:disabled) {
+  background: var(--accent-active);
+}
+
+.clock {
+  display: flex;
+  min-width: 124px;
+  flex-direction: column;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.clock output {
+  color: var(--text-primary);
+  font-size: 20px;
+  letter-spacing: -0.04em;
+}
+
+.clock > span {
+  color: var(--text-tertiary);
+  font-size: 10px;
+}
+
+.selection {
+  padding-left: 16px;
+  border-left: 1px solid var(--border-default);
+}
+
+.zoom {
+  margin-left: auto;
+}
+
+.scale {
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+@media (max-width: 370px) {
+  .playback {
+    gap: 0;
+  }
+
+  .playback .iconButton {
+    width: 24px;
+  }
+}
+
+@media (max-width: 1180px) {
+  .gesture,
+  .viewLabel {
+    display: none;
+  }
+
+  .root {
+    gap: 10px;
+    padding-inline: 16px;
+  }
+}
+
+@media (max-width: 700px) {
+  .toolbar {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-inline: 16px;
+  }
+
+  .views {
+    gap: 0;
+  }
+
+  .views .control {
+    font-size: 10px;
+    padding-inline: 6px;
+  }
+
+  .views svg {
+    width: 13px;
+  }
+
+  .root {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .clock {
+    min-width: 100px;
+  }
+
+  .selection {
+    margin-left: auto;
+    padding-left: 8px;
+  }
+
+  .selection .control {
+    width: 32px;
+    padding: 0;
+  }
+
+  .selection .control > span {
+    display: none;
+  }
+
+  .zoom {
+    width: 100%;
+    justify-content: flex-end;
+    border-top: 1px solid var(--border-subtle);
+    padding-top: 8px;
+  }
+
+  .zoom > :first-child {
+    margin-right: auto;
+  }
+}
+
+@media (max-width: 370px) {
+  .root {
+    gap: 8px;
+  }
+
+  .selection {
+    padding-left: 4px;
+  }
 }

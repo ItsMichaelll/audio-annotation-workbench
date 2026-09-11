@@ -20,7 +20,7 @@
 }
 
 .root {
-  color: #d4dbde;
+  color: var(--text-primary);
   font-size: 12px;
   line-height: 1.55;
 }
@@ -71,7 +71,7 @@
 }
 
 .root a {
-  color: #8dbaff;
+  color: var(--text-link);
 }
 
 .root code {

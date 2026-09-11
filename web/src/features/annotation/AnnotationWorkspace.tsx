@@ -1,9 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
-import { Button, ButtonLink } from '../../components/Button'
+import { ButtonLink } from '../../components/Button'
 import { useConfirmation } from '../../components/confirmationContext'
 import { StatusReadout } from '../../components/StatusReadout'
-import { TransportBar } from '../../components/TransportBar'
+import {
+  TransportBar,
+  WaveformToolbar,
+  type TransportBarProps,
+} from '../../components/TransportBar'
+import { ApplicationHeader } from '../../components/ApplicationHeader'
+import { KeyboardHelp } from '../../components/KeyboardHelp'
+import { Icon } from '../../components/Icon'
+import { RegionList } from '../../components/RegionList'
 import {
   annotationsEqual,
   createAnnotationDocument,
@@ -63,7 +71,7 @@ import {
 import layoutStyles from '../projects/ProjectLayout.module.css'
 import { useProject } from '../projects/projectHooks'
 import { AnnotationInspector } from './AnnotationInspector'
-import styles from './AnnotationWorkspace.module.css'
+import styles from '../../components/EditorWorkspace.module.css'
 
 type SaveState = 'Unsaved' | 'Saving' | 'Saved' | 'Save failed'
 type AudioState =
@@ -87,6 +95,10 @@ function annotationRegions(
     start: region.start,
     end: region.end,
     data: {
+      label:
+        taxonomy.labels.find(
+          (label) => label.id === region.assignments[0]?.labelId,
+        )?.name ?? 'Unlabeled',
       color: region.assignments
         .map((assignment) =>
           taxonomy.labels.find((label) => label.id === assignment.labelId),
@@ -237,6 +249,12 @@ function ActiveAnnotationWorkspace({
   const [meterEnabled, setMeterEnabled] = useState(false)
   const [workflowError, setWorkflowError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [inspectorOpen, setInspectorOpen] = useState(true)
+  const inspectorToggleRef = useRef<HTMLButtonElement>(null)
+  const [historyAvailability, setHistoryAvailability] = useState({
+    canUndo: false,
+    canRedo: false,
+  })
   const readOnly = task.status === 'submitted'
   const ordered = useMemo(
     () => orderedTasks(aggregate.tasks),
@@ -322,6 +340,7 @@ function ActiveAnnotationWorkspace({
 
   const applyHistoryState = useCallback(
     (state: HistoryState<AnnotationDocument>) => {
+      setHistoryAvailability({ canUndo: state.canUndo, canRedo: state.canRedo })
       const bounded =
         duration > 0
           ? normalizeAnnotation(state.present, duration)
@@ -342,10 +361,12 @@ function ActiveAnnotationWorkspace({
       if (annotationsEqual(historyRef.current.state.present, next)) return
       const revisioned = { ...next, revision: ++revisionRef.current }
       const state = historyRef.current.commit(revisioned)
+      setHistoryAvailability({ canUndo: state.canUndo, canRedo: state.canRedo })
       documentRef.current = state.present
       setAnnotation(state.present)
       setSaveState('Unsaved')
       setSaveError(null)
+      setWorkflowError(null)
     },
     [readOnly],
   )
@@ -444,7 +465,24 @@ function ActiveAnnotationWorkspace({
         false,
       )
       if (!validation.valid) {
-        setWorkflowError(validation.errors.join(' '))
+        setInspectorOpen(true)
+        const currentRegions = [...documentRef.current.regions].sort(
+          (a, b) => a.start - b.start,
+        )
+        setWorkflowError(
+          validation.errors
+            .map((error) =>
+              currentRegions.reduce(
+                (message, region, index) =>
+                  message.replace(
+                    region.id,
+                    String(index + 1).padStart(2, '0'),
+                  ),
+                error,
+              ),
+            )
+            .join(' '),
+        )
         return
       }
       if (
@@ -615,7 +653,7 @@ function ActiveAnnotationWorkspace({
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (isEditableTarget(event.target)) return
+      if (event.defaultPrevented || isEditableTarget(event.target)) return
       const command = keyboardCommand(event)
       if (command) {
         event.preventDefault()
@@ -745,172 +783,251 @@ function ActiveAnnotationWorkspace({
     }
   }
 
+  useEffect(() => {
+    const guard = (event: BeforeUnloadEvent) => {
+      if (
+        !readOnly &&
+        documentRef.current.revision > savedRevisionRef.current
+      ) {
+        event.preventDefault()
+        event.returnValue = ''
+      }
+    }
+    window.addEventListener('beforeunload', guard)
+    return () => window.removeEventListener('beforeunload', guard)
+  }, [readOnly])
+
+  const controls: TransportBarProps = {
+    isLoaded: loadStatus === 'ready',
+    isPlaying,
+    loopEnabled,
+    spectrogramEnabled,
+    spectrumEnabled,
+    meterEnabled,
+    hasSelection: selectedRegion !== null,
+    canDelete: !readOnly && selectedRegion !== null,
+    canPreviousRegion: previousRegion !== null,
+    canNextRegion: nextRegion !== null,
+    verticalScale,
+    currentTime,
+    duration,
+    onPlayPause: () => waveformRef.current?.playPause(),
+    onFit: () => waveformRef.current?.fit(),
+    onZoomIn: () => waveformRef.current?.zoom('in'),
+    onZoomOut: () => waveformRef.current?.zoom('out'),
+    onResetVerticalScale: () => waveformRef.current?.resetVerticalScale(),
+    onToggleLoop: () => setLoopEnabled((value) => !value),
+    onDelete: deleteSelectedRegion,
+    onPreviousRegion: () => navigateRegion('previous'),
+    onNextRegion: () => navigateRegion('next'),
+    onToggleSpectrogram: () => setSpectrogramEnabled((value) => !value),
+    onToggleSpectrum: () => {
+      setSpectrumEnabled(!spectrumEnabled)
+      if (!spectrumEnabled) waveformRef.current?.activateSpectrum()
+    },
+    onToggleMeter: () => {
+      setMeterEnabled(!meterEnabled)
+      if (!meterEnabled) waveformRef.current?.activateMeter()
+    },
+  }
+  const addRegion = () => {
+    if (loadStatus !== 'ready' || readOnly || duration <= 0) return
+    const start = Math.min(currentTime, Math.max(0, duration - 1))
+    const region = {
+      id: crypto.randomUUID(),
+      start,
+      end: Math.min(start + 1, duration),
+      assignments: [],
+    }
+    commit((current) => ({ ...current, regions: [...current.regions, region] }))
+    setSelectedRegionId(region.id)
+    setLoopEnabled(true)
+    setInspectorOpen(true)
+    waveformRef.current?.revealRegion(region.start, region.end)
+  }
+  const labels = Object.fromEntries(
+    annotation.regions.flatMap((region) => {
+      const label = taxonomy.labels.find(
+        (item) => item.id === region.assignments[0]?.labelId,
+      )
+      return label ? [[region.id, label.name]] : []
+    }),
+  )
+  const regionIssues = annotation.regions
+    .filter(
+      (region) =>
+        !validateSubmission(
+          { ...annotation, regions: [region], clipAssignments: [] },
+          taxonomy,
+          duration,
+        ).valid,
+    )
+    .map((region) => region.id)
+  const submittedCount = aggregate.tasks.filter(
+    (item) => item.status === 'submitted',
+  ).length
+
   return (
-    <div className={styles.shell}>
-      <header className={styles.header}>
+    <div className={styles.shell} data-editor-theme="light">
+      <ApplicationHeader
+        projectName={aggregate.project.name}
+        onNavigate={async (path) => {
+          if (await flush()) navigate(path)
+          else
+            setWorkflowError(
+              'The latest draft could not be saved. Navigation was stopped.',
+            )
+        }}
+      >
+        <KeyboardHelp />
+      </ApplicationHeader>
+      <div className={styles.documentBar}>
         <div className={styles.identity}>
-          <span className={styles.projectName}>{aggregate.project.name}</span>
-          <strong className={styles.taskName}>
+          <div className={styles.eyebrow}>
+            Task {String(position).padStart(2, '0')} /{' '}
+            {String(ordered.length).padStart(2, '0')}
+            <span>·</span>
+            <span className={styles.taskProgress}>
+              <progress
+                value={submittedCount}
+                max={ordered.length}
+                aria-label="Project submission progress"
+              />
+              {submittedCount} submitted
+            </span>
+            <output
+              className={`${styles.saveState} ${saveState === 'Unsaved' ? styles.unsaved : saveState === 'Saving' ? styles.saving : saveState === 'Save failed' ? styles.saveFailed : ''}`}
+              aria-live="polite"
+            >
+              <Icon name={saveState === 'Saved' ? 'check' : 'info'} size={14} />
+              {readOnly
+                ? 'Submitted'
+                : saveState === 'Saved'
+                  ? 'Saved locally'
+                  : saveState}
+            </output>
+          </div>
+          <h1 className={styles.title}>
             {task.displayName ?? task.primaryMedia.displayName}
-          </strong>
-          <small className={styles.taskMeta}>
-            Task {position} of {ordered.length} · Taxonomy v
-            {taxonomyVersion.version}
-          </small>
+          </h1>
         </div>
-        <output
-          className={`${styles.saveState} ${
-            saveState === 'Unsaved'
-              ? styles.unsaved
-              : saveState === 'Saving'
-                ? styles.saving
-                : saveState === 'Save failed'
-                  ? styles.saveFailed
-                  : ''
-          }`}
-          aria-live="polite"
-        >
-          {saveState}
-        </output>
         <div className={styles.headerActions}>
-          <Button type="button" onClick={() => void returnToProject()}>
-            Return to Project
-          </Button>
+          <button
+            className={styles.button}
+            type="button"
+            onClick={() => void returnToProject()}
+            title="Save draft and return to project"
+          >
+            <Icon name="back" />
+            Project
+          </button>
+          <button
+            ref={inspectorToggleRef}
+            className={styles.button}
+            type="button"
+            aria-label={
+              inspectorOpen
+                ? 'Hide annotation inspector'
+                : 'Show annotation inspector'
+            }
+            aria-expanded={inspectorOpen}
+            aria-controls="annotation-inspector"
+            onClick={() => setInspectorOpen((value) => !value)}
+          >
+            <Icon name="panel" />
+          </button>
           {!readOnly && (
-            <Button type="button" onClick={() => void skip()}>
-              Skip &amp; Next
-            </Button>
+            <button
+              className={styles.button}
+              type="button"
+              disabled={submitting}
+              onClick={() => void skip()}
+              title="Skip and next (Ctrl+Shift+Enter)"
+            >
+              Skip
+            </button>
           )}
           {!readOnly && (
-            <Button
-              variant="primary"
+            <button
+              className={styles.primaryButton}
               type="button"
               disabled={submitting}
               onClick={() => void submit()}
+              title="Submit and next (Ctrl+Enter)"
             >
               {submitting
                 ? 'Submitting…'
                 : nextTask
-                  ? 'Submit & Next'
-                  : 'Submit Task'}
-            </Button>
+                  ? 'Submit & next'
+                  : 'Submit task'}
+              <Icon name="arrow" />
+            </button>
           )}
         </div>
-      </header>
+      </div>
       <div className={styles.notices}>
         {readOnly && (
           <div className={styles.workspaceNotice}>
-            Submitted task · read-only. Reopen it from the project page to make
-            changes.
+            <Icon name="lock" />
+            Submitted annotation · read-only. Reopen this task from the project
+            to make changes.
           </div>
         )}
         {(workflowError || saveError) && (
           <div className={styles.errorBanner} role="alert">
-            <strong className={styles.errorTitle}>Annotation notice</strong>
+            <strong className={styles.errorTitle}>Review needed</strong>
             <span>{workflowError ?? saveError}</span>
+            {saveError && (
+              <button type="button" onClick={() => void flush()}>
+                Retry save
+              </button>
+            )}
+            <button
+              type="button"
+              className={styles.errorDismiss}
+              aria-label="Dismiss annotation notice"
+              onClick={() => setWorkflowError(null)}
+            >
+              <Icon name="close" />
+            </button>
           </div>
         )}
       </div>
-      <StatusReadout
-        fileName={
-          audioState.kind === 'ready'
-            ? audioState.name
-            : task.primaryMedia.displayName
-        }
-        duration={duration}
-        currentTime={currentTime}
-        zoom={zoom}
-        verticalScale={verticalScale}
-        isPlaying={isPlaying}
-        selectedRegion={selectedRegion}
-      />
-      <TransportBar
-        isLoaded={loadStatus === 'ready'}
-        isPlaying={isPlaying}
-        loopEnabled={loopEnabled}
-        spectrogramEnabled={spectrogramEnabled}
-        spectrumEnabled={spectrumEnabled}
-        meterEnabled={meterEnabled}
-        hasSelection={selectedRegion !== null}
-        canDelete={!readOnly && selectedRegion !== null}
-        canPreviousRegion={previousRegion !== null}
-        canNextRegion={nextRegion !== null}
-        verticalScale={verticalScale}
-        onPlayPause={() => waveformRef.current?.playPause()}
-        onFit={() => waveformRef.current?.fit()}
-        onZoomIn={() => waveformRef.current?.zoom('in')}
-        onZoomOut={() => waveformRef.current?.zoom('out')}
-        onResetVerticalScale={() => waveformRef.current?.resetVerticalScale()}
-        onToggleLoop={() => setLoopEnabled((value) => !value)}
-        onDelete={deleteSelectedRegion}
-        onPreviousRegion={() => navigateRegion('previous')}
-        onNextRegion={() => navigateRegion('next')}
-        onToggleSpectrogram={() => setSpectrogramEnabled((value) => !value)}
-        onToggleSpectrum={() => {
-          const enabled = !spectrumEnabled
-          setSpectrumEnabled(enabled)
-          if (enabled) waveformRef.current?.activateSpectrum()
-        }}
-        onToggleMeter={() => {
-          const enabled = !meterEnabled
-          setMeterEnabled(enabled)
-          if (enabled) waveformRef.current?.activateMeter()
-        }}
-      />
-      <main className={styles.workspace}>
-        <section className={styles.editor} aria-label="Task waveform editor">
+      <main
+        className={`${styles.workspace}${inspectorOpen ? ` ${styles.withInspector}` : ''}`}
+        id="editor-workspace"
+        tabIndex={-1}
+      >
+        <section className={styles.editor} aria-label="Task audio editor">
+          <WaveformToolbar {...controls} />
           {audioState.kind !== 'ready' ? (
-            <div
-              className={`${styles.sourceRecovery}${
-                audioState.kind === 'loading'
-                  ? ''
-                  : ` ${styles.sourceRecoveryError}`
-              }`}
-              role="status"
-            >
+            <div className={styles.sourceRecovery} role="status">
+              <Icon
+                name={audioState.kind === 'loading' ? 'waveform' : 'folder'}
+                size={32}
+              />
               <h2 className={styles.sourceRecoveryTitle}>
                 {audioState.kind === 'loading'
-                  ? 'Loading task audio'
-                  : 'Error: Audio file not found'}
+                  ? 'Opening local audio…'
+                  : audioState.kind === 'permission'
+                    ? 'Allow access to this recording'
+                    : audioState.kind === 'mismatch'
+                      ? 'This is a different recording'
+                      : 'Reconnect your audio'}
               </h2>
-              {audioState.kind === 'mismatch' ? (
-                <div>
-                  <p className={styles.sourceRecoveryDescription}>
-                    The uploaded file doesn't match the original.
-                  </p>
-                  <p className={styles.sourceRecoveryDescription}>
-                    {audioState.message}
-                  </p>
-                  <p className={styles.sourceRecoveryDescription}>
-                    Please re-upload the original file to continue.
-                  </p>
-                </div>
-              ) : audioState.kind === 'error' ? (
-                <div>
-                  <p className={styles.sourceRecoveryDescription}>
-                    {audioState.message}
-                  </p>
-                  <p className={styles.sourceRecoveryDescription}>
-                    This often happens when you close the browser tab or refresh
-                    the page.
-                  </p>
-                  <p className={styles.sourceRecoveryDescription}>
-                    Don't worry; your task progress is saved locally and should
-                    be preserved.
-                  </p>
-                  <p className={styles.sourceRecoveryDescription}>
-                    Just re-upload the original file below to pick up where you
-                    left off.
-                  </p>
-                </div>
-              ) : (
+              <p className={styles.sourceRecoveryDescription}>
+                {audioState.message}
+              </p>
+              {audioState.kind !== 'loading' && (
                 <p className={styles.sourceRecoveryDescription}>
-                  {audioState.message}
+                  Choose the original file to continue with this task.
                 </p>
               )}
               <input
                 ref={relinkInputRef}
                 className="u-visually-hidden"
+                tabIndex={-1}
+                aria-label="Relink original audio"
                 type="file"
                 accept="audio/*,.wav,.wave,.flac,.mp3,.m4a,.aac,.aif,.aiff,.ogg,.oga,.opus,.webm"
                 onChange={(event) => {
@@ -919,19 +1036,27 @@ function ActiveAnnotationWorkspace({
                   void relink(file)
                 }}
               />
-              <div className={styles.sourceRecoveryActions}>
-                {audioState.kind === 'permission' && (
-                  <Button type="button" onClick={() => void grantPermission()}>
-                    Grant file permission
-                  </Button>
-                )}
-                <Button
-                  type="button"
-                  onClick={() => relinkInputRef.current?.click()}
-                >
-                  Upload audio file
-                </Button>
-              </div>
+              {audioState.kind !== 'loading' && (
+                <div className={styles.sourceRecoveryActions}>
+                  {audioState.kind === 'permission' && (
+                    <button
+                      className={styles.button}
+                      type="button"
+                      onClick={() => void grantPermission()}
+                    >
+                      Grant file permission
+                    </button>
+                  )}
+                  <button
+                    className={styles.primaryButton}
+                    type="button"
+                    onClick={() => relinkInputRef.current?.click()}
+                  >
+                    <Icon name="upload" />
+                    Relink audio file
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <div className={styles.editorSurface}>
@@ -1025,50 +1150,114 @@ function ActiveAnnotationWorkspace({
               />
             </div>
           )}
-          <footer className={styles.editorFooter}>
-            <span>
-              {regions.length} {regions.length === 1 ? 'region' : 'regions'}
-            </span>
-            <span>{loopEnabled ? 'Selected region loops' : 'Loop off'}</span>
-            <span>Drafts stay in this browser</span>
-          </footer>
+          <RegionList
+            regions={regions}
+            selectedRegionId={selectedRegionId}
+            labels={labels}
+            issues={regionIssues}
+            onSelect={(region) => {
+              setSelectedRegionId(region.id)
+              setLoopEnabled(true)
+              setInspectorOpen(true)
+              waveformRef.current?.revealRegion(region.start, region.end)
+            }}
+            onAdd={addRegion}
+            canAdd={loadStatus === 'ready' && !readOnly}
+            onUndo={undo}
+            onRedo={redo}
+            canUndo={!readOnly && historyAvailability.canUndo}
+            canRedo={!readOnly && historyAvailability.canRedo}
+          />
         </section>
-        <AnnotationInspector
-          annotation={annotation}
-          taxonomy={taxonomy}
-          selectedRegionId={selectedRegionId}
-          instructions={aggregate.instructions?.rawMarkdown ?? null}
-          readOnly={readOnly}
-          onToggleLabel={toggleLabel}
-          onAssignmentChange={assignmentChange}
-          onRegionNotesChange={(notes) =>
-            commit((current) => ({
-              ...current,
-              regions: current.regions.map((region) => {
-                if (region.id !== selectedRegionId) return region
-                if (notes) return { ...region, notes }
-                const withoutNotes = { ...region }
-                delete withoutNotes.notes
-                return withoutNotes
-              }),
-            }))
-          }
-          onTaskNotesChange={(taskNotes) =>
-            commit((current) => {
-              if (taskNotes) return { ...current, taskNotes }
-              const withoutTaskNotes = { ...current }
-              delete withoutTaskNotes.taskNotes
-              return withoutTaskNotes
-            })
-          }
-        />
+        {inspectorOpen && (
+          <AnnotationInspector
+            annotation={annotation}
+            duration={duration}
+            sourceName={task.primaryMedia.displayName}
+            taxonomyVersion={taxonomyVersion.version}
+            metadata={task.metadata}
+            onClose={() => {
+              setInspectorOpen(false)
+              inspectorToggleRef.current?.focus()
+            }}
+            onRegionBoundsChange={(start, end) => {
+              if (selectedRegion)
+                replaceRegion({ ...selectedRegion, start, end }, true)
+            }}
+            taxonomy={taxonomy}
+            selectedRegionId={selectedRegionId}
+            instructions={aggregate.instructions?.rawMarkdown ?? null}
+            readOnly={readOnly}
+            onToggleLabel={toggleLabel}
+            onAssignmentChange={assignmentChange}
+            onRegionNotesChange={(notes) =>
+              commit((current) => ({
+                ...current,
+                regions: current.regions.map((region) => {
+                  if (region.id !== selectedRegionId) return region
+                  if (notes) return { ...region, notes }
+                  const withoutNotes = { ...region }
+                  delete withoutNotes.notes
+                  return withoutNotes
+                }),
+              }))
+            }
+            onTaskNotesChange={(taskNotes) =>
+              commit((current) => {
+                if (taskNotes) return { ...current, taskNotes }
+                const withoutTaskNotes = { ...current }
+                delete withoutTaskNotes.taskNotes
+                return withoutTaskNotes
+              })
+            }
+          />
+        )}
       </main>
+      <TransportBar {...controls} />
+      <StatusReadout
+        loadStatus={
+          audioState.kind === 'ready'
+            ? loadStatus
+            : audioState.kind === 'loading'
+              ? 'loading'
+              : 'error'
+        }
+        fileName={
+          audioState.kind === 'ready'
+            ? audioState.name
+            : task.primaryMedia.displayName
+        }
+        duration={duration}
+        currentTime={currentTime}
+        zoom={zoom}
+        verticalScale={verticalScale}
+        isPlaying={isPlaying}
+        selectedRegion={selectedRegion}
+      />
     </div>
   )
 }
 
 export function AnnotationWorkspace() {
   const { projectId, taskId } = useParams()
+  return (
+    <AnnotationTaskRoute
+      key={`${projectId}/${taskId}`}
+      projectId={projectId}
+      taskId={taskId}
+    />
+  )
+}
+
+// Reload the project snapshot at each task boundary. Queue statuses and progress
+// must include submissions/skips made during the preceding editor session.
+function AnnotationTaskRoute({
+  projectId,
+  taskId,
+}: {
+  projectId: string | undefined
+  taskId: string | undefined
+}) {
   const state = useProject(projectId)
   if (state.loading) return <ProjectLayout>{null}</ProjectLayout>
   if (state.error)

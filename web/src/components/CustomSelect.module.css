@@ -25,7 +25,7 @@
 
 .trigger:hover:not(:disabled),
 .trigger[aria-expanded='true'] {
-  border-color: rgb(255 255 255 / 24%);
+  border-color: var(--border-strong);
   background: var(--surface-control-hover);
 }
 
@@ -61,9 +61,8 @@
   margin: 0;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
-  background: transparent;
-  backdrop-filter: blur(2px);
-  box-shadow: 0 10px 24px rgb(0 0 0 / 55%);
+  background: var(--surface-overlay);
+  box-shadow: var(--shadow-overlay);
   color: var(--text-primary);
   font-size: inherit;
 }
@@ -82,12 +81,12 @@
 }
 
 .optionActive {
-  background: rgb(255 255 255 / 9%);
+  background: var(--surface-button-hover);
 }
 
 .option[aria-selected='true'] {
-  background: var(--color-blue-600);
-  color: var(--text-primary);
+  background: var(--accent-muted);
+  color: var(--accent-ink);
 }
 
 .field {
@@ -125,9 +124,9 @@
 
 .spectrum .trigger {
   padding: 2px 7px;
-  border-color: rgb(255 255 255 / 10%);
-  background-color: #171b1d;
-  color: #d9dfe1;
+  border-color: var(--border-default);
+  background-color: var(--surface-control);
+  color: var(--text-primary);
 }
 
 .spectrum .trigger:focus-visible {

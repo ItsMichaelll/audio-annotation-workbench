@@ -1,6 +1,8 @@
+import { Icon } from './Icon'
+import { formatTime } from '../domain/transport'
 import styles from './TransportBar.module.css'
 
-interface TransportBarProps {
+export interface TransportBarProps {
   isLoaded: boolean
   isPlaying: boolean
   loopEnabled: boolean
@@ -12,6 +14,8 @@ interface TransportBarProps {
   canPreviousRegion?: boolean
   canNextRegion?: boolean
   verticalScale: number
+  currentTime: number
+  duration: number
   onPlayPause(): void
   onFit(): void
   onZoomIn(): void
@@ -26,18 +30,77 @@ interface TransportBarProps {
   onToggleMeter(): void
 }
 
+export function WaveformToolbar(
+  props: Pick<
+    TransportBarProps,
+    | 'isLoaded'
+    | 'spectrogramEnabled'
+    | 'spectrumEnabled'
+    | 'meterEnabled'
+    | 'onToggleSpectrogram'
+    | 'onToggleSpectrum'
+    | 'onToggleMeter'
+  >,
+) {
+  return (
+    <div className={styles.toolbar}>
+      <div className={styles.surfaceTitle}>
+        <Icon name="waveform" />
+        <h2>Waveform</h2>
+        <span className={styles.gesture}>Drag to mark a region</span>
+      </div>
+      <div
+        className={styles.views}
+        role="group"
+        aria-label="Audio analysis views"
+      >
+        <span className={styles.viewLabel}>Analysis</span>
+        <button
+          className={styles.control}
+          type="button"
+          aria-pressed={props.spectrogramEnabled}
+          disabled={!props.isLoaded}
+          onClick={props.onToggleSpectrogram}
+        >
+          <Icon name="spectrogram" />
+          Spectrogram
+        </button>
+        <button
+          className={styles.control}
+          type="button"
+          aria-pressed={props.spectrumEnabled}
+          disabled={!props.isLoaded}
+          onClick={props.onToggleSpectrum}
+        >
+          <Icon name="spectrum" />
+          Spectrum
+        </button>
+        <button
+          className={styles.control}
+          type="button"
+          aria-pressed={props.meterEnabled}
+          disabled={!props.isLoaded}
+          onClick={props.onToggleMeter}
+        >
+          <Icon name="meter" />
+          Meter
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export function TransportBar({
   isLoaded,
   isPlaying,
   loopEnabled,
-  spectrogramEnabled,
-  spectrumEnabled,
-  meterEnabled,
   hasSelection,
   canDelete = hasSelection,
   canPreviousRegion = false,
   canNextRegion = false,
   verticalScale,
+  currentTime,
+  duration,
   onPlayPause,
   onFit,
   onZoomIn,
@@ -47,156 +110,109 @@ export function TransportBar({
   onDelete,
   onPreviousRegion,
   onNextRegion,
-  onToggleSpectrogram,
-  onToggleSpectrum,
-  onToggleMeter,
 }: TransportBarProps) {
   return (
     <nav className={styles.root} aria-label="Transport and editing controls">
-      <button
-        className={`${styles.control} ${styles.primary}`}
-        type="button"
-        onClick={onPlayPause}
-        disabled={!isLoaded}
-        title="Play or pause (Space)"
-      >
-        {isPlaying ? (
-          <svg
-            aria-hidden="true"
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-          >
-            <rect x="14" y="3" width="5" height="18" rx="1" />
-            <rect x="5" y="3" width="5" height="18" rx="1" />
-          </svg>
-        ) : (
-          <svg
-            aria-hidden="true"
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-          >
-            <path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z" />
-          </svg>
-        )}
-        {isPlaying ? 'Pause' : 'Play'}
-      </button>
-      <span className={styles.divider} aria-hidden="true" />
-      {onPreviousRegion && onNextRegion && (
-        <>
-          <button
-            className={styles.control}
-            type="button"
-            onClick={onPreviousRegion}
-            disabled={!isLoaded || !canPreviousRegion}
-            title="Previous region (Ctrl+Left)"
-          >
-            Previous Region
-          </button>
-          <button
-            className={styles.control}
-            type="button"
-            onClick={onNextRegion}
-            disabled={!isLoaded || !canNextRegion}
-            title="Next region (Ctrl+Right)"
-          >
-            Next Region
-          </button>
-          <span className={styles.divider} aria-hidden="true" />
-        </>
-      )}
-      <button
-        className={styles.control}
-        type="button"
-        onClick={onFit}
-        disabled={!isLoaded}
-        title="Fit (F)"
-      >
-        Fit
-      </button>
-      <button
-        className={styles.control}
-        type="button"
-        onClick={onZoomOut}
-        disabled={!isLoaded}
-        aria-label="Zoom out"
-        title="Zoom out (-)"
-      >
-        −
-      </button>
-      <button
-        className={styles.control}
-        type="button"
-        onClick={onZoomIn}
-        disabled={!isLoaded}
-        aria-label="Zoom in"
-        title="Zoom in (+)"
-      >
-        +
-      </button>
-      <button
-        className={styles.control}
-        type="button"
-        onClick={onResetVerticalScale}
-        disabled={!isLoaded || Math.abs(verticalScale - 1) < 0.001}
-        title="Reset vertical scale to 1×"
-      >
-        Reset V-Scale
-      </button>
-      <span className={styles.divider} aria-hidden="true" />
-      <button
-        type="button"
-        className={styles.control}
-        aria-pressed={loopEnabled}
-        onClick={onToggleLoop}
-        disabled={!hasSelection}
-        title="Loop selected region (L)"
-      >
-        Loop
-      </button>
-      <button
-        className={styles.control}
-        type="button"
-        onClick={onDelete}
-        disabled={!canDelete}
-        title="Delete selected region (Delete, Backspace, or Ctrl+D)"
-      >
-        Delete
-      </button>
-      <span className={styles.divider} aria-hidden="true" />
-      <button
-        type="button"
-        className={`${styles.control} ${styles.viewToggle}`}
-        aria-pressed={spectrogramEnabled}
-        onClick={onToggleSpectrogram}
-        disabled={!isLoaded}
-        title="Show or hide the spectrogram"
-      >
-        Spectrogram
-      </button>
-      <button
-        type="button"
-        className={`${styles.control} ${styles.viewToggle}`}
-        aria-pressed={spectrumEnabled}
-        onClick={onToggleSpectrum}
-        disabled={!isLoaded}
-        title="Show or hide the spectrum analyzer"
-      >
-        Spectrum Analyzer
-      </button>
-      <button
-        type="button"
-        className={`${styles.control} ${styles.viewToggle}`}
-        aria-pressed={meterEnabled}
-        onClick={onToggleMeter}
-        disabled={!isLoaded}
-        title="Show or hide the loudness and true-peak meter"
-      >
-        Meter
-      </button>
+      <div className={styles.playback}>
+        <button
+          className={styles.iconButton}
+          type="button"
+          onClick={onPreviousRegion}
+          disabled={!isLoaded || !canPreviousRegion}
+          aria-label="Previous region"
+          title="Previous region (Ctrl+Left)"
+        >
+          <Icon name="previous" />
+        </button>
+        <button
+          className={styles.play}
+          type="button"
+          onClick={onPlayPause}
+          disabled={!isLoaded}
+          aria-label={isPlaying ? 'Pause' : 'Play'}
+          title="Play or pause (Space)"
+        >
+          <Icon name={isPlaying ? 'pause' : 'play'} size={20} />
+        </button>
+        <button
+          className={styles.iconButton}
+          type="button"
+          onClick={onNextRegion}
+          disabled={!isLoaded || !canNextRegion}
+          aria-label="Next region"
+          title="Next region (Ctrl+Right)"
+        >
+          <Icon name="next" />
+        </button>
+      </div>
+      <div className={styles.clock} aria-label="Playback time">
+        <output>{formatTime(currentTime)}</output>
+        <span>/ {formatTime(duration)}</span>
+      </div>
+      <div className={styles.selection}>
+        <button
+          type="button"
+          className={styles.control}
+          aria-pressed={loopEnabled}
+          onClick={onToggleLoop}
+          disabled={!hasSelection}
+          title="Loop selected region (L)"
+        >
+          <Icon name="loop" />
+          <span>Loop</span>
+        </button>
+        <button
+          type="button"
+          className={styles.iconButton}
+          onClick={onDelete}
+          disabled={!canDelete}
+          aria-label="Delete selected region"
+          title="Delete selected region (Delete)"
+        >
+          <Icon name="trash" />
+        </button>
+      </div>
+      <div className={styles.zoom} role="group" aria-label="Waveform zoom">
+        <button
+          type="button"
+          className={styles.control}
+          onClick={onResetVerticalScale}
+          disabled={!isLoaded || Math.abs(verticalScale - 1) < 0.001}
+          title="Reset waveform amplitude to 1×"
+        >
+          <span className={styles.scale}>↕ {verticalScale.toFixed(2)}×</span>
+        </button>
+        <button
+          type="button"
+          className={styles.iconButton}
+          onClick={onZoomOut}
+          disabled={!isLoaded}
+          aria-label="Zoom out"
+          title="Zoom out (-)"
+        >
+          <Icon name="minus" />
+        </button>
+        <button
+          type="button"
+          className={styles.iconButton}
+          onClick={onZoomIn}
+          disabled={!isLoaded}
+          aria-label="Zoom in"
+          title="Zoom in (+)"
+        >
+          <Icon name="plus" />
+        </button>
+        <button
+          type="button"
+          className={styles.control}
+          onClick={onFit}
+          disabled={!isLoaded}
+          title="Fit complete file (F)"
+        >
+          <Icon name="fit" />
+          Fit
+        </button>
+      </div>
     </nav>
   )
 }

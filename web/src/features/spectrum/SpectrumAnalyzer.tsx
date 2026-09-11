@@ -107,6 +107,7 @@ function drawGrid(
     context.fillText(`${decibels}`, plotLeft - 7, y)
   }
 
+  let previousLabelRight = -Infinity
   for (const frequency of FREQUENCY_GRID_HZ) {
     if (frequency > maxFrequency) continue
     const x =
@@ -116,14 +117,18 @@ function drawGrid(
     context.moveTo(Math.round(x) + 0.5, plotTop)
     context.lineTo(Math.round(x) + 0.5, plotTop + plotHeight)
     context.stroke()
-    context.textAlign =
-      frequency === SPECTRUM_MIN_FREQUENCY
-        ? 'left'
-        : frequency === maxFrequency
-          ? 'right'
-          : 'center'
-    context.textBaseline = 'top'
-    context.fillText(formatFrequency(frequency), x, plotTop + plotHeight + 7)
+    const label = formatFrequency(frequency)
+    const labelWidth = context.measureText(label).width
+    const labelX = Math.min(
+      Math.max(x, plotLeft + labelWidth / 2),
+      plotLeft + plotWidth - labelWidth / 2,
+    )
+    if (labelX - labelWidth / 2 >= previousLabelRight + 8) {
+      context.textAlign = 'center'
+      context.textBaseline = 'top'
+      context.fillText(label, labelX, plotTop + plotHeight + 7)
+      previousLabelRight = labelX + labelWidth / 2
+    }
   }
 
   context.strokeStyle = 'rgba(141, 151, 158, 0.32)'

@@ -1,10 +1,5 @@
 import styles from './ShortcutPanel.module.css'
 
-interface ShortcutPanelProps {
-  collapsed: boolean
-  onToggle(): void
-}
-
 const shortcutGroups = [
   {
     title: 'Transport',
@@ -29,6 +24,14 @@ const shortcutGroups = [
     ],
   },
   {
+    title: 'Task workflow',
+    items: [
+      ['Ctrl + Enter', 'Submit and next'],
+      ['Ctrl + Shift + Enter', 'Skip and next'],
+      ['1–9 / assigned key', 'Apply taxonomy label'],
+    ],
+  },
+  {
     title: 'Regions',
     items: [
       ['Left drag', 'Create region'],
@@ -44,43 +47,22 @@ const shortcutGroups = [
   },
 ]
 
-export function ShortcutPanel({ collapsed, onToggle }: ShortcutPanelProps) {
+export function ShortcutPanel() {
   return (
-    <aside
-      className={`${styles.root}${collapsed ? ` ${styles.collapsed}` : ''}`}
-    >
-      <button
-        className={styles.toggle}
-        type="button"
-        onClick={onToggle}
-        aria-expanded={!collapsed}
-        aria-controls="shortcut-reference"
-        title={
-          collapsed ? 'Show keyboard reference' : 'Hide keyboard reference'
-        }
-      >
-        <span className={styles.icon} aria-hidden="true">
-          ⌨
-        </span>
-        {!collapsed && <span>Shortcuts</span>}
-      </button>
-      {!collapsed && (
-        <div id="shortcut-reference" className={styles.content}>
-          {shortcutGroups.map((group) => (
-            <section className={styles.group} key={group.title}>
-              <h2 className={styles.heading}>{group.title}</h2>
-              <dl className={styles.list}>
-                {group.items.map(([keys, action]) => (
-                  <div className={styles.item} key={keys}>
-                    <dt className={styles.keys}>{keys}</dt>
-                    <dd className={styles.action}>{action}</dd>
-                  </div>
-                ))}
-              </dl>
-            </section>
-          ))}
-        </div>
-      )}
-    </aside>
+    <div className={styles.content}>
+      {shortcutGroups.map((group) => (
+        <section className={styles.group} key={group.title}>
+          <h3 className={styles.heading}>{group.title}</h3>
+          <dl className={styles.list}>
+            {group.items.map(([keys, action]) => (
+              <div className={styles.item} key={keys}>
+                <dt className={styles.keys}>{keys}</dt>
+                <dd className={styles.action}>{action}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      ))}
+    </div>
   )
 }

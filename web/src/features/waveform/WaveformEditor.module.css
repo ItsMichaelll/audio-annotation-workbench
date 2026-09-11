@@ -1,7 +1,6 @@
 .root {
   display: grid;
   min-width: 0;
-  min-height: 100%;
   grid-template-columns: minmax(0, 1fr);
 }
 
@@ -10,14 +9,53 @@
 }
 
 .stack {
-  min-height: 100%;
-  padding: 24px 18px 18px;
+  padding: 12px 24px;
 }
 
 .surface {
-  border: 1px solid #252b2e;
-  background: var(--surface-waveform);
-  box-shadow: 0 1px 0 #050606;
+  --waveform-height: 240;
+  border: 1px solid var(--border-default);
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent calc(10% - 1px),
+      rgb(65 102 232 / 6%) calc(10% - 1px),
+      rgb(65 102 232 / 6%) 10%
+    ),
+    var(--surface-waveform);
+}
+
+.surface:focus-visible,
+.surface:focus-within {
+  outline: 2px solid var(--focus-ring-color);
+  outline-offset: 3px;
+}
+
+.overviewHeader {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  color: var(--text-tertiary);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+}
+
+.overviewHeader > :last-child {
+  letter-spacing: 0;
+}
+
+.surface > :global(div)::part(region-content) {
+  max-width: 100%;
+  overflow: hidden;
+  padding: 4px 6px;
+  border-radius: 0;
+  background: rgb(255 255 255 / 92%);
+  color: var(--text-primary);
+  font-size: 10px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* WaveSurfer appends one generated shadow host directly under this wrapper. */
@@ -31,9 +69,9 @@
 }
 
 .minimap {
-  margin-top: 10px;
-  border: 1px solid #252b2e;
-  background: #0e1112;
+  margin-top: 7px;
+  border: 1px solid var(--border-default);
+  background: var(--surface-control);
 }
 
 .minimap > :global([part~='minimap']) {
@@ -51,10 +89,10 @@
   height: 12px;
   overflow-x: auto;
   overflow-y: hidden;
-  border: 1px solid #252b2e;
+  border: 1px solid var(--border-default);
   border-top: 0;
-  background: #0e1112;
-  scrollbar-color: #465158 #161a1c;
+  background: var(--surface-panel-raised);
+  scrollbar-color: var(--border-strong) var(--surface-panel-raised);
   scrollbar-width: thin;
 }
 
@@ -73,17 +111,17 @@
 }
 
 .scrollbar::-webkit-scrollbar-track {
-  background: #161a1c;
+  background: var(--surface-panel-raised);
 }
 
 .scrollbar::-webkit-scrollbar-thumb {
-  border: 2px solid #161a1c;
+  border: 2px solid var(--surface-panel-raised);
   border-radius: var(--radius-pill);
-  background: #465158;
+  background: var(--border-strong);
 }
 
 .scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #59666e;
+  background: var(--text-secondary);
 }
 
 .scrollbarTrack {
@@ -93,7 +131,7 @@
 .spectrogram {
   margin-top: 10px;
   overflow: hidden;
-  border: 1px solid #252b2e;
+  border: 1px solid var(--border-default);
   background: #0e1112;
 }
 
@@ -103,13 +141,13 @@
   align-items: center;
   justify-content: space-between;
   padding: 5px 8px 5px 12px;
-  border-bottom: 1px solid #252b2e;
+  border-bottom: 1px solid var(--border-default);
   background: var(--surface-panel);
 }
 
 .spectrogramTitle {
   margin: 0;
-  color: #cfd6d9;
+  color: var(--text-primary);
   font-size: 11px;
   font-weight: 650;
   letter-spacing: 0.055em;
@@ -164,16 +202,34 @@
 }
 
 .spectrogramAxisUnit {
-  color: var(--text-secondary);
+  color: #a6b1b8;
   font-size: 8px;
 }
 
-@media (max-height: 720px) {
+@media (min-height: 950px) {
+  .surface {
+    --waveform-height: 360;
+  }
+}
+
+@media (max-height: 820px) {
+  .surface {
+    --waveform-height: 180;
+  }
+}
+
+@media (max-width: 1000px) {
+  .withMeter {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 700px) {
   .stack {
-    padding-top: 14px;
+    padding: 16px;
   }
 
-  .surface > :global(div) {
-    max-height: 260px;
+  .surface {
+    --waveform-height: 200;
   }
 }

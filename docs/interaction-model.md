@@ -36,9 +36,26 @@ forms, and browser history.
 
 ## Transport controls
 
-The transport bar includes Previous Region and Next Region controls alongside the existing playback, zoom, region, and analysis controls. Region navigation is chronological, does not wrap or autoplay, selects and reveals the destination, and seeks to its start.
+The persistent transport dock below the scrolling workspace groups playback, a prominent timecode,
+previous/next region navigation, loop, deletion, time zoom, fit, and amplitude
+reset. Analysis toggles sit above the waveform. Region navigation is
+chronological, does not wrap or autoplay, selects and reveals the destination,
+and seeks to its start.
 
-Loop and Delete are disabled when no region is selected. Reset V-Scale restores `1.00`. Undo and redo remain available through `Ctrl+Z`, `Ctrl+Y`, and `Ctrl+Shift+Z`; they are not transport buttons.
+Loop and Delete are disabled when no region is selected. The amplitude control
+restores `1.00×`. Undo and redo are available in the region ledger and through
+`Ctrl+Z`, `Ctrl+Y`, and `Ctrl+Shift+Z`.
+
+The chronological region ledger selects and reveals an interval. Add region
+creates a one-second interval at the playhead, clamped to the recording, and
+selects it without autoplay. Start and end fields accept seconds and commit
+one undoable edit on blur or Enter. Invalid bounds restore the previous value
+and show an inline error.
+
+The task inspector is collapsible and resizable on desktop; below 700 px it
+follows the audio workspace. Region, Clip & info, and Guide tabs separate
+interval labels and timing from whole-recording labels, notes, metadata, and
+project instructions. Shared keyboard help opens in a focus-contained modal.
 
 ## Pointer precedence
 
@@ -90,7 +107,7 @@ Loop is scoped to the selected region. Selecting a different region enables loop
 
 ## Analysis panels
 
-Spectrum, Spectrogram, and Meter visibility are independent. Their toggle buttons follow Loop and Delete in the transport bar, and each view has its own top-right close button. Below the waveform, the fixed order is minimap, reserved minimap scrollbar, spectrogram, then spectrum analyzer. Meter occupies a fixed rail to the right of that stack, never inside a horizontally scrolling viewport. Disabled views are removed from layout. Enabling Spectrum Analyzer or Meter creates the shared Web Audio graph after that user interaction. Freeze stops spectrum sampling and drawing without changing transport. Pausing preserves the latest analysis frame. Peak Hold is enabled by default, holds maxima for 400 ms, and then decays at 12 dB per second so recent narrow resonances remain readable without becoming stale. Fast (`0.35`), Balanced (`0.72`), and Smooth (`0.88`) alter only `AnalyserNode.smoothingTimeConstant`; they do not alter the audible signal.
+Spectrum, Spectrogram, and Meter visibility are independent. Their toggle buttons sit in the analysis toolbar above the waveform, and each view has its own top-right close button. Below the waveform, the fixed order is minimap, reserved minimap scrollbar, spectrogram, then spectrum analyzer. Meter occupies a rail to the right of that stack on wide screens and follows the stack at narrower widths, never inside a horizontally scrolling viewport. Playback controls remain visible in the dock outside the scrolling workspace. Disabled views are removed from layout. Enabling Spectrum Analyzer or Meter creates the shared Web Audio graph after that user interaction. Freeze stops spectrum sampling and drawing without changing transport. Pausing preserves the latest analysis frame. Peak Hold is enabled by default, holds maxima for 400 ms, and then decays at 12 dB per second so recent narrow resonances remain readable without becoming stale. Fast (`0.35`), Balanced (`0.72`), and Smooth (`0.88`) alter only `AnalyserNode.smoothingTimeConstant`; they do not alter the audible signal.
 
 The hover cursor uses the same logarithmic frequency and linear decibel mapping as the plotted trace. Hiding the panel removes it from layout and cancels its animation callback. Loading a different file resets all analyzer display and control state.
 
