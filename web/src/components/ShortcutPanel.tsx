@@ -1,48 +1,10 @@
 import styles from './ShortcutPanel.module.css'
+import { EDITOR_SHORTCUT_GROUPS } from './editorShortcuts'
 
 interface ShortcutPanelProps {
   collapsed: boolean
   onToggle(): void
 }
-
-const shortcutGroups = [
-  {
-    title: 'Transport',
-    items: [
-      ['Space', 'Play / pause'],
-      ['← / →', 'Step 50 ms'],
-      ['Shift + ← / →', 'Step 250 ms'],
-      ['A / D', 'Step 1 second'],
-      ['Home / End', 'File bounds'],
-    ],
-  },
-  {
-    title: 'View',
-    items: [
-      ['Wheel', 'Zoom at pointer'],
-      ['Alt + wheel', 'Scale waveform height'],
-      ['Shift + wheel', 'Pan or nudge selected region'],
-      ['Middle drag', 'Pan'],
-      ['Alt + left drag', 'Pan'],
-      ['F', 'Fit file'],
-      ['+ / −', 'Zoom at playhead'],
-    ],
-  },
-  {
-    title: 'Regions',
-    items: [
-      ['Left drag', 'Create region'],
-      ['Double-click', 'Play region'],
-      ['Ctrl + ← / →', 'Previous / next region'],
-      ['L', 'Toggle loop'],
-      ['Delete / Backspace', 'Delete region'],
-      ['Ctrl + D', 'Delete region'],
-      ['Escape', 'Clear selection'],
-      ['Ctrl + Z', 'Undo'],
-      ['Ctrl + Y', 'Redo'],
-    ],
-  },
-]
 
 export function ShortcutPanel({ collapsed, onToggle }: ShortcutPanelProps) {
   return (
@@ -66,7 +28,7 @@ export function ShortcutPanel({ collapsed, onToggle }: ShortcutPanelProps) {
       </button>
       {!collapsed && (
         <div id="shortcut-reference" className={styles.content}>
-          {shortcutGroups.map((group) => (
+          {EDITOR_SHORTCUT_GROUPS.map((group) => (
             <section className={styles.group} key={group.title}>
               <h2 className={styles.heading}>{group.title}</h2>
               <dl className={styles.list}>

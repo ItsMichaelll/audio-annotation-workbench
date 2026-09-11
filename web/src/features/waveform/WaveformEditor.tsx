@@ -15,6 +15,11 @@ import RegionsPlugin, {
 import WindowedSpectrogramPlugin from 'wavesurfer.js/dist/plugins/spectrogram-windowed.esm.js'
 import TimelinePlugin from 'wavesurfer.js/dist/plugins/timeline.esm.js'
 import ZoomPlugin from 'wavesurfer.js/dist/plugins/zoom.esm.js'
+import type { MarkerAnnotation } from '../../domain/models'
+import {
+  normalizeMarkerTime,
+  seekToMarkerWithoutPlaybackChange,
+} from '../../domain/marker'
 import type { RegionMetadata } from '../../domain/region'
 import {
   clampRegionEdit,
@@ -44,8 +49,15 @@ import {
   steppedZoom,
 } from '../../domain/zoom'
 import styles from './WaveformEditor.module.css'
+import {
+  markerRegionOptions,
+  markerShapePresentation,
+  type WaveformEntityKind,
+  waveformEntityKind,
+} from './markerRegion'
 
 const REGION_COLOR = 'rgba(70, 144, 255, 0.28)'
+const MARKER_COLOR = '#FFDF7D'
 const WARNING_COLOR = '#ffa500'
 const REGION_WHEEL_NUDGE_RATIO = 0.1
 const SPECTROGRAM_FREQUENCY_LABELS = [
@@ -81,22 +93,93 @@ function applyRegionHandlePresentation(region: Region): void {
   if (rightHandle) rightHandle.style.borderRight = 'none'
 }
 
+function applyMarkerPresentation(
+  region: Region,
+  label: string,
+  selected: boolean,
+  readOnly: boolean,
+): void {
+  if (!region.element) return
+  const presentation = markerShapePresentation(selected)
+  const line =
+    region.element.querySelector<HTMLElement>('[data-marker-part="line"]') ??
+    region.element.ownerDocument.createElement('span')
+  const cap =
+    region.element.querySelector<HTMLElement>('[data-marker-part="cap"]') ??
+    region.element.ownerDocument.createElement('span')
+  if (!line.isConnected) {
+    line.dataset.markerPart = 'line'
+    line.setAttribute('aria-hidden', 'true')
+    region.element.append(line)
+  }
+  if (!cap.isConnected) {
+    cap.dataset.markerPart = 'cap'
+    cap.setAttribute('aria-hidden', 'true')
+    region.element.append(cap)
+  }
+  region.element.dataset.selected = String(selected)
+  region.element.setAttribute('role', 'button')
+  region.element.setAttribute('aria-label', label)
+  region.element.setAttribute('aria-pressed', String(selected))
+  region.element.setAttribute('title', label)
+  region.element.tabIndex = -1
+  region.element.style.cursor = readOnly ? 'pointer' : 'ew-resize'
+  region.element.style.width = `${presentation.hitTargetWidthPx}px`
+  region.element.style.minWidth = `${presentation.hitTargetWidthPx}px`
+  region.element.style.overflow = 'visible'
+  region.element.style.border = '0'
+  region.element.style.background = 'transparent'
+  region.element.style.boxShadow = 'none'
+  region.element.style.outline = 'none'
+  region.element.style.transform = `translateX(-${presentation.hitTargetWidthPx / 2}px)`
+  region.element.style.zIndex = selected ? '3' : '2'
+
+  line.style.position = 'absolute'
+  line.style.top = '0'
+  line.style.bottom = '0'
+  line.style.left = '50%'
+  line.style.width = `${presentation.lineWidthPx}px`
+  line.style.background = MARKER_COLOR
+  line.style.boxShadow = selected
+    ? `0 0 ${presentation.shadowBlurPx}px ${MARKER_COLOR}`
+    : 'none'
+  line.style.pointerEvents = 'none'
+  line.style.transform = 'translateX(-50%)'
+
+  cap.style.position = 'absolute'
+  cap.style.top = '0'
+  cap.style.left = '50%'
+  cap.style.width = `${presentation.capWidthPx}px`
+  cap.style.height = `${presentation.capHeightPx}px`
+  cap.style.background = MARKER_COLOR
+  cap.style.clipPath = 'polygon(0 0, 100% 0, 50% 100%)'
+  cap.style.filter = selected
+    ? `drop-shadow(0 0 ${presentation.shadowBlurPx}px ${MARKER_COLOR})`
+    : 'none'
+  cap.style.pointerEvents = 'none'
+  cap.style.transform = 'translateX(-50%)'
+}
+
 export interface WaveformEditorHandle {
   activateMeter(): void
   activateSpectrum(): void
   fit(): void
+  getCurrentTime(): number
   playPause(): void
   resetVerticalScale(): void
   seekBy(seconds: number): void
   seekTo(seconds: number): void
   revealRegion(start: number, end: number): void
+  seekToMarker(time: number): void
   zoom(direction: 'in' | 'out'): void
 }
 
 interface WaveformEditorProps {
   audioUrl: string
   regions: readonly RegionMetadata[]
+  markers: readonly MarkerAnnotation[]
   selectedRegionId: string | null
+  selectedMarkerId: string | null
   loopEnabled: boolean
   meterEnabled: boolean
   spectrumEnabled: boolean
@@ -114,7 +197,11 @@ interface WaveformEditorProps {
   onRegionLiveChange(region: RegionMetadata): void
   onRegionCommit(region: RegionMetadata): void
   onRegionSelect(regionId: string): void
+  onMarkerCommit(marker: MarkerAnnotation): void
+  onMarkerSelect(markerId: string): void
   onClearRegionSelection(): void
+  onClearMarkerSelection(): void
+  onEditorFocusChange(focused: boolean): void
   onHideSpectrogram(): void
   onHideSpectrum(): void
   onHideMeter(): void
@@ -132,7 +219,10 @@ interface CallbackBundle {
   onRegionLiveChange: WaveformEditorProps['onRegionLiveChange']
   onRegionCommit: WaveformEditorProps['onRegionCommit']
   onRegionSelect: WaveformEditorProps['onRegionSelect']
+  onMarkerCommit: WaveformEditorProps['onMarkerCommit']
+  onMarkerSelect: WaveformEditorProps['onMarkerSelect']
   onClearRegionSelection: WaveformEditorProps['onClearRegionSelection']
+  onClearMarkerSelection: WaveformEditorProps['onClearMarkerSelection']
 }
 
 function regionMetadata(
@@ -149,6 +239,14 @@ function regionMetadata(
   }
 }
 
+function markerMetadata(
+  region: Region,
+  duration: number,
+): MarkerAnnotation | null {
+  const time = normalizeMarkerTime(region.start, duration)
+  return time === null ? null : { id: region.id, time }
+}
+
 function errorMessage(error: unknown): string {
   if (error instanceof Error && error.message.trim()) return error.message
   return 'The browser could not decode or play this audio file.'
@@ -161,7 +259,9 @@ export const WaveformEditor = forwardRef<
   {
     audioUrl,
     regions,
+    markers,
     selectedRegionId,
+    selectedMarkerId,
     loopEnabled,
     meterEnabled,
     spectrumEnabled,
@@ -179,7 +279,11 @@ export const WaveformEditor = forwardRef<
     onRegionLiveChange,
     onRegionCommit,
     onRegionSelect,
+    onMarkerCommit,
+    onMarkerSelect,
     onClearRegionSelection,
+    onClearMarkerSelection,
+    onEditorFocusChange,
     onHideSpectrogram,
     onHideSpectrum,
     onHideMeter,
@@ -194,11 +298,13 @@ export const WaveformEditor = forwardRef<
   const scrollbarTrackElementRef = useRef<HTMLDivElement>(null)
   const wavesurferRef = useRef<WaveSurfer | null>(null)
   const regionsPluginRef = useRef<RegionsPlugin | null>(null)
+  const entityKindsRef = useRef(new Map<string, WaveformEntityKind>())
   const synchronizationRef = useRef(false)
   const lastValidRegionsRef = useRef(
     new Map<string, Pick<RegionMetadata, 'start' | 'end'>>(),
   )
   const selectedRegionIdRef = useRef(selectedRegionId)
+  const selectedMarkerIdRef = useRef(selectedMarkerId)
   const loopEnabledRef = useRef(loopEnabled)
   const spectrumEnabledRef = useRef(spectrumEnabled)
   const meterEnabledRef = useRef(meterEnabled)
@@ -217,7 +323,10 @@ export const WaveformEditor = forwardRef<
     onRegionLiveChange,
     onRegionCommit,
     onRegionSelect,
+    onMarkerCommit,
+    onMarkerSelect,
     onClearRegionSelection,
+    onClearMarkerSelection,
   })
   const [instanceVersion, setInstanceVersion] = useState(0)
   const [spectrogramMaxFrequency, setSpectrogramMaxFrequency] = useState(24_000)
@@ -256,9 +365,13 @@ export const WaveformEditor = forwardRef<
     onRegionLiveChange,
     onRegionCommit,
     onRegionSelect,
+    onMarkerCommit,
+    onMarkerSelect,
     onClearRegionSelection,
+    onClearMarkerSelection,
   }
   selectedRegionIdRef.current = selectedRegionId
+  selectedMarkerIdRef.current = selectedMarkerId
   loopEnabledRef.current = loopEnabled
   spectrumEnabledRef.current = spectrumEnabled
   meterEnabledRef.current = meterEnabled
@@ -287,6 +400,9 @@ export const WaveformEditor = forwardRef<
         if (fittedZoom <= 0) return
         wavesurfer.zoom(fittedZoom)
         wavesurfer.setScroll(0)
+      },
+      getCurrentTime() {
+        return wavesurferRef.current?.getCurrentTime() ?? 0
       },
       playPause() {
         const wavesurfer = wavesurferRef.current
@@ -360,6 +476,37 @@ export const WaveformEditor = forwardRef<
           ),
         )
       },
+      seekToMarker(time: number) {
+        const wavesurfer = wavesurferRef.current
+        if (!wavesurfer) return
+        const duration = wavesurfer.getDuration()
+        const scrollContainer = wavesurfer.getWrapper().parentElement
+        if (!scrollContainer || duration <= 0) return
+        const bounded = seekToMarkerWithoutPlaybackChange(
+          time,
+          duration,
+          (markerTime) => wavesurfer.setTime(markerTime),
+        )
+        if (bounded === null) return
+        const pixelsPerSecond = Math.max(
+          wavesurfer.options.minPxPerSec,
+          scrollContainer.clientWidth / duration,
+        )
+        const markerX = bounded * pixelsPerSecond
+        const viewportStart = scrollContainer.scrollLeft
+        const viewportEnd = viewportStart + scrollContainer.clientWidth
+        if (markerX >= viewportStart && markerX <= viewportEnd) return
+        wavesurfer.setScroll(
+          Math.min(
+            Math.max(markerX - scrollContainer.clientWidth / 2, 0),
+            maximumAudioScroll(
+              duration,
+              pixelsPerSecond,
+              scrollContainer.clientWidth,
+            ),
+          ),
+        )
+      },
       zoom(direction: 'in' | 'out') {
         const wavesurfer = wavesurferRef.current
         if (!wavesurfer) return
@@ -398,7 +545,9 @@ export const WaveformEditor = forwardRef<
     const minimapContainer = minimapElementRef.current
     if (!container || !minimapContainer) return
 
+    const entityKinds = entityKindsRef.current
     verticalScaleRef.current = 1
+    entityKinds.clear()
     pendingPlaybackRegionIdRef.current = null
     restorePlaybackAfterEmptyClickRef.current = false
     callbacksRef.current.onVerticalScaleChange(1)
@@ -406,6 +555,8 @@ export const WaveformEditor = forwardRef<
     let loadErrorReported = false
     let loopRestartQueued = false
     const regionsPlugin = RegionsPlugin.create()
+    const entityKind = (region: Region) =>
+      waveformEntityKind(entityKinds, region.id)
     const minimapPlugin = MinimapPlugin.create({
       container: minimapContainer,
       height: 52,
@@ -473,6 +624,10 @@ export const WaveformEditor = forwardRef<
       )
     }
     const selectRegion = (regionId: string) => {
+      if (selectedMarkerIdRef.current !== null) {
+        selectedMarkerIdRef.current = null
+        callbacksRef.current.onClearMarkerSelection()
+      }
       if (selectedRegionIdRef.current !== regionId) {
         selectedRegionIdRef.current = regionId
         loopEnabledRef.current = true
@@ -485,11 +640,29 @@ export const WaveformEditor = forwardRef<
       }
       callbacksRef.current.onRegionSelect(regionId)
     }
+    const selectMarker = (markerId: string) => {
+      if (selectedRegionIdRef.current !== null) {
+        selectedRegionIdRef.current = null
+        loopEnabledRef.current = false
+        pendingPlaybackRegionIdRef.current = null
+        callbacksRef.current.onClearRegionSelection()
+      }
+      selectedMarkerIdRef.current = markerId
+      callbacksRef.current.onMarkerSelect(markerId)
+    }
     const clearRegionSelection = () => {
       selectedRegionIdRef.current = null
       loopEnabledRef.current = false
       pendingPlaybackRegionIdRef.current = null
       callbacksRef.current.onClearRegionSelection()
+    }
+    const clearMarkerSelection = () => {
+      selectedMarkerIdRef.current = null
+      callbacksRef.current.onClearMarkerSelection()
+    }
+    const clearSelection = () => {
+      clearRegionSelection()
+      clearMarkerSelection()
     }
 
     const unsubscribeReady = wavesurfer.on('ready', (duration) => {
@@ -579,7 +752,7 @@ export const WaveformEditor = forwardRef<
     const seekAfterClearingSelection = (relativeX: number) => {
       const shouldContinue =
         restorePlaybackAfterEmptyClickRef.current || wavesurfer.isPlaying()
-      clearRegionSelection()
+      clearSelection()
       const duration = wavesurfer.getDuration()
       if (duration > 0) {
         wavesurfer.setTime(clampTime(relativeX * duration, duration))
@@ -639,8 +812,13 @@ export const WaveformEditor = forwardRef<
     const unsubscribeInitialized = regionsPlugin.on(
       'region-initialized',
       (region) => {
-        if (region.id.startsWith('region-')) {
-          region.setOptions({ id: crypto.randomUUID() })
+        if (entityKind(region) === 'annotation-region') {
+          region.setOptions({
+            ...(region.id.startsWith('region-')
+              ? { id: crypto.randomUUID() }
+              : {}),
+          })
+          entityKinds.set(region.id, 'annotation-region')
         }
       },
     )
@@ -680,6 +858,7 @@ export const WaveformEditor = forwardRef<
       return bounds ? clampRenderedRegion(region, bounds) : null
     }
     const unsubscribeCreated = regionsPlugin.on('region-created', (region) => {
+      if (entityKind(region) === 'marker') return
       applyRegionHandlePresentation(region)
       if (synchronizationRef.current) return
       const metadata = regionMetadata(region, wavesurfer.getDuration())
@@ -701,6 +880,22 @@ export const WaveformEditor = forwardRef<
       'region-update',
       (region, side) => {
         if (synchronizationRef.current) return
+        if (entityKind(region) === 'marker') {
+          const marker = markerMetadata(region, wavesurfer.getDuration())
+          if (
+            marker &&
+            (Math.abs(region.start - marker.time) > 1e-7 ||
+              Math.abs(region.end - marker.time) > 1e-7)
+          ) {
+            synchronizationRef.current = true
+            try {
+              region.setOptions({ start: marker.time, end: marker.time })
+            } finally {
+              synchronizationRef.current = false
+            }
+          }
+          return
+        }
         const previous = lastValidRegionsRef.current.get(region.id)
         if (activeRegionDrag?.regionId === region.id && side) {
           activeRegionDrag.resizing = true
@@ -731,6 +926,11 @@ export const WaveformEditor = forwardRef<
       'region-updated',
       (region) => {
         if (synchronizationRef.current) return
+        if (entityKind(region) === 'marker') {
+          const marker = markerMetadata(region, wavesurfer.getDuration())
+          if (marker) callbacksRef.current.onMarkerCommit(marker)
+          return
+        }
         const dragged = applyActiveRegionDrag(region)
         const bounds = dragged
           ? dragged
@@ -746,6 +946,16 @@ export const WaveformEditor = forwardRef<
       'region-clicked',
       (region, event) => {
         event.stopPropagation()
+        if (entityKind(region) === 'marker') {
+          selectMarker(region.id)
+          pendingPlaybackRegionIdRef.current = null
+          seekToMarkerWithoutPlaybackChange(
+            region.start,
+            wavesurfer.getDuration(),
+            (time) => wavesurfer.setTime(time),
+          )
+          return
+        }
         selectRegion(region.id)
         pendingPlaybackRegionIdRef.current = null
         const regionBounds = region.element?.getBoundingClientRect()
@@ -768,6 +978,16 @@ export const WaveformEditor = forwardRef<
       (region, event) => {
         event.preventDefault()
         event.stopPropagation()
+        if (entityKind(region) === 'marker') {
+          selectMarker(region.id)
+          pendingPlaybackRegionIdRef.current = null
+          seekToMarkerWithoutPlaybackChange(
+            region.start,
+            wavesurfer.getDuration(),
+            (time) => wavesurfer.setTime(time),
+          )
+          return
+        }
         selectRegion(region.id)
         pendingPlaybackRegionIdRef.current = null
         if (spectrumEnabledRef.current) void activateAudioAnalyzer()
@@ -1166,7 +1386,7 @@ export const WaveformEditor = forwardRef<
       const region = regionsPlugin
         .getRegions()
         .find((item) => item.element !== null && path.includes(item.element))
-      if (!region) return
+      if (!region || entityKind(region) === 'marker') return
       const resizing = path.some(
         (item) =>
           item instanceof Element &&
@@ -1370,6 +1590,7 @@ export const WaveformEditor = forwardRef<
       if (wavesurferRef.current === wavesurfer) wavesurferRef.current = null
       if (regionsPluginRef.current === regionsPlugin)
         regionsPluginRef.current = null
+      entityKinds.clear()
     }
   }, [activateAudioAnalyzer, activateLoudnessMeter, audioUrl, readOnly])
 
@@ -1377,6 +1598,8 @@ export const WaveformEditor = forwardRef<
     const wavesurfer = wavesurferRef.current
     const plugin = regionsPluginRef.current
     if (!wavesurfer || !plugin || wavesurfer.getDuration() <= 0) return
+    const entityKind = (region: Region) =>
+      waveformEntityKind(entityKindsRef.current, region.id)
 
     synchronizationRef.current = true
     try {
@@ -1385,15 +1608,28 @@ export const WaveformEditor = forwardRef<
         const bounds = normalizeRegion(region.start, region.end, duration)
         return bounds ? [{ ...region, ...bounds }] : []
       })
-      const expected = new Map(
-        normalizedRegions.map((region) => [region.id, region]),
-      )
+      const regionIds = new Set(normalizedRegions.map(({ id }) => id))
+      const normalizedMarkers = markers.flatMap((marker) => {
+        if (regionIds.has(marker.id)) return []
+        const time = normalizeMarkerTime(marker.time, duration)
+        return time === null ? [] : [{ ...marker, time }]
+      })
+      const expectedKinds = new Map<string, WaveformEntityKind>([
+        ...normalizedRegions.map(
+          ({ id }) => [id, 'annotation-region'] as const,
+        ),
+        ...normalizedMarkers.map(({ id }) => [id, 'marker'] as const),
+      ])
       for (const regionId of lastValidRegionsRef.current.keys()) {
-        if (!expected.has(regionId))
+        if (!regionIds.has(regionId))
           lastValidRegionsRef.current.delete(regionId)
       }
       for (const renderedRegion of plugin.getRegions()) {
-        if (!expected.has(renderedRegion.id)) renderedRegion.remove()
+        const expectedKind = expectedKinds.get(renderedRegion.id)
+        if (!expectedKind || entityKind(renderedRegion) !== expectedKind) {
+          renderedRegion.remove()
+          entityKindsRef.current.delete(renderedRegion.id)
+        }
       }
 
       for (const metadata of normalizedRegions) {
@@ -1408,6 +1644,7 @@ export const WaveformEditor = forwardRef<
           metadata.id === selectedRegionId,
         )
         if (renderedRegion) {
+          entityKindsRef.current.set(metadata.id, 'annotation-region')
           renderedRegion.setOptions({
             start: metadata.start,
             end: metadata.end,
@@ -1418,6 +1655,7 @@ export const WaveformEditor = forwardRef<
             renderedRegion.element.style.boxSizing = 'border-box'
           }
         } else {
+          entityKindsRef.current.set(metadata.id, 'annotation-region')
           const addedRegion = plugin.addRegion({
             id: metadata.id,
             start: metadata.start,
@@ -1433,10 +1671,45 @@ export const WaveformEditor = forwardRef<
           }
         }
       }
+
+      const orderedMarkers = [...normalizedMarkers].sort(
+        (left, right) =>
+          left.time - right.time || left.id.localeCompare(right.id),
+      )
+      for (const [index, marker] of orderedMarkers.entries()) {
+        const selected = marker.id === selectedMarkerId
+        const label = `Marker ${index + 1} of ${orderedMarkers.length} at ${formatTime(marker.time)}`
+        const renderedMarker = plugin
+          .getRegions()
+          .find((region) => region.id === marker.id)
+        if (renderedMarker) {
+          entityKindsRef.current.set(marker.id, 'marker')
+          renderedMarker.setOptions({
+            ...markerRegionOptions(marker, readOnly),
+            color: 'transparent',
+          })
+          applyMarkerPresentation(renderedMarker, label, selected, readOnly)
+        } else {
+          entityKindsRef.current.set(marker.id, 'marker')
+          const addedMarker = plugin.addRegion({
+            id: marker.id,
+            ...markerRegionOptions(marker, readOnly),
+            color: 'transparent',
+          })
+          applyMarkerPresentation(addedMarker, label, selected, readOnly)
+        }
+      }
     } finally {
       synchronizationRef.current = false
     }
-  }, [instanceVersion, readOnly, regions, selectedRegionId])
+  }, [
+    instanceVersion,
+    markers,
+    readOnly,
+    regions,
+    selectedMarkerId,
+    selectedRegionId,
+  ])
 
   useEffect(() => {
     const wavesurfer = wavesurferRef.current
@@ -1523,7 +1796,16 @@ export const WaveformEditor = forwardRef<
         <div
           className={styles.surface}
           ref={waveformElementRef}
-          aria-label="Audio waveform. Drag empty space to create a region."
+          role="region"
+          tabIndex={0}
+          aria-label={
+            readOnly
+              ? 'Audio waveform. Submitted annotation is read-only.'
+              : 'Audio waveform. Drag empty space to create a region. Press T to create a marker.'
+          }
+          onPointerDown={(event) => event.currentTarget.focus()}
+          onFocus={() => onEditorFocusChange(true)}
+          onBlur={() => onEditorFocusChange(false)}
         />
         <div className={styles.minimap} ref={minimapElementRef} />
         <div

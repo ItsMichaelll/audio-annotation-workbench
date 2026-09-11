@@ -11,6 +11,11 @@ interface TransportBarProps {
   canDelete?: boolean
   canPreviousRegion?: boolean
   canNextRegion?: boolean
+  markerEditingEnabled?: boolean
+  canCreateMarker?: boolean
+  canPreviousMarker?: boolean
+  canNextMarker?: boolean
+  canDeleteMarker?: boolean
   verticalScale: number
   onPlayPause(): void
   onFit(): void
@@ -21,6 +26,10 @@ interface TransportBarProps {
   onDelete(): void
   onPreviousRegion?(): void
   onNextRegion?(): void
+  onCreateMarker?(): void
+  onPreviousMarker?(): void
+  onNextMarker?(): void
+  onDeleteMarker?(): void
   onToggleSpectrogram(): void
   onToggleSpectrum(): void
   onToggleMeter(): void
@@ -37,6 +46,11 @@ export function TransportBar({
   canDelete = hasSelection,
   canPreviousRegion = false,
   canNextRegion = false,
+  markerEditingEnabled = false,
+  canCreateMarker = false,
+  canPreviousMarker = false,
+  canNextMarker = false,
+  canDeleteMarker = false,
   verticalScale,
   onPlayPause,
   onFit,
@@ -47,6 +61,10 @@ export function TransportBar({
   onDelete,
   onPreviousRegion,
   onNextRegion,
+  onCreateMarker,
+  onPreviousMarker,
+  onNextMarker,
+  onDeleteMarker,
   onToggleSpectrogram,
   onToggleSpectrum,
   onToggleMeter,
@@ -105,6 +123,55 @@ export function TransportBar({
           >
             Next Region
           </button>
+          <span className={styles.divider} aria-hidden="true" />
+        </>
+      )}
+      {onPreviousMarker && onNextMarker && (
+        <>
+          <button
+            className={styles.control}
+            type="button"
+            onClick={onPreviousMarker}
+            disabled={!isLoaded || !canPreviousMarker}
+            aria-label="Previous marker"
+            title="Previous marker (Shift+Tab while waveform is focused)"
+          >
+            Previous Marker
+          </button>
+          <button
+            className={styles.control}
+            type="button"
+            onClick={onNextMarker}
+            disabled={!isLoaded || !canNextMarker}
+            aria-label="Next marker"
+            title="Next marker (Tab while waveform is focused)"
+          >
+            Next Marker
+          </button>
+          {markerEditingEnabled && onCreateMarker && onDeleteMarker && (
+            <>
+              <button
+                className={styles.control}
+                type="button"
+                onClick={onCreateMarker}
+                disabled={!canCreateMarker}
+                aria-label="Create marker at playhead"
+                title="Create marker at playhead (T while waveform is focused)"
+              >
+                Create Marker
+              </button>
+              <button
+                className={styles.control}
+                type="button"
+                onClick={onDeleteMarker}
+                disabled={!canDeleteMarker}
+                aria-label="Delete selected marker"
+                title="Delete selected marker (Delete, Backspace, or Ctrl+D)"
+              >
+                Delete Marker
+              </button>
+            </>
+          )}
           <span className={styles.divider} aria-hidden="true" />
         </>
       )}

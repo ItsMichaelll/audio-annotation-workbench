@@ -77,6 +77,33 @@ describe('SnapshotHistory', () => {
     })
   })
 
+  it('undoes and redoes marker creation and committed drag timestamps', () => {
+    const initial = createAnnotationDocument({
+      id: 'a',
+      projectId: 'p',
+      taskId: 't',
+      taxonomyVersionId: 'v1',
+      now: 'now',
+    })
+    const history = new SnapshotHistory(initial, annotationsEqual)
+    const created = {
+      ...initial,
+      revision: 1,
+      markers: [{ id: 'marker', time: 1 }],
+    }
+    history.commit(created)
+    history.commit({
+      ...created,
+      revision: 2,
+      markers: [{ id: 'marker', time: 2.5 }],
+    })
+
+    expect(history.undo().present.markers).toEqual([{ id: 'marker', time: 1 }])
+    expect(history.redo().present.markers).toEqual([
+      { id: 'marker', time: 2.5 },
+    ])
+  })
+
   it('clamps restored undo and redo snapshots to the loaded duration', () => {
     const initial = createAnnotationDocument({
       id: 'a',

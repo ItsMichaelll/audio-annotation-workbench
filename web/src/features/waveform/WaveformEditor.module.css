@@ -25,6 +25,14 @@
   scrollbar-width: none;
 }
 
+.surface:focus-visible,
+.surface > :global(div)::part(scroll):focus,
+.surface > :global(div)::part(scroll):focus-visible,
+.surface > :global(div)::part(wrapper):focus,
+.surface > :global(div)::part(wrapper):focus-visible {
+  outline: none;
+}
+
 .panning > :global(div)::part(scroll) {
   cursor: grabbing;
   user-select: none;

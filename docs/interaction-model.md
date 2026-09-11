@@ -79,6 +79,12 @@ input, textarea, select, button, or editable element has focus.
 `Ctrl+Left` and `Ctrl+Right` select the previous or next chronological region,
 reveal it in the waveform viewport, and seek to its start without autoplaying.
 
+With waveform editor focus, `T` creates a marker at the playhead, `Tab` and
+`Shift+Tab` select and seek between markers, and `Delete` or `Backspace` removes
+the selected marker. Boundary Tab navigation yields to normal browser focus
+movement. `Ctrl+D` deletes the selected region or marker through the existing
+application shortcut scope.
+
 `Ctrl+Enter` runs normal submission validation and empty-annotation
 confirmation before submitting and advancing. `Ctrl+Shift+Enter` flushes the
 draft, skips the task, and advances. Navigation is stopped when a required save

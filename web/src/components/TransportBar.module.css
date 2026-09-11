@@ -6,6 +6,8 @@
   padding: 6px 10px;
   border-bottom: 1px solid var(--border-default);
   background: #171a1d;
+  overflow-x: auto;
+  white-space: nowrap;
 }
 
 .control {

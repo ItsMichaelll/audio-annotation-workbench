@@ -1,3 +1,4 @@
+import type { MarkerAnnotation } from '../domain/models'
 import type { RegionMetadata } from '../domain/region'
 import { formatTime } from '../domain/transport'
 import styles from './StatusReadout.module.css'
@@ -10,13 +11,26 @@ interface StatusReadoutProps {
   verticalScale: number
   isPlaying: boolean
   selectedRegion: RegionMetadata | null
+  selectedMarker: MarkerAnnotation | null
+  selectedMarkerOrdinal: number | null
+  markerCount: number
 }
 
-function Readout({ label, value }: { label: string; value: string }) {
+function Readout({
+  label,
+  value,
+  live = false,
+}: {
+  label: string
+  value: string
+  live?: boolean
+}) {
   return (
     <div className={styles.readout}>
       <span className={styles.label}>{label}</span>
-      <output className={styles.value}>{value}</output>
+      <output className={styles.value} aria-live={live ? 'polite' : undefined}>
+        {value}
+      </output>
     </div>
   )
 }
@@ -29,6 +43,9 @@ export function StatusReadout({
   verticalScale,
   isPlaying,
   selectedRegion,
+  selectedMarker,
+  selectedMarkerOrdinal,
+  markerCount,
 }: StatusReadoutProps) {
   return (
     <section className={styles.root} aria-label="Audio and selection status">
@@ -60,6 +77,15 @@ export function StatusReadout({
           selectedRegion
             ? formatTime(selectedRegion.end - selectedRegion.start)
             : '—'
+        }
+      />
+      <Readout
+        label="Marker"
+        live
+        value={
+          selectedMarker && selectedMarkerOrdinal
+            ? `Marker ${selectedMarkerOrdinal} of ${markerCount} · ${formatTime(selectedMarker.time)}`
+            : `${markerCount} ${markerCount === 1 ? 'marker' : 'markers'}`
         }
       />
     </section>

@@ -312,8 +312,11 @@ fixture rules.
 | F | Fit the complete waveform |
 | + / - | Zoom around the visible playhead or viewport center |
 | L | Toggle selected-region looping |
-| Delete / Backspace or Ctrl + D | Delete the selected region |
-| Escape | Clear region selection |
+| Delete / Backspace | Delete the selected region or focused selected marker |
+| Ctrl + D | Delete the selected region or marker |
+| T | Create a marker at the playhead while the waveform is focused |
+| Tab / Shift + Tab | Select and seek to the next / previous marker while the waveform is focused |
+| Escape | Clear region or marker selection |
 | Ctrl + Z | Undo region edit |
 | Ctrl + Y or Ctrl + Shift + Z | Redo region edit |
 

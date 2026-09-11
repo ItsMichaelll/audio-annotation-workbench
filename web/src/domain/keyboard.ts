@@ -5,13 +5,15 @@ export type EditorCommand =
   | { type: 'fit' }
   | { type: 'zoom'; direction: 'in' | 'out' }
   | { type: 'toggle-loop' }
-  | { type: 'delete-region' }
+  | { type: 'delete-selection'; markerRequiresWaveformFocus: boolean }
   | { type: 'clear-selection' }
   | { type: 'undo' }
   | { type: 'redo' }
   | { type: 'submit-next' }
   | { type: 'skip-next' }
   | { type: 'navigate-region'; direction: 'previous' | 'next' }
+  | { type: 'create-marker' }
+  | { type: 'navigate-marker'; direction: 'previous' | 'next' }
 
 export interface KeyboardCommandInput {
   key: string
@@ -42,7 +44,10 @@ export function keyboardCommand(
       return { type: 'submit-next' }
     }
     if (input.ctrlKey && key === 'd' && !input.shiftKey && !input.altKey) {
-      return { type: 'delete-region' }
+      return {
+        type: 'delete-selection',
+        markerRequiresWaveformFocus: false,
+      }
     }
     if (key === 'z' && input.shiftKey) return { type: 'redo' }
     if (key === 'z') return { type: 'undo' }
@@ -53,6 +58,13 @@ export function keyboardCommand(
   if (input.altKey) return null
 
   switch (key) {
+    case 'tab':
+      return {
+        type: 'navigate-marker',
+        direction: input.shiftKey ? 'previous' : 'next',
+      }
+    case 't':
+      return { type: 'create-marker' }
     case ' ':
       return { type: 'toggle-playback' }
     case 'arrowleft':
@@ -85,7 +97,7 @@ export function keyboardCommand(
       return { type: 'toggle-loop' }
     case 'delete':
     case 'backspace':
-      return { type: 'delete-region' }
+      return { type: 'delete-selection', markerRequiresWaveformFocus: true }
     case 'escape':
       return { type: 'clear-selection' }
     default:
@@ -100,6 +112,13 @@ export function keyboardCommand(
 export function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
   return isEditableElement(target.tagName, target.isContentEditable)
+}
+
+export function isDialogTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof Element &&
+    target.closest('dialog, [role="dialog"]') !== null
+  )
 }
 
 export function isEditableElement(

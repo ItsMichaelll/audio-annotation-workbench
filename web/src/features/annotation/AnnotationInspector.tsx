@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { CustomSelectField } from '../../components/CustomSelect'
+import { EDITOR_SHORTCUT_GROUPS } from '../../components/editorShortcuts'
 import {
   clampInspectorWidth,
   DEFAULT_INSPECTOR_WIDTH,
@@ -431,45 +432,19 @@ export function AnnotationInspector(props: AnnotationInspectorProps) {
             aria-labelledby={`${tabId}-shortcuts-tab`}
             className={styles.shortcutReference}
           >
-            <h3 className={styles.shortcutTitle}>Transport and regions</h3>
-            <dl className={styles.shortcutList}>
-              <div className={styles.shortcutItem}>
-                <dt className={styles.shortcutKeys}>Space</dt>
-                <dd className={styles.shortcutAction}>Play / pause</dd>
-              </div>
-              <div className={styles.shortcutItem}>
-                <dt className={styles.shortcutKeys}>← / →</dt>
-                <dd className={styles.shortcutAction}>Step playhead</dd>
-              </div>
-              <div className={styles.shortcutItem}>
-                <dt className={styles.shortcutKeys}>Ctrl + ← / →</dt>
-                <dd className={styles.shortcutAction}>
-                  Previous / next region
-                </dd>
-              </div>
-              <div className={styles.shortcutItem}>
-                <dt className={styles.shortcutKeys}>F</dt>
-                <dd className={styles.shortcutAction}>Fit file</dd>
-              </div>
-              <div className={styles.shortcutItem}>
-                <dt className={styles.shortcutKeys}>+ / −</dt>
-                <dd className={styles.shortcutAction}>Zoom</dd>
-              </div>
-              <div className={styles.shortcutItem}>
-                <dt className={styles.shortcutKeys}>L</dt>
-                <dd className={styles.shortcutAction}>Toggle loop</dd>
-              </div>
-              <div className={styles.shortcutItem}>
-                <dt className={styles.shortcutKeys}>Delete</dt>
-                <dd className={styles.shortcutAction}>
-                  Delete selected region
-                </dd>
-              </div>
-              <div className={styles.shortcutItem}>
-                <dt className={styles.shortcutKeys}>Ctrl + Z / Y</dt>
-                <dd className={styles.shortcutAction}>Undo / redo</dd>
-              </div>
-            </dl>
+            {EDITOR_SHORTCUT_GROUPS.map((group) => (
+              <section key={group.title}>
+                <h3 className={styles.shortcutTitle}>{group.title}</h3>
+                <dl className={styles.shortcutList}>
+                  {group.items.map(([keys, action]) => (
+                    <div className={styles.shortcutItem} key={keys}>
+                      <dt className={styles.shortcutKeys}>{keys}</dt>
+                      <dd className={styles.shortcutAction}>{action}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            ))}
             <h3 className={styles.shortcutTitle}>Workflow</h3>
             <dl className={styles.shortcutList}>
               <div className={styles.shortcutItem}>

@@ -2,7 +2,7 @@ export const PROJECT_SCHEMA_VERSION = 1 as const
 export const TAXONOMY_RECORD_SCHEMA_VERSION = 1 as const
 export const INSTRUCTIONS_SCHEMA_VERSION = 1 as const
 export const TASK_SCHEMA_VERSION = 1 as const
-export const ANNOTATION_SCHEMA_VERSION = 1 as const
+export const ANNOTATION_SCHEMA_VERSION = 2 as const
 
 export type ProjectStatus = 'active' | 'archived'
 
@@ -120,6 +120,11 @@ export interface RegionAnnotation {
   notes?: string
 }
 
+export interface MarkerAnnotation {
+  id: string
+  time: number
+}
+
 export interface AnnotationDocument {
   id: string
   schemaVersion: typeof ANNOTATION_SCHEMA_VERSION
@@ -128,6 +133,7 @@ export interface AnnotationDocument {
   taxonomyVersionId: string
   revision: number
   regions: RegionAnnotation[]
+  markers: MarkerAnnotation[]
   clipAssignments: LabelAssignment[]
   taskNotes?: string
   createdAt: string

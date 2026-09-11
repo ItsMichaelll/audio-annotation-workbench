@@ -1,6 +1,8 @@
 .root {
   display: grid;
-  grid-template-columns: minmax(200px, 1.6fr) repeat(8, minmax(82px, 0.7fr));
+  grid-template-columns:
+    minmax(200px, 1.6fr) repeat(8, minmax(82px, 0.7fr))
+    minmax(180px, 1.2fr);
   min-height: 49px;
   border-bottom: 1px solid var(--border-default);
   background: var(--surface-panel);
