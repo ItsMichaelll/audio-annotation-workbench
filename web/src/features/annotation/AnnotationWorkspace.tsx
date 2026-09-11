@@ -16,10 +16,19 @@ import {
 import { AutosaveRevisionGate } from '../../domain/autosave'
 import { SnapshotHistory, type HistoryState } from '../../domain/history'
 import {
+  isDialogTarget,
   isEditableTarget,
   keyboardCommand,
   labelingShortcut,
 } from '../../domain/keyboard'
+import {
+  addMarker,
+  adjacentMarker,
+  MARKER_TIME_TOLERANCE_SECONDS,
+  markerOrdinal,
+  removeMarker,
+  updateMarker,
+} from '../../domain/marker'
 import {
   getMediaSourceRegistry,
   registerRelinkSessionFile,
@@ -27,6 +36,7 @@ import {
 import type {
   AnnotationDocument,
   LabelAssignment,
+  MarkerAnnotation,
   ProjectAggregate,
   TaskRecord,
   TaxonomyVersion,
@@ -231,6 +241,8 @@ function ActiveAnnotationWorkspace({
   )
   const [audioError, setAudioError] = useState<string | null>(null)
   const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null)
+  const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null)
+  const [waveformFocused, setWaveformFocused] = useState(false)
   const [loopEnabled, setLoopEnabled] = useState(false)
   const [spectrumEnabled, setSpectrumEnabled] = useState(false)
   const [spectrogramEnabled, setSpectrogramEnabled] = useState(false)
@@ -250,18 +262,54 @@ function ActiveAnnotationWorkspace({
   )
   const selectedRegion =
     regions.find((region) => region.id === selectedRegionId) ?? null
+  const markers = annotation.markers
+  const selectedMarker =
+    markers.find((marker) => marker.id === selectedMarkerId) ?? null
+  const selectedMarkerOrdinal = markerOrdinal(markers, selectedMarkerId)
   const previousRegion = adjacentRegion(regions, selectedRegionId, 'previous')
   const nextRegion = adjacentRegion(regions, selectedRegionId, 'next')
+  const previousMarker = adjacentMarker(
+    markers,
+    selectedMarkerId,
+    currentTime,
+    'previous',
+  )
+  const nextMarker = adjacentMarker(
+    markers,
+    selectedMarkerId,
+    currentTime,
+    'next',
+  )
 
   const navigateRegion = useCallback(
     (direction: 'previous' | 'next') => {
       const destination = adjacentRegion(regions, selectedRegionId, direction)
       if (!destination) return
+      setSelectedMarkerId(null)
       setSelectedRegionId(destination.id)
       setLoopEnabled(true)
       waveformRef.current?.revealRegion(destination.start, destination.end)
     },
     [regions, selectedRegionId],
+  )
+
+  const navigateMarker = useCallback(
+    (direction: 'previous' | 'next'): boolean => {
+      const playhead = waveformRef.current?.getCurrentTime() ?? currentTime
+      const destination = adjacentMarker(
+        documentRef.current.markers,
+        selectedMarkerId,
+        playhead,
+        direction,
+      )
+      if (!destination) return false
+      setSelectedRegionId(null)
+      setLoopEnabled(false)
+      setSelectedMarkerId(destination.id)
+      waveformRef.current?.seekToMarker(destination.time)
+      return true
+    },
+    [currentTime, selectedMarkerId],
   )
 
   useEffect(() => {
@@ -329,10 +377,23 @@ function ActiveAnnotationWorkspace({
       const rebased = { ...bounded, revision: ++revisionRef.current }
       documentRef.current = rebased
       setAnnotation(rebased)
+      if (
+        selectedRegionId &&
+        !rebased.regions.some((region) => region.id === selectedRegionId)
+      ) {
+        setSelectedRegionId(null)
+        setLoopEnabled(false)
+      }
+      if (
+        selectedMarkerId &&
+        !rebased.markers.some((marker) => marker.id === selectedMarkerId)
+      ) {
+        setSelectedMarkerId(null)
+      }
       setSaveState('Unsaved')
       setSaveError(null)
     },
-    [duration],
+    [duration, selectedMarkerId, selectedRegionId],
   )
 
   const commit = useCallback(
@@ -604,6 +665,46 @@ function ActiveAnnotationWorkspace({
     setLoopEnabled(false)
   }, [commit, selectedRegionId])
 
+  const createMarkerAtPlayhead = useCallback(() => {
+    if (readOnly || loadStatus !== 'ready') return
+    const time = waveformRef.current?.getCurrentTime() ?? currentTime
+    const existing = documentRef.current.markers.find(
+      (marker) => Math.abs(marker.time - time) <= MARKER_TIME_TOLERANCE_SECONDS,
+    )
+    setSelectedRegionId(null)
+    setLoopEnabled(false)
+    if (existing) {
+      setSelectedMarkerId(existing.id)
+      return
+    }
+    const marker = { id: crypto.randomUUID(), time }
+    commit((current) => ({
+      ...current,
+      markers: addMarker(current.markers, marker, duration),
+    }))
+    setSelectedMarkerId(marker.id)
+  }, [commit, currentTime, duration, loadStatus, readOnly])
+
+  const commitMarker = useCallback(
+    (marker: MarkerAnnotation) => {
+      commit((current) => ({
+        ...current,
+        markers: updateMarker(current.markers, marker, duration),
+      }))
+      setSelectedMarkerId(marker.id)
+    },
+    [commit, duration],
+  )
+
+  const deleteSelectedMarker = useCallback(() => {
+    if (!selectedMarkerId) return
+    commit((current) => ({
+      ...current,
+      markers: removeMarker(current.markers, selectedMarkerId),
+    }))
+    setSelectedMarkerId(null)
+  }, [commit, selectedMarkerId])
+
   const undo = useCallback(
     () => applyHistoryState(historyRef.current.undo()),
     [applyHistoryState],
@@ -615,9 +716,27 @@ function ActiveAnnotationWorkspace({
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (isEditableTarget(event.target)) return
+      if (isEditableTarget(event.target) || isDialogTarget(event.target)) return
       const command = keyboardCommand(event)
-      if (command) {
+      if (command?.type === 'create-marker') {
+        if (waveformFocused) {
+          event.preventDefault()
+          createMarkerAtPlayhead()
+          return
+        }
+      }
+      if (command?.type === 'navigate-marker') {
+        if (!waveformFocused) return
+        if (navigateMarker(command.direction)) event.preventDefault()
+        return
+      }
+      if (command?.type === 'delete-selection' && selectedMarkerId) {
+        if (command.markerRequiresWaveformFocus && !waveformFocused) return
+        event.preventDefault()
+        if (!readOnly) deleteSelectedMarker()
+        return
+      }
+      if (command && command.type !== 'create-marker') {
         event.preventDefault()
         switch (command.type) {
           case 'toggle-playback':
@@ -642,11 +761,12 @@ function ActiveAnnotationWorkspace({
           case 'toggle-loop':
             if (selectedRegionId) setLoopEnabled((value) => !value)
             break
-          case 'delete-region':
+          case 'delete-selection':
             if (!readOnly) deleteSelectedRegion()
             break
           case 'clear-selection':
             setSelectedRegionId(null)
+            setSelectedMarkerId(null)
             setLoopEnabled(false)
             break
           case 'undo':
@@ -668,6 +788,7 @@ function ActiveAnnotationWorkspace({
         return
       }
       if (readOnly) return
+      if (selectedMarkerId) return
       const labelId = labelingShortcut(event, taxonomy.labels)
       if (!labelId) return
       const label = taxonomy.labels.find((item) => item.id === labelId)
@@ -679,18 +800,23 @@ function ActiveAnnotationWorkspace({
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [
+    createMarkerAtPlayhead,
+    deleteSelectedMarker,
     deleteSelectedRegion,
     duration,
     loadStatus,
     navigateRegion,
+    navigateMarker,
     readOnly,
     redo,
     selectedRegionId,
+    selectedMarkerId,
     skip,
     submit,
     taxonomy.labels,
     toggleLabel,
     undo,
+    waveformFocused,
   ])
 
   const grantPermission = async () => {
@@ -823,6 +949,9 @@ function ActiveAnnotationWorkspace({
         verticalScale={verticalScale}
         isPlaying={isPlaying}
         selectedRegion={selectedRegion}
+        selectedMarker={selectedMarker}
+        selectedMarkerOrdinal={selectedMarkerOrdinal}
+        markerCount={markers.length}
       />
       <TransportBar
         isLoaded={loadStatus === 'ready'}
@@ -835,6 +964,11 @@ function ActiveAnnotationWorkspace({
         canDelete={!readOnly && selectedRegion !== null}
         canPreviousRegion={previousRegion !== null}
         canNextRegion={nextRegion !== null}
+        markerEditingEnabled={!readOnly}
+        canCreateMarker={!readOnly && loadStatus === 'ready'}
+        canPreviousMarker={previousMarker !== null}
+        canNextMarker={nextMarker !== null}
+        canDeleteMarker={!readOnly && selectedMarker !== null}
         verticalScale={verticalScale}
         onPlayPause={() => waveformRef.current?.playPause()}
         onFit={() => waveformRef.current?.fit()}
@@ -845,6 +979,10 @@ function ActiveAnnotationWorkspace({
         onDelete={deleteSelectedRegion}
         onPreviousRegion={() => navigateRegion('previous')}
         onNextRegion={() => navigateRegion('next')}
+        onCreateMarker={createMarkerAtPlayhead}
+        onPreviousMarker={() => navigateMarker('previous')}
+        onNextMarker={() => navigateMarker('next')}
+        onDeleteMarker={deleteSelectedMarker}
         onToggleSpectrogram={() => setSpectrogramEnabled((value) => !value)}
         onToggleSpectrum={() => {
           const enabled = !spectrumEnabled
@@ -954,7 +1092,9 @@ function ActiveAnnotationWorkspace({
                 ref={waveformRef}
                 audioUrl={audioState.url}
                 regions={regions}
+                markers={markers}
                 selectedRegionId={selectedRegionId}
+                selectedMarkerId={selectedMarkerId}
                 loopEnabled={loopEnabled}
                 meterEnabled={meterEnabled}
                 spectrumEnabled={spectrumEnabled}
@@ -1012,6 +1152,7 @@ function ActiveAnnotationWorkspace({
                 onRegionLiveChange={(region) => replaceRegion(region, false)}
                 onRegionCommit={(region) => replaceRegion(region, true)}
                 onRegionSelect={(id) => {
+                  setSelectedMarkerId(null)
                   setSelectedRegionId(id)
                   setLoopEnabled(true)
                 }}
@@ -1019,6 +1160,14 @@ function ActiveAnnotationWorkspace({
                   setSelectedRegionId(null)
                   setLoopEnabled(false)
                 }}
+                onMarkerCommit={commitMarker}
+                onMarkerSelect={(id) => {
+                  setSelectedRegionId(null)
+                  setLoopEnabled(false)
+                  setSelectedMarkerId(id)
+                }}
+                onClearMarkerSelection={() => setSelectedMarkerId(null)}
+                onEditorFocusChange={setWaveformFocused}
                 onHideSpectrogram={() => setSpectrogramEnabled(false)}
                 onHideSpectrum={() => setSpectrumEnabled(false)}
                 onHideMeter={() => setMeterEnabled(false)}
@@ -1028,6 +1177,9 @@ function ActiveAnnotationWorkspace({
           <footer className={styles.editorFooter}>
             <span>
               {regions.length} {regions.length === 1 ? 'region' : 'regions'}
+            </span>
+            <span>
+              {markers.length} {markers.length === 1 ? 'marker' : 'markers'}
             </span>
             <span>{loopEnabled ? 'Selected region loops' : 'Loop off'}</span>
             <span>Drafts stay in this browser</span>

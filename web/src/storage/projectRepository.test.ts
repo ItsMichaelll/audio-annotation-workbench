@@ -119,6 +119,7 @@ describe('IndexedDB project repository', () => {
       taxonomyVersionId: project.activeTaxonomyVersionId,
       revision: 1,
       regions: [],
+      markers: [{ id: 'marker-1', time: 0.75 }],
       clipAssignments: [],
       createdAt: NOW,
       updatedAt: NOW,
@@ -133,6 +134,7 @@ describe('IndexedDB project repository', () => {
     expect(await repository.getAnnotation(task!.id)).toMatchObject({
       id: 'annotation-1',
       taxonomyVersionId: project.activeTaxonomyVersionId,
+      markers: [{ id: 'marker-1', time: 0.75 }],
     })
 
     await repository.addTaxonomyVersion(project.id, taxonomy('b'.repeat(64)))
@@ -148,6 +150,7 @@ describe('IndexedDB project repository', () => {
       revision: 2,
     })
     expect(submitted.submittedAt).toBe(NOW)
+    expect(submitted.markers).toEqual([{ id: 'marker-1', time: 0.75 }])
     expect((await repository.getProject(project.id))?.tasks[0]?.status).toBe(
       'submitted',
     )
@@ -195,6 +198,7 @@ describe('IndexedDB project repository', () => {
           ],
         },
       ],
+      markers: [],
       clipAssignments: [{ labelId: 'first' }, { labelId: 'second' }],
       createdAt: NOW,
       updatedAt: NOW,
@@ -228,6 +232,7 @@ describe('IndexedDB project repository', () => {
         taxonomyVersionId: project.activeTaxonomyVersionId,
         revision: 1,
         regions: [],
+        markers: [],
         clipAssignments: [],
         createdAt: NOW,
         updatedAt: NOW,
@@ -252,6 +257,7 @@ describe('IndexedDB project repository', () => {
       taxonomyVersionId: project.activeTaxonomyVersionId,
       revision: 1,
       regions: [],
+      markers: [],
       clipAssignments: [],
       createdAt: NOW,
       updatedAt: NOW,
@@ -291,6 +297,7 @@ describe('IndexedDB project repository', () => {
       taxonomyVersionId: project.activeTaxonomyVersionId,
       revision: 1,
       regions: [],
+      markers: [],
       clipAssignments: [],
       createdAt: NOW,
       updatedAt: NOW,
@@ -334,6 +341,7 @@ describe('IndexedDB project repository', () => {
       taxonomyVersionId: project.activeTaxonomyVersionId,
       revision: 1,
       regions: [],
+      markers: [],
       clipAssignments: [],
       createdAt: NOW,
       updatedAt: NOW,
@@ -489,6 +497,7 @@ describe('IndexedDB project repository', () => {
       taxonomyVersionId: target.activeTaxonomyVersionId,
       revision: 1,
       regions: [],
+      markers: [],
       clipAssignments: [],
       createdAt: NOW,
       updatedAt: NOW,
@@ -531,6 +540,7 @@ describe('IndexedDB project repository', () => {
       taxonomyVersionId: project.activeTaxonomyVersionId,
       revision: 1,
       regions: [],
+      markers: [],
       clipAssignments: [],
       createdAt: NOW,
       updatedAt: NOW,

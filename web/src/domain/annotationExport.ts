@@ -7,7 +7,7 @@ import type {
 } from './models'
 import { orderedTasks } from './taskQueue'
 
-export const ANNOTATION_EXPORT_SCHEMA_VERSION = 1 as const
+export const ANNOTATION_EXPORT_SCHEMA_VERSION = 2 as const
 export type AnnotationExportMode = 'submitted' | 'all'
 export type AnnotationExportFormat = 'jsonl' | 'csv'
 
@@ -55,6 +55,8 @@ export const ANNOTATION_CSV_COLUMNS = [
   'taxonomy_version_id',
   'taxonomy_version',
   'scope',
+  'marker_id',
+  'marker_time',
   'region_id',
   'region_start',
   'region_end',
@@ -243,7 +245,7 @@ export function buildAnnotationCsvRows(
         : [],
     )
     const base = commonRow(source, task, annotation, taxonomy)
-    let assignmentCount = 0
+    let rowCount = 0
     for (const region of [...(annotation?.regions ?? [])].sort((left, right) =>
       left.id.localeCompare(right.id),
     )) {
@@ -263,8 +265,20 @@ export function buildAnnotationCsvRows(
           region_duration: String(region.end - region.start),
           region_notes: region.notes ?? '',
         })
-        assignmentCount += 1
+        rowCount += 1
       }
+    }
+    for (const marker of [...(annotation?.markers ?? [])].sort(
+      (left, right) =>
+        left.time - right.time || left.id.localeCompare(right.id),
+    )) {
+      rows.push({
+        ...base,
+        scope: 'marker',
+        marker_id: marker.id,
+        marker_time: String(marker.time),
+      })
+      rowCount += 1
     }
     for (const assignment of [...(annotation?.clipAssignments ?? [])].sort(
       (left, right) => left.labelId.localeCompare(right.labelId),
@@ -277,9 +291,9 @@ export function buildAnnotationCsvRows(
         ),
         scope: 'clip',
       })
-      assignmentCount += 1
+      rowCount += 1
     }
-    if (mode === 'all' && assignmentCount === 0) {
+    if (mode === 'all' && rowCount === 0) {
       rows.push({ ...base, scope: 'task' })
     }
   }

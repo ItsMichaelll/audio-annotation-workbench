@@ -89,6 +89,7 @@ function backup(id = 'project-1', name = 'Restored'): ProjectBackup {
               assignments: [{ labelId: 'noise' }],
             },
           ],
+          markers: [{ id: 'marker-1', time: 0.5 }],
           clipAssignments: [],
           createdAt: NOW,
           updatedAt: NOW,
@@ -120,6 +121,7 @@ describe('atomic project backup restoration', () => {
     expect(restored.annotations[0]).toMatchObject({
       revision: 7,
       taxonomyVersionId: 'project-1-taxonomy',
+      markers: [{ id: 'marker-1', time: 0.5 }],
       submittedAt: NOW,
     })
     expect(restored.tasks[0]?.primaryMedia.kind).toBe('unresolved')

@@ -75,6 +75,10 @@ const submitted: AnnotationDocument = {
       notes: 'comma, quote " and\nnewline',
     },
   ],
+  markers: [
+    { id: 'marker-late', time: 4.5 },
+    { id: 'marker-early', time: 0.75 },
+  ],
   clipAssignments: [{ labelId: 'quality' }],
   taskNotes: 'task notes',
   createdAt: NOW,
@@ -96,6 +100,7 @@ describe('annotation export', () => {
     expect(all.map(({ task }) => task.id)).toEqual(['submitted', 'empty'])
     expect(all.at(1)?.annotation).toBeNull()
     expect(all.at(0)?.pinnedTaxonomy?.id).toBe(taxonomy.id)
+    expect(all.at(0)?.annotation?.markers).toEqual(submitted.markers)
     expect(
       serializeAnnotationJsonl(source, 'all').trim().split('\n'),
     ).toHaveLength(2)
@@ -103,7 +108,13 @@ describe('annotation export', () => {
 
   it('flattens region and clip assignments and preserves task-only rows', () => {
     const rows = buildAnnotationCsvRows(source, 'all')
-    expect(rows.map(({ scope }) => scope)).toEqual(['region', 'clip', 'task'])
+    expect(rows.map(({ scope }) => scope)).toEqual([
+      'region',
+      'marker',
+      'marker',
+      'clip',
+      'task',
+    ])
     expect(rows.at(0)).toMatchObject({
       region_id: 'region-1',
       region_start: '1.25',
@@ -112,8 +123,16 @@ describe('annotation export', () => {
       label_id: 'noise',
       label_name: 'Noise',
     })
-    expect(rows.at(1)?.region_start).toBe('')
-    expect(rows.at(2)?.annotation_id).toBe('')
+    expect(rows.at(1)).toMatchObject({
+      marker_id: 'marker-early',
+      marker_time: '0.75',
+    })
+    expect(rows.at(2)).toMatchObject({
+      marker_id: 'marker-late',
+      marker_time: '4.5',
+    })
+    expect(rows.at(3)?.region_start).toBe('')
+    expect(rows.at(4)?.annotation_id).toBe('')
   })
 
   it('escapes CSV delimiters, quotes, carriage returns, and newlines', () => {

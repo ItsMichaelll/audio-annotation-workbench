@@ -9,7 +9,7 @@ import type {
 } from '../domain/models'
 
 export const DATABASE_NAME = 'audio-annotation-workbench'
-export const DATABASE_VERSION = 4
+export const DATABASE_VERSION = 5
 
 export interface WorkbenchDatabase extends DBSchema {
   projects: {
@@ -106,6 +106,14 @@ export async function openWorkbenchDatabase(
           annotations.createIndex('by-task', 'taskId', { unique: true })
         }
         if (oldVersion < 4) {
+          const annotations = transaction.objectStore('annotations')
+          let cursor = await annotations.openCursor()
+          while (cursor) {
+            await cursor.update(normalizeAnnotationCardinality(cursor.value))
+            cursor = await cursor.continue()
+          }
+        }
+        if (oldVersion < 5) {
           const annotations = transaction.objectStore('annotations')
           let cursor = await annotations.openCursor()
           while (cursor) {

@@ -29,9 +29,21 @@ describe('keyboard command mapping', () => {
     })
   })
 
-  it('maps Ctrl+D to region deletion', () => {
+  it('maps Ctrl+D to application-scoped selection deletion', () => {
     expect(keyboardCommand({ key: 'd', ctrlKey: true })).toEqual({
-      type: 'delete-region',
+      type: 'delete-selection',
+      markerRequiresWaveformFocus: false,
+    })
+  })
+
+  it('keeps Delete and Backspace scoped to waveform selection', () => {
+    expect(keyboardCommand({ key: 'Delete' })).toEqual({
+      type: 'delete-selection',
+      markerRequiresWaveformFocus: true,
+    })
+    expect(keyboardCommand({ key: 'Backspace' })).toEqual({
+      type: 'delete-selection',
+      markerRequiresWaveformFocus: true,
     })
   })
 
@@ -43,6 +55,18 @@ describe('keyboard command mapping', () => {
     expect(keyboardCommand({ key: 'ArrowRight', ctrlKey: true })).toEqual({
       type: 'navigate-region',
       direction: 'next',
+    })
+  })
+
+  it('maps waveform marker creation and bidirectional Tab navigation', () => {
+    expect(keyboardCommand({ key: 't' })).toEqual({ type: 'create-marker' })
+    expect(keyboardCommand({ key: 'Tab' })).toEqual({
+      type: 'navigate-marker',
+      direction: 'next',
+    })
+    expect(keyboardCommand({ key: 'Tab', shiftKey: true })).toEqual({
+      type: 'navigate-marker',
+      direction: 'previous',
     })
   })
 
