@@ -81,7 +81,7 @@
 .fftSize {
   min-width: 62px;
   color: var(--text-secondary);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 10px;
   text-align: center;
   white-space: nowrap;

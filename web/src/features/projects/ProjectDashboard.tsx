@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { Button, ButtonLink } from '../../components/Button'
+import { Icon } from '../../components/Icon'
+import { CustomSelect } from '../../components/CustomSelect'
 import type { ProjectStatus } from '../../domain/models'
 import {
   requestPersistentStorage,
@@ -24,6 +26,8 @@ export function ProjectDashboard() {
   const status: ProjectStatus =
     searchParams.get('view') === 'archived' ? 'archived' : 'active'
   const projects = useProjectList(status)
+  const [query, setQuery] = useState('')
+  const [sort, setSort] = useState('updated')
   const [durability, setDurability] = useState<StorageDurability | null>(null)
   const [requestingStorage, setRequestingStorage] = useState(false)
   const [storageError, setStorageError] = useState<string | null>(null)
@@ -57,163 +61,259 @@ export function ProjectDashboard() {
     }
   }
 
+  const shown = [...projects.data]
+    .filter(({ project }) =>
+      `${project.name} ${project.description ?? ''}`
+        .toLowerCase()
+        .includes(query.trim().toLowerCase()),
+    )
+    .sort((a, b) =>
+      sort === 'name'
+        ? a.project.name.localeCompare(b.project.name)
+        : b.project.updatedAt.localeCompare(a.project.updatedAt),
+    )
+  const totalTasks = projects.data.reduce(
+    (sum, item) => sum + item.progress.total,
+    0,
+  )
+  const submitted = projects.data.reduce(
+    (sum, item) => sum + item.progress.submitted,
+    0,
+  )
+
   return (
-    <ProjectLayout
-      actions={
-        <>
-          <ButtonLink to="/editor">Standalone editor</ButtonLink>
-          <ButtonLink to="/projects/restore">Restore backup</ButtonLink>
-          <ButtonLink variant="primary" to="/projects/new">
-            New Project
-          </ButtonLink>
-        </>
-      }
-    >
+    <ProjectLayout theme="light">
       <main className={layoutStyles.page}>
-        <div className={layoutStyles.pageHeading}>
+        <header className={styles.heading}>
           <div>
-            <p className={layoutStyles.eyebrow}>Project library</p>
+            <p className={layoutStyles.eyebrow}>Your workspace</p>
             <h1 className={layoutStyles.pageHeadingTitle}>Projects</h1>
             <p className={layoutStyles.pageHeadingDescription}>
-              View and manage your projects.
+              A place for every recording. A clear path through the work.
             </p>
           </div>
-          <div
-            className={styles.segmentedControl}
-            aria-label="Project status filter"
-          >
-            <Button
-              className={styles.segment}
-              type="button"
-              aria-pressed={status === 'active'}
-              onClick={() => setSearchParams({})}
-            >
-              Active
-            </Button>
-            <Button
-              className={styles.segment}
-              type="button"
-              aria-pressed={status === 'archived'}
-              onClick={() => setSearchParams({ view: 'archived' })}
-            >
-              Archived
-            </Button>
+          <div className={styles.headingActions}>
+            <ButtonLink to="/projects/restore">
+              <Icon name="upload" />
+              Restore backup
+            </ButtonLink>
+            <ButtonLink variant="primary" to="/projects/new">
+              <Icon name="plus" />
+              New Project
+            </ButtonLink>
           </div>
+        </header>
+
+        <div className={styles.overview} aria-label="Library summary">
+          <span>
+            <strong>{projects.data.length}</strong> {status} projects
+          </span>
+          <span>
+            <strong>{totalTasks}</strong> audio tasks
+          </span>
+          <span>
+            <strong>{submitted}</strong> submitted
+          </span>
         </div>
 
-        {durability && (
-          <p className={styles.storageState}>
-            Project storage:{' '}
-            {durability === 'persistent'
-              ? 'durable browser storage granted'
-              : durability === 'unsupported'
-                ? 'durability status unavailable in this browser'
-                : 'best-effort browser storage'}
-          </p>
-        )}
-
-        {durability === 'best-effort' && (
-          <PageNotice title="Browser storage is not guaranteed" tone="warning">
-            <p>
-              This browser may evict local project data under storage pressure.
-              Browser persistence is not a substitute for downloading project
-              backups regularly.
-            </p>
-            <div className={styles.storageRequestAction}>
-              <Button
+        <section
+          className={styles.library}
+          aria-label={`${status} projects`}
+          aria-busy={projects.loading}
+        >
+          <div className={styles.toolbar}>
+            <div
+              className={styles.segmentedControl}
+              role="group"
+              aria-label="Project status filter"
+            >
+              <button
                 type="button"
-                onClick={() => void requestDurability()}
-                disabled={requestingStorage}
+                aria-pressed={status === 'active'}
+                onClick={() => {
+                  setSearchParams({})
+                  setQuery('')
+                }}
               >
-                {requestingStorage ? 'Requesting…' : 'Request durable storage'}
+                Active
+              </button>
+              <button
+                type="button"
+                aria-pressed={status === 'archived'}
+                onClick={() => {
+                  setSearchParams({ view: 'archived' })
+                  setQuery('')
+                }}
+              >
+                Archived
+              </button>
+            </div>
+            <label className={styles.search}>
+              <Icon name="search" />
+              <input
+                aria-label="Search projects"
+                placeholder="Find a project…"
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+              />
+            </label>
+            <CustomSelect
+              ariaLabel="Sort projects"
+              value={sort}
+              onChange={setSort}
+              options={[
+                { value: 'updated', label: 'Recently updated' },
+                { value: 'name', label: 'Project name' },
+              ]}
+            />
+          </div>
+          {projects.error && (
+            <PageNotice title="Projects could not be loaded" tone="error">
+              <p>{projects.error}</p>
+              <Button type="button" onClick={projects.refresh}>
+                Try again
               </Button>
-              {storageError && (
-                <span className={styles.storageRequestError} role="alert">
-                  {storageError}
-                </span>
+            </PageNotice>
+          )}
+          {projects.loading ? (
+            <div className={styles.empty} role="status">
+              Loading projects…
+            </div>
+          ) : !projects.error && shown.length === 0 ? (
+            <div className={styles.empty}>
+              <span className={styles.emptyIcon}>
+                <Icon name={query ? 'search' : 'folder'} size={32} />
+              </span>
+              <h2>
+                {query
+                  ? 'No matching projects'
+                  : status === 'active'
+                    ? 'Give your recordings a home.'
+                    : 'Your archive is clear.'}
+              </h2>
+              <p>
+                {query
+                  ? 'Try another project name or description.'
+                  : status === 'active'
+                    ? 'Bring your audio, labels, and listening guide together. Start a project to build your first annotation set.'
+                    : 'Archived projects will appear here. You can restore them whenever you need them.'}
+              </p>
+              {query ? (
+                <Button onClick={() => setQuery('')}>Clear search</Button>
+              ) : status === 'active' ? (
+                <ButtonLink variant="primary" to="/projects/new">
+                  Create your first project <Icon name="arrow" />
+                </ButtonLink>
+              ) : (
+                <Button onClick={() => setSearchParams({})}>
+                  View active projects
+                </Button>
               )}
             </div>
-          </PageNotice>
-        )}
-
-        {projects.error && (
-          <PageNotice title="Projects could not be loaded" tone="error">
-            <p>{projects.error}</p>
-            <Button type="button" onClick={projects.refresh}>
-              Try again
-            </Button>
-          </PageNotice>
-        )}
-
-        {projects.loading ? null : projects.data.length === 0 &&
-          !projects.error ? (
-          <div className={`${layoutStyles.statePanel} ${styles.statePanel}`}>
-            <h2 className={layoutStyles.statePanelTitle}>
-              {status === 'active'
-                ? 'Create a project to get started'
-                : 'No archived projects'}
-            </h2>
-            <p
-              className={`${layoutStyles.statePanelDescription} ${styles.statePanelDescription}`}
-            >
-              {status === 'active'
-                ? 'Create a project or restore a validated backup to continue a local-first annotation workflow.'
-                : 'Archived projects remain available here and can be restored at any time.'}
-            </p>
-            {status === 'active' && (
-              <ButtonLink variant="primary" to="/projects/new">
-                New Project
-              </ButtonLink>
-            )}
-          </div>
-        ) : (
-          <section
-            className={styles.projectGrid}
-            aria-label={`${status} projects`}
-          >
-            {projects.data.map(
-              ({ project, activeTaxonomyVersion, progress }) => (
-                <article className={styles.card} key={project.id}>
-                  <div className={styles.cardHeader}>
-                    <span
-                      className={`${statusStyles.badge} ${
-                        project.status === 'archived'
-                          ? statusStyles.archived
-                          : ''
-                      }`}
-                    >
-                      {project.status}
+          ) : (
+            <div>
+              <div className={styles.columns} aria-hidden="true">
+                <span>Project</span>
+                <span>Progress</span>
+                <span>Last updated</span>
+                <span />
+              </div>
+              {shown.map(({ project, activeTaxonomyVersion, progress }) => (
+                <article className={styles.projectRow} key={project.id}>
+                  <div className={styles.projectIdentity}>
+                    <span className={styles.projectIcon}>
+                      <Icon name="folder" size={21} />
                     </span>
-                    <span>Taxonomy v{activeTaxonomyVersion.version}</span>
+                    <div>
+                      <div className={styles.projectMeta}>
+                        <span
+                          className={`${statusStyles.badge} ${status === 'archived' ? statusStyles.archived : ''}`}
+                        >
+                          {project.status}
+                        </span>
+                        <span>Taxonomy v{activeTaxonomyVersion.version}</span>
+                      </div>
+                      <h2>
+                        <Link to={`/projects/${project.id}`}>
+                          {project.name}
+                        </Link>
+                      </h2>
+                      <p>
+                        {project.description
+                          ? truncateDescription(project.description)
+                          : 'No description provided.'}
+                      </p>
+                    </div>
                   </div>
-                  <h2 className={styles.cardTitle}>{project.name}</h2>
-                  <p className={styles.cardDescription}>
-                    {project.description
-                      ? truncateDescription(project.description)
-                      : 'No description provided.'}
-                  </p>
-                  <dl className={styles.cardMetadata}>
-                    <div>
-                      <dt>Progress</dt>
-                      <dd>
-                        {progressLabel(progress.total, progress.completed)}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Updated</dt>
-                      <dd>{formatTimestamp(project.updatedAt)}</dd>
-                    </div>
-                  </dl>
-                  <Link
-                    className={styles.cardOpen}
-                    to={`/projects/${project.id}`}
+                  <div
+                    className={styles.progress}
+                    title={`${progress.submitted} submitted · ${progress.skipped} skipped`}
                   >
-                    Open project <span aria-hidden="true">→</span>
-                  </Link>
+                    <span>
+                      {progressLabel(progress.total, progress.completed)}
+                    </span>
+                    <progress
+                      aria-label={`${project.name} task completion`}
+                      value={progress.completed}
+                      max={Math.max(progress.total, 1)}
+                    />
+                  </div>
+                  <time className={styles.updated} dateTime={project.updatedAt}>
+                    {formatTimestamp(project.updatedAt)}
+                  </time>
+                  <Icon name="arrow" />
                 </article>
-              ),
-            )}
-          </section>
+              ))}
+              {shown.length > 0 && (
+                <p className={styles.listFoot}>
+                  {shown.length} of {projects.data.length} projects
+                </p>
+              )}
+            </div>
+          )}
+        </section>
+        {durability && (
+          <details className={styles.storage}>
+            <summary>
+              <Icon name="info" />
+              <span>
+                {durability === 'persistent'
+                  ? 'Persistent storage enabled'
+                  : 'Your projects live in this browser'}
+                <small>
+                  {durability === 'persistent'
+                    ? 'Keep regular backups of your work.'
+                    : 'Keep a backup. Browser storage can be cleared.'}
+                </small>
+              </span>
+            </summary>
+            <div className={styles.storageBody}>
+              <p>
+                {durability === 'persistent'
+                  ? 'This browser has granted durable storage. Download project backups regularly to keep an independent copy.'
+                  : durability === 'unsupported'
+                    ? 'Storage durability status is unavailable in this browser. Download project backups regularly.'
+                    : 'This browser may evict local project data under storage pressure. Request durable storage and download backups regularly.'}
+              </p>
+              {durability === 'best-effort' && (
+                <Button
+                  type="button"
+                  onClick={() => void requestDurability()}
+                  disabled={requestingStorage}
+                >
+                  {requestingStorage
+                    ? 'Requesting…'
+                    : 'Request durable storage'}
+                </Button>
+              )}
+              {storageError && (
+                <p className={styles.storageError} role="alert">
+                  {storageError}
+                </p>
+              )}
+            </div>
+          </details>
         )}
       </main>
     </ProjectLayout>

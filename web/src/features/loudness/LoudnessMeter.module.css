@@ -101,7 +101,7 @@
   left: 0;
   width: 24px;
   color: var(--text-tertiary);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 8px;
   text-align: right;
   transform: translateY(50%);
@@ -173,7 +173,7 @@
 
 .readoutValue {
   color: var(--text-primary);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 17px;
   font-variant-numeric: tabular-nums;
   font-weight: var(--font-weight-medium);
@@ -235,7 +235,7 @@
   border-radius: var(--radius-sm);
   background: var(--surface-panel-raised);
   color: var(--text-primary);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 9px;
 }
 
@@ -290,6 +290,6 @@
 
 .statisticsValue {
   margin: 0;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-variant-numeric: tabular-nums;
 }

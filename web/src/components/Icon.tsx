@@ -3,6 +3,9 @@ import type { CSSProperties } from 'react'
 const paths = {
   waveform: 'M3 10v4m4-8v12m5-15v18m5-15v12m4-8v4',
   folder: 'M3 7V5h6l2 2h10v13H3V7Z',
+  search: 'M21 21l-5-5M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z',
+  book: 'M12 5v16M3 3l9 2 9-2v16l-9 2-9-2V3Z',
+  download: 'M12 3v13m-5-5 5 5 5-5M4 17v4h16v-4',
   arrow: 'M5 12h14m-5-5 5 5-5 5',
   back: 'M19 12H5m5-5-5 5 5 5',
   upload: 'M12 16V3m-5 5 5-5 5 5M4 15v6h16v-6',

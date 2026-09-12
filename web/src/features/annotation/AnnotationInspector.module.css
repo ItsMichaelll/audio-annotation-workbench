@@ -79,7 +79,7 @@
 .tabCount {
   margin-left: 5px;
   color: var(--accent-ink);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 10px;
 }
 
@@ -115,7 +115,7 @@
 .selectedRegionTime {
   padding-bottom: 2px;
   color: var(--text-secondary);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
 }
 
@@ -225,7 +225,7 @@
   border: 1px solid var(--border-strong);
   border-radius: 3px;
   color: var(--text-secondary);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 10px;
 }
 

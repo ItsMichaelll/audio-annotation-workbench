@@ -6,11 +6,19 @@ import styles from './ProjectLayout.module.css'
 interface ProjectLayoutProps {
   children: ReactNode
   actions?: ReactNode
+  theme?: 'light'
 }
 
-export function ProjectLayout({ children, actions }: ProjectLayoutProps) {
+export function ProjectLayout({
+  children,
+  actions,
+  theme,
+}: ProjectLayoutProps) {
   return (
-    <div className={`${styles.shell} project-app-shell`}>
+    <div
+      className={`${styles.shell} project-app-shell`}
+      data-project-theme={theme}
+    >
       <ApplicationHeader skipTarget="main-content">{actions}</ApplicationHeader>
       <div id="main-content" tabIndex={-1}>
         {children}
@@ -53,7 +61,7 @@ export function ProjectPageState({
   message: string
 }) {
   return (
-    <ProjectLayout>
+    <ProjectLayout theme="light">
       <main className={`${styles.page} ${styles.pageNarrow}`}>
         <div className={styles.statePanel}>
           <h1 className={styles.statePanelTitle}>{title}</h1>

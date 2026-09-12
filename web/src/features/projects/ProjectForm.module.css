@@ -21,7 +21,7 @@
   min-width: 28px;
   padding-top: 4px;
   color: var(--color-blue-500);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 12px;
 }
 
@@ -77,7 +77,7 @@
 .fileSelectionName {
   flex: 1;
   color: var(--text-secondary);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 10px;
 }
 

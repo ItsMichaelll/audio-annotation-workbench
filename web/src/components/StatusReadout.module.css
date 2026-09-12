@@ -38,18 +38,18 @@
 
 .selection > span {
   color: var(--text-secondary);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 10px;
   font-variant-numeric: tabular-nums;
 }
 
 .zoom {
   margin-left: auto;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
 }
 
 .markerStatus {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   white-space: nowrap;
 }
 

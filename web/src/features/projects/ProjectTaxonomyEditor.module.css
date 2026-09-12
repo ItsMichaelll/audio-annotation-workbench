@@ -67,7 +67,7 @@
   border-radius: 0;
   background: #0c0f11;
   color: var(--text-primary);
-  font-family: var(--font-mono);
+  font-family: var(--font-code);
   font-size: 12px;
   line-height: 1.55;
   resize: vertical;
@@ -98,14 +98,14 @@
 
 .sourceHelpMeta {
   color: #c8d0d4;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   white-space: nowrap;
 }
 
 .schemaVersion {
   margin-left: 5px;
   color: #79848a;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 10px;
   white-space: nowrap;
 }
