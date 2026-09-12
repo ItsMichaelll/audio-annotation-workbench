@@ -715,8 +715,10 @@ export class IndexedDbProjectRepository implements ProjectRepository {
       const task = await store.get(id)
       if (!task || task.projectId !== projectId)
         throw new Error('Task not found.')
-      if (!canTransitionTask(task.status, status))
+      if (!canTransitionTask(task.status, status)) {
+        if (status === 'skipped') continue
         throw new Error(`Cannot change ${task.status} to ${status}.`)
+      }
       await store.put({ ...task, status, updatedAt: timestamp })
     }
     const project = await transaction.objectStore('projects').get(projectId)
@@ -1042,7 +1044,10 @@ export class IndexedDbProjectRepository implements ProjectRepository {
     if (!task || task.projectId !== projectId) {
       throw new Error('Task not found.')
     }
-    if (!canTransitionTask(task.status, 'skipped')) {
+    if (
+      task.status === 'skipped' ||
+      !canTransitionTask(task.status, 'skipped')
+    ) {
       throw new Error(`Cannot skip a ${task.status} task.`)
     }
     const timestamp = this.now()

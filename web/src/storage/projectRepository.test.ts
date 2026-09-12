@@ -359,6 +359,31 @@ describe('IndexedDB project repository', () => {
     )
   })
 
+  it('skips only eligible tasks in a mixed bulk selection', async () => {
+    const project = await repository.createProject({
+      name: 'Mixed skip selection',
+      taxonomy: taxonomy(),
+    })
+    const [draft, skipped] = await repository.importTasks(project.id, [
+      { audio: 'draft.wav' },
+      { audio: 'skipped.wav' },
+    ])
+    await repository.updateTaskStatus(project.id, [skipped!.id], 'skipped')
+    await repository.updateTaskStatus(
+      project.id,
+      [draft!.id, skipped!.id],
+      'skipped',
+    )
+    const tasks = await repository.listTasks(project.id)
+    expect(tasks.find((task) => task.id === draft!.id)?.status).toBe('skipped')
+    expect(tasks.find((task) => task.id === skipped!.id)?.status).toBe(
+      'skipped',
+    )
+    await expect(repository.skipTask(project.id, skipped!.id)).rejects.toThrow(
+      'Cannot skip a skipped task.',
+    )
+  })
+
   it('lists active and archived projects separately and preserves rename IDs', async () => {
     const first = await repository.createProject({
       name: 'First',
