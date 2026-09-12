@@ -1,13 +1,18 @@
 .form {
   display: grid;
-  gap: 16px;
+  gap: 0;
 }
 
 .section {
-  padding: 20px;
-  border: 1px solid var(--border-default);
-  border-radius: 5px;
-  background: var(--surface-panel);
+  display: grid;
+  grid-template-columns: minmax(200px, 0.8fr) minmax(0, 1.8fr);
+  gap: 40px;
+  padding: 32px 0;
+  border-top: 1px solid var(--border-default);
+}
+
+.sectionBody {
+  min-width: 0;
 }
 
 .sectionHeading {
@@ -27,14 +32,16 @@
 
 .sectionTitle {
   margin: 0;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 630;
 }
 
 .sectionDescription {
   margin: 4px 0 0;
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
 .sectionActions {
@@ -47,8 +54,8 @@
   display: grid;
   gap: 7px;
   margin-bottom: 15px;
-  color: #cbd2d5;
-  font-size: 11px;
+  color: var(--text-primary);
+  font-size: 12px;
 }
 
 .field input,
@@ -57,13 +64,15 @@
   padding: 9px 10px;
   border: 1px solid var(--border-default);
   border-radius: 4px;
-  background: #0e1113;
+  background: var(--surface-control);
   color: var(--text-primary);
   resize: vertical;
 }
 
 .fileSelection {
   display: flex;
+  flex-wrap: wrap;
+  overflow-wrap: anywhere;
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
@@ -88,7 +97,7 @@
 
 .fieldError {
   margin: 9px 0 0;
-  color: #ff9292;
+  color: var(--text-danger);
   font-size: 11px;
 }
 
@@ -97,6 +106,7 @@
   border: 1px solid var(--border-default);
   border-radius: 5px;
   background: var(--surface-control);
+  border-left: 3px solid var(--accent-primary);
   font-size: 11px;
 }
 
@@ -114,15 +124,22 @@
 
 .validationSummaryReady {
   margin: 7px 0 0;
-  color: var(--color-green-500);
+  color: var(--text-success);
 }
 
 .actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  padding-top: 5px;
+  flex-wrap: wrap;
+  padding: 16px 0;
+  margin-top: 16px;
+  border-top: 1px solid var(--border-default);
+  background: var(--surface-canvas);
 }
 
 .compactHistory {
@@ -132,7 +149,8 @@
 
 .historyRow {
   display: grid;
-  grid-template-columns: 55px 1fr 180px;
+  grid-template-columns: 40px minmax(0, 1fr) minmax(90px, 0.7fr);
+  overflow-wrap: anywhere;
   gap: 10px;
   padding: 9px 4px;
   border-bottom: 1px solid var(--border-subtle);
@@ -150,4 +168,12 @@
   color: var(--text-secondary);
   font-size: 11px;
   line-height: 1.55;
+}
+
+@media (max-width: 700px) {
+  .section {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    padding: 24px 0;
+  }
 }

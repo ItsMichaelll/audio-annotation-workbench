@@ -1,5 +1,5 @@
 .editor {
-  width: min(1500px, 100%);
+  min-width: 0;
 }
 
 .heading {
@@ -9,18 +9,17 @@
 .saveState {
   padding: 6px 10px;
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-md);
   color: var(--text-secondary);
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .saveStateUnsaved,
 .saveStateSaving {
-  border-color: #a8792b;
-  color: #ffd28a;
+  border-color: var(--border-warning);
+  color: var(--text-warning);
 }
 
 .saveStateValidationError {
@@ -36,13 +35,14 @@
 }
 
 .toolbar {
-  position: relative;
-  z-index: 1;
+  position: sticky;
+  top: 0;
+  z-index: 3;
   justify-content: space-between;
-  padding: 10px;
+  padding: 14px 20px;
   border: 1px solid var(--border-default);
   border-bottom: 0;
-  background: #121618;
+  background: var(--surface-panel);
 }
 
 .sourcePanel {
@@ -61,11 +61,12 @@
 .sourceTextarea {
   display: block;
   width: 100%;
-  min-height: 620px;
+  min-height: 480px;
+  height: calc(100dvh - 360px);
   padding: 18px 20px;
   border: 0;
   border-radius: 0;
-  background: #0c0f11;
+  background: var(--surface-control);
   color: var(--text-primary);
   font-family: var(--font-code);
   font-size: 12px;
@@ -80,31 +81,33 @@
 }
 
 .sourceTextarea:focus-visible {
-  outline: none;
+  outline: 2px solid var(--focus-ring-color);
+  outline-offset: -2px;
 }
 
 .sourceHelp {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   padding: 8px 12px;
   margin: 0;
   border-top: 1px solid var(--border-default);
-  background: #121618;
+  background: var(--surface-panel);
   color: var(--text-secondary);
   font-size: 10px;
 }
 
 .sourceHelpMeta {
-  color: #c8d0d4;
+  color: var(--text-secondary);
   font-family: var(--font-sans);
   white-space: nowrap;
 }
 
 .schemaVersion {
   margin-left: 5px;
-  color: #79848a;
+  color: var(--text-tertiary);
   font-family: var(--font-sans);
   font-size: 10px;
   white-space: nowrap;

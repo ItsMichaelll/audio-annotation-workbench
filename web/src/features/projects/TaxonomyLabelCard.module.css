@@ -2,7 +2,7 @@
   min-width: 0;
   border: 1px solid var(--border-default);
   border-radius: 5px;
-  background: #14181a;
+  background: var(--surface-panel);
   transition:
     border-color var(--duration-fast) var(--easing-standard),
     box-shadow var(--duration-fast) var(--easing-standard),
@@ -24,7 +24,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 7px 8px;
+  padding: 12px;
   cursor: pointer;
 }
 
@@ -74,9 +74,9 @@
 
 .badge {
   padding: 3px 6px;
-  border: 1px solid #344047;
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-pill);
-  color: #aab5ba;
+  color: var(--text-secondary);
   font-size: 9px;
 }
 
@@ -89,8 +89,8 @@
   border: 1px solid var(--border-strong);
   border-bottom-width: 2px;
   border-radius: var(--radius-md);
-  background: #0e1113;
-  color: #d7dddf;
+  background: var(--surface-panel-raised);
+  color: var(--text-primary);
   font-family: var(--font-sans);
   font-size: 10px;
 }
@@ -100,6 +100,7 @@
   gap: 14px;
   padding: 16px;
   border-top: 1px solid var(--border-default);
+  background: var(--surface-canvas);
 }
 
 .body[hidden] {
@@ -137,12 +138,12 @@
   display: grid;
   gap: 5px;
   margin: 0;
-  color: #cbd2d5;
+  color: var(--text-primary);
   font-size: 11px;
 }
 
 .fieldLabel {
-  color: #818c92;
+  color: var(--text-secondary);
   font-size: 9px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -161,7 +162,7 @@
 
 .identityInput {
   border-color: var(--border-strong);
-  background: #0d1012;
+  background: var(--surface-control);
   font-size: 12px;
   font-weight: var(--font-weight-semibold);
 }
@@ -172,7 +173,7 @@
 }
 
 .descriptionTextarea {
-  min-height: 116px;
+  min-height: 76px;
 }
 
 .scopeField,
@@ -206,7 +207,7 @@
 .toggleButton[aria-pressed='true'] {
   border-color: rgb(var(--color-blue-500-rgb) / 52%);
   background: rgb(var(--color-blue-500-rgb) / 10%);
-  color: #d8e6ff;
+  color: var(--accent-ink);
 }
 
 .colorControl {
@@ -250,7 +251,7 @@
 .fieldError {
   display: block;
   margin-top: 4px;
-  color: #ff9e9e;
+  color: var(--text-danger);
   font-size: 9px;
   line-height: 1.35;
 }

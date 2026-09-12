@@ -21,7 +21,7 @@ Tasks get the full available width; import is contextual, selection actions are
 grouped, and exports/project administration live in Data. Retain all existing
 domain, storage, annotation, versioning, and confirmation behavior.
 
-## 2. Setup and authoring — awaiting permission after increment 1
+## 2. Setup and authoring — implemented after approval
 
 Project creation and settings, shared import/form composition, taxonomy editor
 (structured and source editing, scales, validation, version history), Markdown
@@ -58,4 +58,29 @@ remain visible instead of being overwritten by a success message.
   automated accessibility checks, keyboard dropdown selection, visible focus,
   confirmation Escape/focus return, dialog focus containment, and empty states.
 
-No commits or pushes were made. Increment 2 requires explicit user approval.
+## Increment 2 decisions and verification
+
+Creation and settings use a shared, two-column section layout: contextual
+guidance on the left, editable content on the right, stacked on narrow screens.
+Creation follows details → taxonomy → optional instructions → optional audio.
+Save/create actions stay visible at the bottom. All project routes now inherit
+the light shell; loading states announce progress rather than showing a blank
+page.
+
+Taxonomy opens in Structured mode for valid data, with separate Labels and
+Scales views. Invalid existing data opens in YAML for repair. YAML editing,
+canonicalization confirmation, custom color controls, reordering, validation,
+and immutable versions are preserved. Instructions offer Write/Split/Preview
+views, persistent actions, wrapped Markdown, and the existing synchronized
+scrolling and unsaved-change protection. Restore pairs file selection with a
+validated inventory, retaining explicit replacement confirmation on collisions.
+
+`pnpm validate` passed (199 tests, lint, formatting, typecheck, production
+build). Isolated-browser checks covered creation, settings save, structured
+label/scale edits, version creation, invalid YAML and duplicate-version
+protection, instructions views/save/unsaved navigation, and backup preview,
+collision cancellation, and replacement. Accessibility and responsive checks
+passed at 1440, 390, and 320 px. The existing WaveSurfer build warning remains;
+the taxonomy specificity lint warning was resolved.
+
+No commits or pushes were made. Both planned increments are now implemented.
