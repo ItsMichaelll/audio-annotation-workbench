@@ -32,6 +32,7 @@ export function normalizeRelativePath(value: string): string {
   const path = value.trim().replaceAll('\\', '/')
   if (
     !path ||
+    !path.split('/').some((part) => part !== '.') ||
     path.startsWith('/') ||
     /^[a-zA-Z]:\//.test(path) ||
     path.split('/').some((part) => part === '..' || !part)
@@ -143,10 +144,20 @@ export function buildImportPlan(
       .filter((task) => task.externalId)
       .map((task) => [task.externalId!, task]),
   )
+  const pathKey = (path: string, source?: MediaSourceReference) =>
+    source?.kind === 'folder' ? JSON.stringify([source.sourceId, path]) : path
   const paths = new Map(
     existing
       .filter((task) => task.relativePath)
-      .map((task) => [task.relativePath!, task]),
+      .map((task) => [
+        pathKey(
+          task.primaryMedia.kind === 'folder'
+            ? task.primaryMedia.relativePath
+            : task.relativePath!,
+          task.primaryMedia,
+        ),
+        task,
+      ]),
   )
   const seenIds = new Set<string>()
   const seenPaths = new Set<string>()
@@ -154,10 +165,11 @@ export function buildImportPlan(
     try {
       const audio = normalizeRelativePath(candidate.audio)
       const byId = candidate.id ? ids.get(candidate.id) : undefined
-      const byPath = paths.get(audio)
+      const key = pathKey(audio, candidate.source)
+      const byPath = paths.get(key)
       if (
         (candidate.id && seenIds.has(candidate.id)) ||
-        seenPaths.has(audio) ||
+        seenPaths.has(key) ||
         (byId && byPath && byId.id !== byPath.id) ||
         (byId && byId.relativePath !== audio) ||
         (byPath && candidate.id && byPath.externalId !== candidate.id)
@@ -173,7 +185,7 @@ export function buildImportPlan(
       plan.valid.push(valid)
       if (!candidate.source) plan.unresolved.push(valid)
       if (candidate.id) seenIds.add(candidate.id)
-      seenPaths.add(audio)
+      seenPaths.add(key)
     } catch (error) {
       plan.invalid.push(
         error instanceof Error ? error.message : 'Invalid entry.',

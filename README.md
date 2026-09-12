@@ -78,7 +78,7 @@ production static hosting must serve `index.html` for these application paths.
 
 ## Persistence and data ownership
 
-IndexedDB database `audio-annotation-workbench` is currently schema version 4.
+IndexedDB database `audio-annotation-workbench` is currently schema version 6.
 It contains:
 
 | Store | Responsibility |
@@ -88,6 +88,7 @@ It contains:
 | `instructions` | Optional raw Markdown instructions |
 | `tasks` | Task source, stable import order, lifecycle status, and indexes |
 | `annotations` | Versioned drafts and submissions, uniquely indexed by task |
+| `sourceFolders` | Read-only directory handles keyed by project and stable source ID |
 
 The typed repository is independent of React and owns database initialization,
 migrations, queries, and writes. Project and task deletion remove associated
@@ -113,20 +114,22 @@ See [editor design and interaction decisions](docs/editor-design.md),
 ## Backup, restore, and annotation export
 
 Project detail includes a deterministic JSON backup for one complete project.
-Backup format `audio-annotation-workbench-project` version 1 contains the project
+Backup format `audio-annotation-workbench-project` version 2 contains the project
 record, every immutable taxonomy version and raw source, optional Markdown
-instructions, every task, and all draft and submitted annotations. Every
-persisted entity currently uses entity schema version 1; these versions are
-independent of both backup format version 1 and IndexedDB schema version 4.
+instructions, every task, and all draft and submitted annotations. Project, taxonomy, instruction, and task records use entity schema version 1;
+annotations use version 2. These versions are independent of backup format
+version 2 and IndexedDB schema version 6. Version-1 backups remain readable.
 
 Backups never contain audio bytes, object URLs, absolute filesystem paths,
 waveform peaks, spectrogram or analysis data, browser file handles, or
-session-only permissions. Media identities are converted to portable unresolved
-references. Restore accepts JSON files up to 10 MB, validates every entity and
+session-only permissions. Session media identities are converted to portable unresolved references.
+Folder references retain their stable source ID, folder name, and full relative
+path with unknown permission. Restore accepts JSON files up to 10 MB, validates every entity and
 relationship before writing, previews the export date and record counts, and
 uses one transaction across all stores. A project ID collision requires explicit
 replacement confirmation; replacement affects only that project and rolls back
-completely on failure. Every restored media source requires relinking.
+completely on failure. Reconnect each saved root folder after restoration to recover all matching
+tasks; temporary sources still need file relinking.
 
 Annotation export supports versioned JSONL and flattened CSV in submitted-only
 or all-task mode. JSONL writes one record per included task with its nullable
@@ -243,9 +246,24 @@ are persisted.
 Task types represent a primary media reference separately from project metadata.
 The media-source adapter contract covers browser capability detection, permission
 query and request behavior, missing or moved files, unresolved references, and
-future fallback adapters. This allows File System Access API handles, a local
-companion service, or a desktop wrapper to be added later without rewriting
+future fallback adapters. Persistent folder and file-handle adapters implement this contract. A local
+companion service or desktop wrapper can be added later without rewriting
 project and annotation domain logic.
+
+Project detail includes **Source folders**. In browsers supporting persistent
+directory handles, select **Connect folder**, then **Scan folder / link matching
+tasks**. Review and confirm new imports. The scan also links existing unresolved
+or temporary tasks by full relative path (including legacy directory-root
+prefixes); duplicate basenames in different subdirectories remain distinct.
+Multiple roots can contain the same relative path without colliding.
+
+On reopening a project, saved folder permission is queried without prompting.
+If granted, tasks resolve automatically. Otherwise **Reconnect folder** restores
+access for the whole root. **Replace folder** points the same stable source ID
+at a new root; **Forget access** removes the saved handle but preserves tasks
+and portable folder identity for later reconnection. Missing or moved files are
+reported by relative path. No filesystem write operations are used. Unsupported
+browsers retain the temporary file and directory import workflow.
 
 The annotation workspace queries saved-handle permission without prompting.
 Permission requests and relinking occur only after a user action. Resolved files
@@ -390,7 +408,7 @@ measurement details.
 ### Later capabilities
 
 Quality review, reviewer assignment, collaboration, authentication, cloud
-storage, inter-annotator agreement, and ML-assisted labeling remain explicitly
+storage (see the [storage integration plan](docs/storage-integrations.md)), inter-annotator agreement, and ML-assisted labeling remain explicitly
 deferred. They require separate product and security decisions after the
 local-first single-reviewer workflow is complete.
 

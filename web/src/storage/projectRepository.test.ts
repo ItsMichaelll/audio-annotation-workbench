@@ -52,6 +52,7 @@ describe('IndexedDB project repository', () => {
       'annotations',
       'instructions',
       'projects',
+      'sourceFolders',
       'tasks',
       'taxonomyVersions',
     ])

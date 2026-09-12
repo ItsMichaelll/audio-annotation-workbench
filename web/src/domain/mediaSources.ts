@@ -35,6 +35,10 @@ export interface MediaSourceRegistry {
 
 const currentSessionFiles = new Map<string, File>()
 
+export function releaseCurrentSessionFile(locator: string): void {
+  currentSessionFiles.delete(locator)
+}
+
 export function registerCurrentSessionFile(locator: string, file: File): void {
   currentSessionFiles.set(locator, file)
 }
@@ -147,7 +151,9 @@ export function getMediaSourceRegistry(): MediaSourceRegistry {
 }
 
 export function detectMediaSourceCapabilities(): MediaSourceCapabilities {
-  const pickerWindow = window as Window & {
+  const pickerWindow = (
+    typeof window === 'undefined' ? {} : window
+  ) as Window & {
     showOpenFilePicker?: unknown
     showDirectoryPicker?: unknown
   }
@@ -156,7 +162,7 @@ export function detectMediaSourceCapabilities(): MediaSourceCapabilities {
     fileSystemAccess: typeof pickerWindow.showOpenFilePicker === 'function',
     directorySelection: typeof pickerWindow.showDirectoryPicker === 'function',
     persistentHandles:
-      typeof pickerWindow.showOpenFilePicker === 'function' &&
+      typeof pickerWindow.showDirectoryPicker === 'function' &&
       typeof indexedDB !== 'undefined',
   }
 }

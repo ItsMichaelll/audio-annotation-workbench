@@ -41,8 +41,8 @@ must route application paths to `index.html`.
 
 ## IndexedDB ownership
 
-Database `audio-annotation-workbench`, version 4, contains `projects`,
-`taxonomyVersions`, `instructions`, `tasks`, and `annotations`. Database access is confined to
+Database `audio-annotation-workbench`, version 6, contains `projects`,
+`taxonomyVersions`, `instructions`, `tasks`, `annotations`, and `sourceFolders`. Database access is confined to
 `storage/`; React components do not open stores or transactions.
 
 The database upgrade callback applies migrations in ascending version order.
@@ -55,6 +55,8 @@ Version 1 creates:
   project-relative source path (added by the forward version-2 migration)
 - annotation documents by UUID, project, and unique task (added by the forward
   version-3 migration without rewriting version-2 records)
+- version 6 adds project-scoped directory handles without rewriting old tasks
+- version 5 reapplies annotation normalization for the corrected cardinality
 - version 4 normalizes legacy multi-label region annotations to the current
   single-region-label cardinality without changing clip labels
 
@@ -78,11 +80,13 @@ never performs filesystem operations.
 
 ## Portability and recovery
 
-`domain/projectBackup.ts` owns backup format version 1 independently from the
+`domain/projectBackup.ts` owns backup format version 2 (also reading version 1) independently from the
 IndexedDB and entity schema versions. It strictly parses untrusted JSON,
 validates supported entity versions and the complete project relationship graph,
-and deterministically orders records. Task media becomes unresolved while safe
-relative identity remains; file handles, permissions, absolute paths, audio, and
+and deterministically orders records. Temporary task media becomes unresolved; folder references retain source IDs
+and full relative paths with unknown permission. Portable folder names live in
+project metadata; native handles live only in the separate sourceFolders store.
+Browser file handles, permissions, absolute paths, audio, and
 derived analysis state are excluded.
 
 `domain/annotationExport.ts` generates versioned JSONL task records and flattened
@@ -91,7 +95,7 @@ pinned taxonomy label interpretation. CSV represents region and clip assignments
 and uses a task-only row for all-task exports with no assignments.
 
 The repository reads complete project snapshots and restores a validated backup
-in one transaction over all five stores. Existing project IDs are never
+in one transaction over all six stores. Existing project IDs are never
 overwritten by default. Explicit replacement deletes only the colliding
 project's scoped records and inserts the backup in the same transaction, so an
 error preserves the prior project and every unrelated project.
@@ -145,10 +149,10 @@ writes. Task media references preserve only a safe relative identity and, where
 available, browser file handles; fallback selections are session-only. Relinking
 requires a matching relative identity unless a replacement is explicitly allowed.
 
-Media references describe file-handle, external, and unresolved states without
+Media references describe folder, file-handle, external, and unresolved states without
 storing audio bytes. The adapter contract separates capability detection,
-permission query/request, and file resolution. Future browser handle, fallback,
-companion-service, or desktop adapters can implement this contract without
+permission query/request, and file resolution. The folder adapter resolves full paths from saved read-only roots.
+Future companion-service or desktop adapters can implement this contract without
 changing tasks or projects.
 
 Project creation does not request filesystem access. Audio is never copied to

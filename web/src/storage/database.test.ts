@@ -71,6 +71,7 @@ describe('annotation database migration', () => {
     expect(await migrated.get('projects', project.id)).toEqual(project)
     expect(await migrated.get('tasks', task.id)).toEqual(task)
     expect(Array.from(migrated.objectStoreNames)).toContain('annotations')
+    expect(Array.from(migrated.objectStoreNames)).toContain('sourceFolders')
     migrated.close()
   })
 

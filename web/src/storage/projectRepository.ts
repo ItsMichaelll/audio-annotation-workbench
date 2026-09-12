@@ -1,3 +1,12 @@
+import {
+  FolderSourceAdapter,
+  folderReference,
+  type DirectoryHandle,
+} from '../domain/folderSources'
+import {
+  getMediaSourceRegistry,
+  releaseCurrentSessionFile,
+} from '../domain/mediaSources'
 import type { IDBPTransaction, StoreNames } from 'idb'
 import { normalizeAnnotationCardinality } from '../domain/annotations'
 import {
@@ -19,6 +28,7 @@ import {
   type RelinkSelection,
 } from '../domain/relink'
 import {
+  normalizeRelativePath,
   canTransitionTask,
   taskFromCandidate,
   type ImportCandidate,
@@ -57,6 +67,21 @@ export interface TaxonomyUpdateResult {
 }
 
 export interface ProjectRepository {
+  getSourceFolder(
+    projectId: string,
+    id: string,
+  ): Promise<DirectoryHandle | undefined>
+  saveSourceFolder(
+    projectId: string,
+    id: string,
+    handle: DirectoryHandle,
+  ): Promise<void>
+  forgetSourceFolder(projectId: string, id: string): Promise<void>
+  linkFolderTasks(
+    projectId: string,
+    sourceId: string,
+    paths: string[],
+  ): Promise<number>
   createProject(input: CreateProjectInput): Promise<Project>
   getProject(id: string): Promise<ProjectAggregate | null>
   listProjects(status?: ProjectStatus): Promise<ProjectSummary[]>
@@ -136,7 +161,12 @@ type ProjectTransaction = IDBPTransaction<
 
 async function deleteAllByProject(
   transaction: ProjectTransaction,
-  storeName: 'taxonomyVersions' | 'instructions' | 'tasks' | 'annotations',
+  storeName:
+    | 'taxonomyVersions'
+    | 'instructions'
+    | 'tasks'
+    | 'annotations'
+    | 'sourceFolders',
   projectId: string,
 ): Promise<void> {
   const store = transaction.objectStore(storeName)
@@ -161,6 +191,105 @@ export class IndexedDbProjectRepository implements ProjectRepository {
     this.uuid = dependencies.uuid ?? (() => crypto.randomUUID())
     this.beforeCreateCommit = dependencies.beforeCreateCommit
     this.beforeRestoreCommit = dependencies.beforeRestoreCommit
+  }
+
+  private async releaseUnusedSessionFiles(locators: string[]): Promise<void> {
+    if (!locators.length) return
+    const tasks = await this.database.getAll('tasks')
+    const retained = new Set(
+      tasks.flatMap((task) =>
+        task.primaryMedia.kind === 'external-reference'
+          ? [task.primaryMedia.locator]
+          : [],
+      ),
+    )
+    locators
+      .filter((locator) => !retained.has(locator))
+      .forEach(releaseCurrentSessionFile)
+  }
+
+  async getSourceFolder(
+    projectId: string,
+    id: string,
+  ): Promise<DirectoryHandle | undefined> {
+    return (await this.database.get('sourceFolders', [projectId, id]))
+      ?.handle as DirectoryHandle | undefined
+  }
+
+  async saveSourceFolder(
+    projectId: string,
+    id: string,
+    handle: DirectoryHandle,
+  ): Promise<void> {
+    const tx = this.database.transaction(
+      ['projects', 'sourceFolders'],
+      'readwrite',
+    )
+    try {
+      const project = await tx.objectStore('projects').get(projectId)
+      if (!project) throw new Error('Project not found.')
+      const sourceFolders = [...(project.sourceFolders ?? [])]
+      const index = sourceFolders.findIndex((folder) => folder.id === id)
+      if (index < 0) sourceFolders.push({ id, name: handle.name })
+      else sourceFolders[index] = { id, name: handle.name }
+      await tx.objectStore('sourceFolders').put({ projectId, id, handle })
+      await tx
+        .objectStore('projects')
+        .put({ ...project, sourceFolders, updatedAt: this.now() })
+      await tx.done
+    } catch (error) {
+      try {
+        tx.abort()
+      } catch {
+        /* already aborted */
+      }
+      await tx.done.catch(() => undefined)
+      throw error
+    }
+  }
+
+  async forgetSourceFolder(projectId: string, id: string): Promise<void> {
+    // Keep portable identity and task references so a later reconnect still works.
+    await this.database.delete('sourceFolders', [projectId, id])
+  }
+
+  async linkFolderTasks(
+    projectId: string,
+    sourceId: string,
+    paths: string[],
+  ): Promise<number> {
+    paths.forEach(normalizeRelativePath)
+    const tx = this.database.transaction(['projects', 'tasks'], 'readwrite')
+    const project = await tx.objectStore('projects').get(projectId)
+    const folder = project?.sourceFolders?.find((item) => item.id === sourceId)
+    if (!folder) throw new Error('Source folder not found.')
+    const available = new Set(paths)
+    const tasks = await tx
+      .objectStore('tasks')
+      .index('by-project')
+      .getAll(projectId)
+    const released: string[] = []
+    let count = 0
+    for (const task of tasks) {
+      if (task.primaryMedia.kind === 'folder' || !task.relativePath) continue
+      const path = available.has(task.relativePath)
+        ? task.relativePath
+        : task.relativePath.startsWith(folder.name + '/')
+          ? task.relativePath.slice(folder.name.length + 1)
+          : ''
+      if (!available.has(path)) continue
+      await tx.objectStore('tasks').put({
+        ...task,
+        primaryMedia: folderReference(projectId, sourceId, path),
+        updatedAt: this.now(),
+      })
+      if (task.primaryMedia.kind === 'external-reference')
+        released.push(task.primaryMedia.locator)
+      count++
+    }
+    await tx.done
+    await this.releaseUnusedSessionFiles(released)
+    return count
   }
 
   async createProject(input: CreateProjectInput): Promise<Project> {
@@ -189,7 +318,14 @@ export class IndexedDbProjectRepository implements ProjectRepository {
       timestamp,
     )
     const transaction = this.database.transaction(
-      ['projects', 'taxonomyVersions', 'instructions', 'tasks', 'annotations'],
+      [
+        'projects',
+        'taxonomyVersions',
+        'instructions',
+        'tasks',
+        'annotations',
+        'sourceFolders',
+      ],
       'readwrite',
     )
     try {
@@ -237,7 +373,14 @@ export class IndexedDbProjectRepository implements ProjectRepository {
 
   async getProject(id: string): Promise<ProjectAggregate | null> {
     const transaction = this.database.transaction(
-      ['projects', 'taxonomyVersions', 'instructions', 'tasks', 'annotations'],
+      [
+        'projects',
+        'taxonomyVersions',
+        'instructions',
+        'tasks',
+        'annotations',
+        'sourceFolders',
+      ],
       'readonly',
     )
     const project = await transaction.objectStore('projects').get(id)
@@ -458,8 +601,16 @@ export class IndexedDbProjectRepository implements ProjectRepository {
   }
 
   async deleteProject(projectId: string): Promise<void> {
+    const removedTasks = await this.listTasks(projectId)
     const transaction = this.database.transaction(
-      ['projects', 'taxonomyVersions', 'instructions', 'tasks', 'annotations'],
+      [
+        'projects',
+        'taxonomyVersions',
+        'instructions',
+        'tasks',
+        'annotations',
+        'sourceFolders',
+      ],
       'readwrite',
     ) as ProjectTransaction
     try {
@@ -467,8 +618,16 @@ export class IndexedDbProjectRepository implements ProjectRepository {
       await deleteAllByProject(transaction, 'instructions', projectId)
       await deleteAllByProject(transaction, 'tasks', projectId)
       await deleteAllByProject(transaction, 'annotations', projectId)
+      await deleteAllByProject(transaction, 'sourceFolders', projectId)
       await transaction.objectStore('projects').delete(projectId)
       await transaction.done
+      await this.releaseUnusedSessionFiles(
+        removedTasks.flatMap((task) =>
+          task.primaryMedia.kind === 'external-reference'
+            ? [task.primaryMedia.locator]
+            : [],
+        ),
+      )
     } catch (error) {
       try {
         transaction.abort()
@@ -569,6 +728,7 @@ export class IndexedDbProjectRepository implements ProjectRepository {
   }
 
   async deleteTasks(projectId: string, taskIds: string[]): Promise<void> {
+    const released: string[] = []
     const transaction = this.database.transaction(
       ['projects', 'tasks', 'annotations'],
       'readwrite',
@@ -585,6 +745,8 @@ export class IndexedDbProjectRepository implements ProjectRepository {
         await transaction.objectStore('annotations').delete(annotation.id)
       }
       await transaction.objectStore('tasks').delete(id)
+      if (task.primaryMedia.kind === 'external-reference')
+        released.push(task.primaryMedia.locator)
     }
     const project = await transaction.objectStore('projects').get(projectId)
     if (project)
@@ -592,6 +754,7 @@ export class IndexedDbProjectRepository implements ProjectRepository {
         .objectStore('projects')
         .put({ ...project, updatedAt: this.now() })
     await transaction.done
+    await this.releaseUnusedSessionFiles(released)
   }
 
   async relinkTask(
@@ -609,6 +772,12 @@ export class IndexedDbProjectRepository implements ProjectRepository {
       primaryMedia: source,
       updatedAt: this.now(),
     })
+    if (
+      task.primaryMedia.kind === 'external-reference' &&
+      (source.kind !== 'external-reference' ||
+        source.locator !== task.primaryMedia.locator)
+    )
+      await this.releaseUnusedSessionFiles([task.primaryMedia.locator])
   }
 
   async getAnnotation(taskId: string): Promise<AnnotationDocument | null> {
@@ -624,7 +793,14 @@ export class IndexedDbProjectRepository implements ProjectRepository {
     projectId: string,
   ): Promise<ProjectBackupRecords> {
     const transaction = this.database.transaction(
-      ['projects', 'taxonomyVersions', 'instructions', 'tasks', 'annotations'],
+      [
+        'projects',
+        'taxonomyVersions',
+        'instructions',
+        'tasks',
+        'annotations',
+        'sourceFolders',
+      ],
       'readonly',
     )
     const project = await transaction.objectStore('projects').get(projectId)
@@ -658,8 +834,16 @@ export class IndexedDbProjectRepository implements ProjectRepository {
     backup: ProjectBackup,
     replaceExisting = false,
   ): Promise<void> {
+    const removedTasks = await this.listTasks(backup.project.id)
     const transaction = this.database.transaction(
-      ['projects', 'taxonomyVersions', 'instructions', 'tasks', 'annotations'],
+      [
+        'projects',
+        'taxonomyVersions',
+        'instructions',
+        'tasks',
+        'annotations',
+        'sourceFolders',
+      ],
       'readwrite',
     ) as ProjectTransaction
     try {
@@ -678,6 +862,11 @@ export class IndexedDbProjectRepository implements ProjectRepository {
         await deleteAllByProject(transaction, 'instructions', backup.project.id)
         await deleteAllByProject(transaction, 'tasks', backup.project.id)
         await deleteAllByProject(transaction, 'annotations', backup.project.id)
+        await deleteAllByProject(
+          transaction,
+          'sourceFolders',
+          backup.project.id,
+        )
         await transaction.objectStore('projects').delete(backup.project.id)
       }
       await transaction.objectStore('projects').add(backup.project)
@@ -697,6 +886,13 @@ export class IndexedDbProjectRepository implements ProjectRepository {
       }
       this.beforeRestoreCommit?.()
       await transaction.done
+      await this.releaseUnusedSessionFiles(
+        removedTasks.flatMap((task) =>
+          task.primaryMedia.kind === 'external-reference'
+            ? [task.primaryMedia.locator]
+            : [],
+        ),
+      )
     } catch (error) {
       try {
         transaction.abort()
@@ -897,8 +1093,14 @@ export class IndexedDbProjectRepository implements ProjectRepository {
 let repositoryPromise: Promise<IndexedDbProjectRepository> | null = null
 
 export function getProjectRepository(): Promise<IndexedDbProjectRepository> {
-  repositoryPromise ??= openWorkbenchDatabase().then(
-    (database) => new IndexedDbProjectRepository(database),
-  )
+  repositoryPromise ??= openWorkbenchDatabase().then((database) => {
+    const repository = new IndexedDbProjectRepository(database)
+    getMediaSourceRegistry().register(
+      new FolderSourceAdapter((projectId, sourceId) =>
+        repository.getSourceFolder(projectId, sourceId),
+      ),
+    )
+    return repository
+  })
   return repositoryPromise
 }

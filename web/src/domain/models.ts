@@ -6,12 +6,18 @@ export const ANNOTATION_SCHEMA_VERSION = 2 as const
 
 export type ProjectStatus = 'active' | 'archived'
 
+export interface SourceFolder {
+  id: string
+  name: string
+}
+
 export interface Project {
   id: string
   schemaVersion: typeof PROJECT_SCHEMA_VERSION
   name: string
   description?: string
   status: ProjectStatus
+  sourceFolders?: SourceFolder[]
   activeTaxonomyVersionId: string
   instructionsId?: string
   createdAt: string
@@ -68,6 +74,14 @@ export type TaskSourceIdentity =
   | { kind: 'manifest'; relativePath: string }
 
 export type MediaSourceReference =
+  | {
+      kind: 'folder'
+      projectId: string
+      sourceId: string
+      relativePath: string
+      displayName: string
+      permission: MediaPermissionState
+    }
   | {
       kind: 'file-handle'
       handleId: string

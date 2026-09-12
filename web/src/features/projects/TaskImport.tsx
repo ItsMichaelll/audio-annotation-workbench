@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '../../components/Button'
 import {
   buildImportPlan,
@@ -7,13 +7,16 @@ import {
   type ImportPlan,
 } from '../../domain/taskIngestion'
 import type { TaskRecord } from '../../domain/models'
-import { registerCurrentSessionFile } from '../../domain/mediaSources'
+import {
+  registerCurrentSessionFile,
+  releaseCurrentSessionFile,
+} from '../../domain/mediaSources'
 import styles from './TaskImport.module.css'
 
 const AUDIO = /\.(wav|mp3|flac|ogg|m4a|aac|aiff?)$/i
 
 function sourceFor(file: File, relativePath: string) {
-  const locator = `${relativePath}:${file.size}:${file.lastModified}`
+  const locator = `import:${crypto.randomUUID()}:${relativePath}`
   registerCurrentSessionFile(locator, file)
   return {
     kind: 'external-reference' as const,
@@ -30,6 +33,17 @@ export function TaskImport({
   existing?: readonly TaskRecord[]
   onReady: (tasks: ImportCandidate[]) => void
 }) {
+  const pendingLocators = useRef<string[]>([])
+  const releasePreview = () => {
+    pendingLocators.current.forEach(releaseCurrentSessionFile)
+    pendingLocators.current = []
+  }
+  useEffect(
+    () => () => {
+      pendingLocators.current.forEach(releaseCurrentSessionFile)
+    },
+    [],
+  )
   const input = useRef<HTMLInputElement>(null)
   const directoryInput = useRef<HTMLInputElement>(null)
   const manifestInput = useRef<HTMLInputElement>(null)
@@ -37,22 +51,25 @@ export function TaskImport({
   const [error, setError] = useState<string | null>(null)
   const prepareFiles = (files: FileList | null) => {
     if (!files) return
+    releasePreview()
     const candidates: ImportCandidate[] = []
     const unsupported: string[] = []
     for (const file of Array.from(files)) {
       const path = file.webkitRelativePath || file.name
-      if (AUDIO.test(file.name))
+      if (AUDIO.test(file.name)) {
+        const source = sourceFor(file, path)
+        pendingLocators.current.push(source.locator)
         candidates.push({
           audio: path,
           name: file.name,
-          source: sourceFor(file, path),
+          source,
           sourceIdentity: {
             kind: 'direct-file',
             filename: file.name,
             size: file.size,
           },
         })
-      else unsupported.push(file.name)
+      } else unsupported.push(file.name)
     }
     const next = buildImportPlan(candidates, existing)
     next.unsupported = unsupported
@@ -63,6 +80,7 @@ export function TaskImport({
     if (!file) return
     try {
       const next = buildImportPlan(parseManifest(await file.text()), existing)
+      releasePreview()
       setPlan(next)
       setError(null)
     } catch (reason) {
@@ -169,6 +187,17 @@ export function TaskImport({
             type="button"
             disabled={!plan.valid.length}
             onClick={() => {
+              const retained = new Set(
+                plan.valid.flatMap((candidate) =>
+                  candidate.source?.kind === 'external-reference'
+                    ? [candidate.source.locator]
+                    : [],
+                ),
+              )
+              pendingLocators.current
+                .filter((locator) => !retained.has(locator))
+                .forEach(releaseCurrentSessionFile)
+              pendingLocators.current = []
               onReady(plan.valid)
               setPlan(null)
             }}
