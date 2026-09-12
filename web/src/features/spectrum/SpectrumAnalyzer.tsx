@@ -55,6 +55,10 @@ interface SpectrumFrame {
   textColor: string
   mutedColor: string
   gridColor: string
+  backgroundColor: string
+  hoverColor: string
+  tooltipBackground: string
+  tooltipBorder: string
   fontFamily: string
 }
 
@@ -75,7 +79,11 @@ const EMPTY_FRAME: SpectrumFrame = {
   peakColor: '#18f76e',
   textColor: '#edf1f2',
   mutedColor: '#8d979e',
-  gridColor: 'rgba(141, 151, 158, 0.16)',
+  gridColor: '#dce1e9',
+  backgroundColor: '#f5f6f8',
+  hoverColor: '#586479',
+  tooltipBackground: '#ffffff',
+  tooltipBorder: '#dce1e9',
   fontFamily: 'system-ui, sans-serif',
 }
 
@@ -133,7 +141,7 @@ function drawGrid(
     }
   }
 
-  context.strokeStyle = 'rgba(141, 151, 158, 0.32)'
+  context.strokeStyle = frame.gridColor
   context.strokeRect(
     Math.round(plotLeft) + 0.5,
     Math.round(plotTop) + 0.5,
@@ -215,7 +223,7 @@ function drawHover(
   }
 
   context.save()
-  context.strokeStyle = 'rgba(237, 241, 242, 0.58)'
+  context.strokeStyle = frame.hoverColor
   context.lineWidth = 1
   context.setLineDash([3, 3])
   context.beginPath()
@@ -245,9 +253,9 @@ function drawHover(
     Math.max(hover.y - labelHeight - 8, plotTop + 4),
     plotTop + plotHeight - labelHeight - 4,
   )
-  context.fillStyle = 'rgba(13, 15, 16, 0.94)'
+  context.fillStyle = frame.tooltipBackground
   context.fillRect(labelX, labelY, labelWidth, labelHeight)
-  context.strokeStyle = 'rgba(237, 241, 242, 0.34)'
+  context.strokeStyle = frame.tooltipBorder
   context.strokeRect(
     labelX + 0.5,
     labelY + 0.5,
@@ -288,7 +296,7 @@ export function SpectrumAnalyzer({
     if (!context) return
 
     context.clearRect(0, 0, frame.canvasWidth, frame.canvasHeight)
-    context.fillStyle = '#0b0d0e'
+    context.fillStyle = frame.backgroundColor
     context.fillRect(0, 0, frame.canvasWidth, frame.canvasHeight)
     const maxFrequency = displayMaxFrequency(sampleRate || 48_000)
     if (maxFrequency <= SPECTRUM_MIN_FREQUENCY) return
@@ -354,11 +362,24 @@ export function SpectrumAnalyzer({
         liveValues: new Float32Array(columns),
         peakValues: new Float32Array(columns),
         peakHoldUntil: new Float64Array(columns),
-        accentColor: styles.getPropertyValue('--accent').trim() || '#4690ff',
-        peakColor: styles.getPropertyValue('--status').trim() || '#18f76e',
-        textColor: styles.getPropertyValue('--text').trim() || '#edf1f2',
-        mutedColor: styles.getPropertyValue('--muted').trim() || '#8d979e',
-        gridColor: 'rgba(141, 151, 158, 0.16)',
+        accentColor:
+          styles.getPropertyValue('--accent-primary').trim() || '#4690ff',
+        peakColor:
+          styles.getPropertyValue('--text-success').trim() || '#18f76e',
+        textColor:
+          styles.getPropertyValue('--text-primary').trim() || '#edf1f2',
+        mutedColor:
+          styles.getPropertyValue('--text-secondary').trim() || '#8d979e',
+        gridColor:
+          styles.getPropertyValue('--border-subtle').trim() || '#dce1e9',
+        backgroundColor:
+          styles.getPropertyValue('--surface-waveform').trim() || '#f5f6f8',
+        hoverColor:
+          styles.getPropertyValue('--text-tertiary').trim() || '#586479',
+        tooltipBackground:
+          styles.getPropertyValue('--surface-panel').trim() || '#ffffff',
+        tooltipBorder:
+          styles.getPropertyValue('--border-default').trim() || '#dce1e9',
       }
       const resizedFrame = frameRef.current
       const maxFrequency = displayMaxFrequency(sampleRate || 48_000)

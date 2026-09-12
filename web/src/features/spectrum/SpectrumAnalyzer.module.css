@@ -2,7 +2,7 @@
   margin-top: 10px;
   overflow: hidden;
   border: 1px solid var(--border-default);
-  background: var(--color-neutral-950);
+  background: var(--surface-panel);
 }
 
 .header {
@@ -91,6 +91,7 @@
   display: block;
   width: 100%;
   height: 208px;
-  background: var(--color-neutral-950);
+  border-top: 1px solid var(--border-subtle);
+  background: var(--surface-waveform);
   cursor: crosshair;
 }

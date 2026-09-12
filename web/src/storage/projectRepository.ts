@@ -23,6 +23,7 @@ import {
   type TaxonomyVersion,
 } from '../domain/models'
 import { deriveTaskProgress } from '../domain/taskProgress'
+import { orderedTasks } from '../domain/taskQueue'
 import {
   assertRelinkSelectionMatchesTask,
   type RelinkSelection,
@@ -645,7 +646,9 @@ export class IndexedDbProjectRepository implements ProjectRepository {
   }
 
   async listTasks(projectId: string): Promise<TaskRecord[]> {
-    return this.database.getAllFromIndex('tasks', 'by-project', projectId)
+    return orderedTasks(
+      await this.database.getAllFromIndex('tasks', 'by-project', projectId),
+    )
   }
 
   async importTasks(

@@ -150,7 +150,7 @@
   margin-top: 10px;
   overflow: hidden;
   border: 1px solid var(--border-default);
-  background: #0e1112;
+  background: var(--surface-waveform);
 }
 
 .spectrogramHeader {
@@ -191,7 +191,7 @@
 .spectrogramSurface {
   position: relative;
   min-height: 150px;
-  background: #0e1112;
+  background: var(--surface-waveform);
 }
 
 .spectrogramAxis {
@@ -201,9 +201,9 @@
   bottom: 0;
   left: 0;
   width: 55px;
-  border-right: 1px solid rgb(255 255 255 / 10%);
-  background: rgb(14 17 18 / 82%);
-  color: #d8dfe2;
+  border-right: 1px solid var(--border-default);
+  background: color-mix(in srgb, var(--surface-panel) 94%, transparent);
+  color: var(--text-primary);
   font-family: var(--font-sans);
   font-size: 10px;
   pointer-events: none;
@@ -220,7 +220,7 @@
 }
 
 .spectrogramAxisUnit {
-  color: #a6b1b8;
+  color: var(--text-tertiary);
   font-size: 8px;
 }
 

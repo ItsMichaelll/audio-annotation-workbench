@@ -1822,10 +1822,13 @@ export const WaveformEditor = forwardRef<
         labels: false,
         fftSamples: 1024,
         scale: 'logarithmic',
-        colorMap: 'igray',
+        // Use the perceptual color map for a standard energy/intensity view.
+        colorMap: 'roseus',
         windowSize: 24,
         bufferSize: 600,
-        progressiveLoading: false,
+        // Render the visible window immediately, then generate the remaining
+        // segments in the background so scrolling does not reveal blank areas.
+        progressiveLoading: true,
         useWebWorker: true,
         fallbackToMainThread: false,
       }),
