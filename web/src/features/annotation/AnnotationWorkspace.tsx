@@ -1,3 +1,9 @@
+import { useRegionSelection } from '../../components/useRegionSelection'
+import {
+  deleteSelectedRegions,
+  assignSelectedRegionLabel,
+  updateSelectedRegionAssignment,
+} from '../../domain/regionSelection'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { ButtonLink } from '../../components/Button'
@@ -222,6 +228,13 @@ function ActiveAnnotationWorkspace({
   taxonomyVersion: TaxonomyVersion
   taxonomy: AnnotationTaxonomy
 }) {
+  const selectionTaskActive = useRef(true)
+  useEffect(() => {
+    selectionTaskActive.current = true
+    return () => {
+      selectionTaskActive.current = false
+    }
+  }, [])
   const confirm = useConfirmation()
   const navigate = useNavigate()
   const waveformRef = useRef<WaveformEditorHandle>(null)
@@ -253,7 +266,14 @@ function ActiveAnnotationWorkspace({
     'loading',
   )
   const [audioError, setAudioError] = useState<string | null>(null)
-  const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null)
+  const {
+    selectedRegionId,
+    selectedRegionIds,
+    setSelectedRegionId,
+    selectRegion,
+    onSelectionKeyDown,
+    onSelectionClick,
+  } = useRegionSelection(annotation.regions)
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null)
   const [waveformFocused, setWaveformFocused] = useState(false)
   const [loopEnabled, setLoopEnabled] = useState(false)
@@ -309,7 +329,7 @@ function ActiveAnnotationWorkspace({
       setLoopEnabled(true)
       waveformRef.current?.revealRegion(destination.start, destination.end)
     },
-    [regions, selectedRegionId],
+    [regions, selectedRegionId, setSelectedRegionId],
   )
 
   const navigateMarker = useCallback(
@@ -328,7 +348,7 @@ function ActiveAnnotationWorkspace({
       waveformRef.current?.seekToMarker(destination.time)
       return true
     },
-    [currentTime, selectedMarkerId],
+    [currentTime, selectedMarkerId, setSelectedRegionId],
   )
 
   useEffect(() => {
@@ -413,7 +433,7 @@ function ActiveAnnotationWorkspace({
       setSaveState('Unsaved')
       setSaveError(null)
     },
-    [duration, selectedMarkerId, selectedRegionId],
+    [duration, selectedMarkerId, selectedRegionId, setSelectedRegionId],
   )
 
   const commit = useCallback(
@@ -622,7 +642,24 @@ function ActiveAnnotationWorkspace({
   )
 
   const toggleLabel = useCallback(
-    (target: 'region' | 'clip', labelId: string) => {
+    async (target: 'region' | 'clip', labelId: string) => {
+      if (readOnly) return
+      if (target === 'region' && selectedRegionIds.length > 1) {
+        const before = documentRef.current
+        const next = await assignSelectedRegionLabel(
+          before,
+          selectedRegionIds,
+          labelId,
+          confirm,
+        )
+        if (
+          next &&
+          documentRef.current === before &&
+          selectionTaskActive.current
+        )
+          commit(() => next)
+        return
+      }
       commit((current) => {
         if (target === 'clip') {
           const exists = current.clipAssignments.some(
@@ -653,7 +690,7 @@ function ActiveAnnotationWorkspace({
         }
       })
     },
-    [commit, selectedRegionId],
+    [commit, selectedRegionId, selectedRegionIds, confirm, readOnly],
   )
 
   const assignmentChange = useCallback(
@@ -672,37 +709,26 @@ function ActiveAnnotationWorkspace({
                 values,
               ),
             }
-          : {
-              ...current,
-              regions: current.regions.map((region) =>
-                region.id === selectedRegionId
-                  ? {
-                      ...region,
-                      assignments: updateAssignment(
-                        region.assignments,
-                        labelId,
-                        values,
-                      ),
-                    }
-                  : region,
-              ),
-            },
+          : updateSelectedRegionAssignment(
+              current,
+              selectedRegionIds,
+              labelId,
+              values,
+            ),
       )
     },
-    [commit, selectedRegionId],
+    [commit, selectedRegionIds],
   )
 
   const deleteSelectedRegion = useCallback(() => {
     if (!selectedRegionId) return
     commit((current) => ({
       ...current,
-      regions: current.regions.filter(
-        (region) => region.id !== selectedRegionId,
-      ),
+      regions: deleteSelectedRegions(current.regions, selectedRegionIds),
     }))
     setSelectedRegionId(null)
     setLoopEnabled(false)
-  }, [commit, selectedRegionId])
+  }, [commit, selectedRegionId, selectedRegionIds, setSelectedRegionId])
 
   const createMarkerAtPlayhead = useCallback(() => {
     if (readOnly || loadStatus !== 'ready') return
@@ -722,7 +748,7 @@ function ActiveAnnotationWorkspace({
       markers: addMarker(current.markers, marker, duration),
     }))
     setSelectedMarkerId(marker.id)
-  }, [commit, currentTime, duration, loadStatus, readOnly])
+  }, [commit, currentTime, duration, loadStatus, readOnly, setSelectedRegionId])
 
   const commitMarker = useCallback(
     (marker: MarkerAnnotation) => {
@@ -762,6 +788,7 @@ function ActiveAnnotationWorkspace({
       )
         return
       const command = keyboardCommand(event)
+      if (command?.type === 'select-all-regions') return
       if (command?.type === 'create-marker') {
         if (waveformFocused) {
           event.preventDefault()
@@ -803,7 +830,8 @@ function ActiveAnnotationWorkspace({
             waveformRef.current?.zoom(command.direction)
             break
           case 'toggle-loop':
-            if (selectedRegionId) setLoopEnabled((value) => !value)
+            if (selectedRegionIds.length === 1)
+              setLoopEnabled((value) => !value)
             break
           case 'delete-selection':
             if (!readOnly) deleteSelectedRegion()
@@ -861,6 +889,8 @@ function ActiveAnnotationWorkspace({
     toggleLabel,
     undo,
     waveformFocused,
+    setSelectedRegionId,
+    selectedRegionIds.length,
   ])
 
   const grantPermission = async () => {
@@ -936,10 +966,7 @@ function ActiveAnnotationWorkspace({
     spectrogramEnabled,
     spectrumEnabled,
     meterEnabled,
-    hasSelection: selectedRegion !== null,
-    canDelete: !readOnly && selectedRegion !== null,
-    canPreviousRegion: previousRegion !== null,
-    canNextRegion: nextRegion !== null,
+    hasSelection: selectedRegionIds.length === 1,
     verticalScale,
     currentTime,
     duration,
@@ -949,9 +976,14 @@ function ActiveAnnotationWorkspace({
     onZoomOut: () => waveformRef.current?.zoom('out'),
     onResetVerticalScale: () => waveformRef.current?.resetVerticalScale(),
     onToggleLoop: () => setLoopEnabled((value) => !value),
-    onDelete: deleteSelectedRegion,
-    onPreviousRegion: () => navigateRegion('previous'),
-    onNextRegion: () => navigateRegion('next'),
+    onJumpToStart: () => {
+      setLoopEnabled(false)
+      waveformRef.current?.jumpToBoundary('start')
+    },
+    onJumpToEnd: () => {
+      setLoopEnabled(false)
+      waveformRef.current?.jumpToBoundary('end')
+    },
     onToggleSpectrogram: () => setSpectrogramEnabled((value) => !value),
     onToggleSpectrum: () => {
       setSpectrumEnabled(!spectrumEnabled)
@@ -1013,7 +1045,20 @@ function ActiveAnnotationWorkspace({
   ).length
 
   return (
-    <div className={styles.shell} data-editor-theme="light">
+    <div
+      className={styles.shell}
+      data-editor-theme="light"
+      onKeyDownCapture={(event) => {
+        onSelectionKeyDown(event)
+        if (event.defaultPrevented) {
+          setSelectedMarkerId(null)
+          setLoopEnabled(false)
+        }
+      }}
+      onClick={(event) => {
+        if (onSelectionClick(event)) setLoopEnabled(false)
+      }}
+    >
       <ApplicationHeader
         projectName={aggregate.project.name}
         onNavigate={async (path) => {
@@ -1228,6 +1273,7 @@ function ActiveAnnotationWorkspace({
                 regions={regions}
                 markers={markers}
                 selectedRegionId={selectedRegionId}
+                selectedRegionIds={selectedRegionIds}
                 selectedMarkerId={selectedMarkerId}
                 loopEnabled={loopEnabled}
                 meterEnabled={meterEnabled}
@@ -1285,10 +1331,10 @@ function ActiveAnnotationWorkspace({
                 }
                 onRegionLiveChange={(region) => replaceRegion(region, false)}
                 onRegionCommit={(region) => replaceRegion(region, true)}
-                onRegionSelect={(id) => {
+                onRegionSelect={(id, toggle) => {
                   setSelectedMarkerId(null)
-                  setSelectedRegionId(id)
-                  setLoopEnabled(true)
+                  selectRegion(id, toggle)
+                  setLoopEnabled(!toggle)
                 }}
                 onClearRegionSelection={() => {
                   setSelectedRegionId(null)
@@ -1311,9 +1357,19 @@ function ActiveAnnotationWorkspace({
           <AnnotationList
             regions={regions}
             selectedRegionId={selectedRegionId}
+            selectedRegionIds={selectedRegionIds}
             markers={markers}
             selectedMarkerId={selectedMarkerId}
             markerControls={markerControls}
+            regionControls={{
+              isLoaded: loadStatus === 'ready',
+              editingEnabled: !readOnly,
+              canPrevious: previousRegion !== null,
+              canNext: nextRegion !== null,
+              onPrevious: () => navigateRegion('previous'),
+              onNext: () => navigateRegion('next'),
+              onDelete: deleteSelectedRegion,
+            }}
             onSelectMarker={(marker) => {
               setSelectedRegionId(null)
               setLoopEnabled(false)
@@ -1322,10 +1378,10 @@ function ActiveAnnotationWorkspace({
             }}
             labels={labels}
             issues={regionIssues}
-            onSelect={(region) => {
+            onSelect={(region, toggle) => {
               setSelectedMarkerId(null)
-              setSelectedRegionId(region.id)
-              setLoopEnabled(true)
+              selectRegion(region.id, toggle)
+              setLoopEnabled(!toggle)
               setInspectorOpen(true)
               waveformRef.current?.revealRegion(region.start, region.end)
             }}
@@ -1354,6 +1410,7 @@ function ActiveAnnotationWorkspace({
             }}
             taxonomy={taxonomy}
             selectedRegionId={selectedRegionId}
+            selectedRegionIds={selectedRegionIds}
             instructions={aggregate.instructions?.rawMarkdown ?? null}
             readOnly={readOnly}
             onToggleLabel={toggleLabel}

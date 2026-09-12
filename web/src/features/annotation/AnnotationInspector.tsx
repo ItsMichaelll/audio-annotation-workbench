@@ -13,6 +13,7 @@ import type {
   AnnotationTaxonomy,
 } from '../../domain/annotationTaxonomy'
 import { formatTime } from '../../domain/transport'
+import { commonSelectedRegionAssignment } from '../../domain/regionSelection'
 import { MarkdownInstructions } from '../projects/MarkdownInstructions'
 import styles from './AnnotationInspector.module.css'
 
@@ -22,6 +23,7 @@ interface AnnotationInspectorProps {
   annotation: AnnotationDocument
   taxonomy: AnnotationTaxonomy
   selectedRegionId: string | null
+  selectedRegionIds?: readonly string[]
   instructions: string | null
   readOnly: boolean
   duration: number
@@ -233,6 +235,10 @@ export function AnnotationInspector(props: AnnotationInspectorProps) {
   const selectedRegion = props.annotation.regions.find(
     (region) => region.id === props.selectedRegionId,
   )
+  const commonBulkAssignment = commonSelectedRegionAssignment(
+    props.annotation,
+    props.selectedRegionIds ?? [],
+  )
   const matchingLabels = props.taxonomy.labels.filter((label) =>
     [label.name, label.id, label.description]
       .filter(Boolean)
@@ -248,6 +254,7 @@ export function AnnotationInspector(props: AnnotationInspectorProps) {
     .findIndex((region) => region.id === props.selectedRegionId)
   return (
     <aside
+      data-region-selection
       id="annotation-inspector"
       ref={inspectorRef}
       className={`${styles.root}${props.readOnly ? ` ${styles.readOnly}` : ''}`}
@@ -354,7 +361,33 @@ export function AnnotationInspector(props: AnnotationInspectorProps) {
         >
           {tab === 'labels' && (
             <>
-              {selectedRegion ? (
+              {(props.selectedRegionIds?.length ?? 0) > 1 ? (
+                <>
+                  <div className={styles.selectedRegionSummary}>
+                    <strong>
+                      {props.selectedRegionIds!.length} regions selected
+                    </strong>
+                  </div>
+                  <LabelControls
+                    title="Assign label to selected regions"
+                    target="region"
+                    labels={matchingLabels.filter((label) =>
+                      label.scopes.includes('region'),
+                    )}
+                    assignments={
+                      commonBulkAssignment ? [commonBulkAssignment] : []
+                    }
+                    taxonomy={props.taxonomy}
+                    disabled={props.readOnly}
+                    onToggle={(labelId) =>
+                      props.onToggleLabel('region', labelId)
+                    }
+                    onAssignmentChange={(labelId, values) =>
+                      props.onAssignmentChange('region', labelId, values)
+                    }
+                  />
+                </>
+              ) : selectedRegion ? (
                 <>
                   <div className={styles.selectedRegionSummary}>
                     <div>

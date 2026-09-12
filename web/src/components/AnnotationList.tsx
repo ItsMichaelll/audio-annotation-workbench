@@ -4,11 +4,14 @@ import type { RegionMetadata } from '../domain/region'
 import { formatTime } from '../domain/transport'
 import { Icon } from './Icon'
 import { MarkerControls, type MarkerControlsProps } from './MarkerControls'
+import { RegionControls, type RegionControlsProps } from './RegionControls'
 import styles from './AnnotationList.module.css'
 
 export function AnnotationList({
   regions,
   selectedRegionId,
+  selectedRegionIds = selectedRegionId ? [selectedRegionId] : [],
+  regionControls,
   onSelect,
   onAdd,
   canAdd,
@@ -25,7 +28,12 @@ export function AnnotationList({
 }: {
   regions: readonly RegionMetadata[]
   selectedRegionId: string | null
-  onSelect: (region: RegionMetadata) => void
+  selectedRegionIds?: readonly string[]
+  regionControls: Omit<
+    RegionControlsProps,
+    'onAdd' | 'canAdd' | 'selectedCount'
+  >
+  onSelect: (region: RegionMetadata, toggle: boolean) => void
   onAdd: () => void
   canAdd: boolean
   labels?: Record<string, string>
@@ -140,18 +148,6 @@ export function AnnotationList({
           >
             <Icon name="redo" />
           </button>
-          {tab === 'regions' && (
-            <button
-              type="button"
-              className={styles.add}
-              disabled={!canAdd}
-              onClick={onAdd}
-              title="Create a one-second region at the playhead"
-            >
-              <Icon name="plus" />
-              Add region
-            </button>
-          )}
         </div>
       </header>
       <div
@@ -160,6 +156,12 @@ export function AnnotationList({
         aria-labelledby={`${tabId}-regions-tab`}
         hidden={tab !== 'regions'}
       >
+        <RegionControls
+          {...regionControls}
+          onAdd={onAdd}
+          canAdd={canAdd}
+          selectedCount={selectedRegionIds.length}
+        />
         {shown.length ? (
           <div className={styles.list}>
             <div className={styles.columnLabels} aria-hidden="true">
@@ -175,8 +177,10 @@ export function AnnotationList({
                 key={region.id}
                 type="button"
                 className={styles.row}
-                aria-pressed={selectedRegionId === region.id}
-                onClick={() => onSelect(region)}
+                aria-pressed={selectedRegionIds.includes(region.id)}
+                onClick={(event) =>
+                  onSelect(region, event.ctrlKey || event.metaKey)
+                }
               >
                 <span className={styles.number}>
                   {(ordered.indexOf(region) + 1).toString().padStart(2, '0')}
@@ -212,7 +216,7 @@ export function AnnotationList({
                         Labeled
                       </>
                     )
-                  ) : selectedRegionId === region.id ? (
+                  ) : selectedRegionIds.includes(region.id) ? (
                     'Selected'
                   ) : (
                     '—'

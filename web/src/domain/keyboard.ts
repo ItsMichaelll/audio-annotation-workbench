@@ -1,4 +1,5 @@
 export type EditorCommand =
+  | { type: 'select-all-regions' }
   | { type: 'toggle-playback' }
   | { type: 'move-playhead'; seconds: number }
   | { type: 'seek-boundary'; boundary: 'start' | 'end' }
@@ -31,6 +32,9 @@ export function keyboardCommand(
   const commandModifier = input.ctrlKey === true || input.metaKey === true
 
   if (commandModifier) {
+    if (!input.shiftKey && !input.altKey && key === 'a') {
+      return { type: 'select-all-regions' }
+    }
     if (!input.shiftKey && !input.altKey && key === 'arrowleft') {
       return { type: 'navigate-region', direction: 'previous' }
     }
