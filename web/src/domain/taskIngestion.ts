@@ -5,6 +5,7 @@ import {
   type TaskSourceIdentity,
   type TaskStatus,
 } from './models'
+import { validateAudioFilename } from './audioFileValidation'
 
 export interface ManifestTask {
   id?: string
@@ -26,6 +27,24 @@ export interface ImportPlan {
   unresolved: ImportCandidate[]
   invalid: string[]
   unsupported: string[]
+}
+
+export const TASK_MANIFEST_FILE_SIZE_LIMIT = 5 * 1024 * 1024
+
+export async function parseManifestFile(file: File): Promise<ManifestTask[]> {
+  if (!/\.(json|jsonl)$/i.test(file.name)) {
+    throw new Error('Task manifests must use the .json or .jsonl extension.')
+  }
+  if (file.size > TASK_MANIFEST_FILE_SIZE_LIMIT) {
+    throw new Error('Task manifests must be 5 MB or smaller.')
+  }
+  let source: string
+  try {
+    source = await file.text()
+  } catch (error) {
+    throw new Error('The task manifest could not be read.', { cause: error })
+  }
+  return parseManifest(source)
 }
 
 export function normalizeRelativePath(value: string): string {
@@ -65,9 +84,21 @@ function parseEntry(value: unknown): ManifestTask {
     throw new Error('Each manifest entry must be an object.')
   }
   const entry = value as Record<string, unknown>
+  const supported = new Set(['id', 'audio', 'name', 'metadata'])
+  const unsupported = Object.keys(entry).find((key) => !supported.has(key))
+  if (unsupported) {
+    throw new Error(`Manifest entry field “${unsupported}” is not supported.`)
+  }
   if (typeof entry.audio !== 'string')
     throw new Error('Each entry requires audio.')
   const audio = normalizeRelativePath(entry.audio)
+  try {
+    validateAudioFilename(audio)
+  } catch {
+    throw new Error(
+      `Manifest audio “${audio}” must use a supported audio extension.`,
+    )
+  }
   if (
     entry.id !== undefined &&
     (typeof entry.id !== 'string' || !entry.id.trim())
@@ -100,6 +131,10 @@ export function parseManifest(text: string): ManifestTask[] {
       typeof parsed === 'object' &&
       Array.isArray((parsed as { tasks?: unknown }).tasks)
     ) {
+      const unsupported = Object.keys(parsed).find((key) => key !== 'tasks')
+      if (unsupported) {
+        throw new Error(`Manifest field “${unsupported}” is not supported.`)
+      }
       entries = (parsed as { tasks: unknown[] }).tasks
     } else
       throw new Error('JSON manifest must be an array or an object with tasks.')

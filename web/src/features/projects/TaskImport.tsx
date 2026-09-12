@@ -2,18 +2,20 @@ import { useEffect, useRef, useState } from 'react'
 import { Button } from '../../components/Button'
 import {
   buildImportPlan,
-  parseManifest,
+  parseManifestFile,
   type ImportCandidate,
   type ImportPlan,
 } from '../../domain/taskIngestion'
 import type { TaskRecord } from '../../domain/models'
 import {
+  AUDIO_FILE_ACCEPT,
+  validateAudioFile,
+} from '../../domain/audioFileValidation'
+import {
   registerCurrentSessionFile,
   releaseCurrentSessionFile,
 } from '../../domain/mediaSources'
 import styles from './TaskImport.module.css'
-
-const AUDIO = /\.(wav|mp3|flac|ogg|m4a|aac|aiff?)$/i
 
 function sourceFor(file: File, relativePath: string) {
   const locator = `import:${crypto.randomUUID()}:${relativePath}`
@@ -49,14 +51,15 @@ export function TaskImport({
   const manifestInput = useRef<HTMLInputElement>(null)
   const [plan, setPlan] = useState<ImportPlan | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const prepareFiles = (files: FileList | null) => {
+  const prepareFiles = async (files: FileList | null) => {
     if (!files) return
     releasePreview()
     const candidates: ImportCandidate[] = []
     const unsupported: string[] = []
     for (const file of Array.from(files)) {
       const path = file.webkitRelativePath || file.name
-      if (AUDIO.test(file.name)) {
+      try {
+        await validateAudioFile(file)
         const source = sourceFor(file, path)
         pendingLocators.current.push(source.locator)
         candidates.push({
@@ -69,7 +72,11 @@ export function TaskImport({
             size: file.size,
           },
         })
-      } else unsupported.push(file.name)
+      } catch (reason) {
+        unsupported.push(
+          `${file.name}: ${reason instanceof Error ? reason.message : 'Invalid audio file.'}`,
+        )
+      }
     }
     const next = buildImportPlan(candidates, existing)
     next.unsupported = unsupported
@@ -79,7 +86,7 @@ export function TaskImport({
   const prepareManifest = async (file: File | undefined) => {
     if (!file) return
     try {
-      const next = buildImportPlan(parseManifest(await file.text()), existing)
+      const next = buildImportPlan(await parseManifestFile(file), existing)
       releasePreview()
       setPlan(next)
       setError(null)
@@ -100,9 +107,9 @@ export function TaskImport({
         aria-label="Audio files to import"
         type="file"
         multiple
-        accept="audio/*,.wav,.flac"
+        accept={AUDIO_FILE_ACCEPT}
         onChange={(event) => {
-          prepareFiles(event.target.files)
+          void prepareFiles(event.target.files)
           event.target.value = ''
         }}
       />
@@ -115,9 +122,9 @@ export function TaskImport({
         aria-label="Audio directory to import"
         type="file"
         multiple
-        accept="audio/*,.wav,.flac"
+        accept={AUDIO_FILE_ACCEPT}
         onChange={(event) => {
-          prepareFiles(event.target.files)
+          void prepareFiles(event.target.files)
           event.target.value = ''
         }}
       />
@@ -177,6 +184,11 @@ export function TaskImport({
             unsupported
           </span>
           {plan.invalid.map((message) => (
+            <p className={styles.error} key={message}>
+              {message}
+            </p>
+          ))}
+          {plan.unsupported.map((message) => (
             <p className={styles.error} key={message}>
               {message}
             </p>

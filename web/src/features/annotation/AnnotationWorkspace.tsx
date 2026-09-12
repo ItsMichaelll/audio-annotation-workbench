@@ -29,6 +29,10 @@ import {
   validateSubmission,
 } from '../../domain/annotations'
 import { AutosaveRevisionGate } from '../../domain/autosave'
+import {
+  AUDIO_FILE_ACCEPT,
+  validateAudioFile,
+} from '../../domain/audioFileValidation'
 import { SnapshotHistory, type HistoryState } from '../../domain/history'
 import {
   isDialogTarget,
@@ -911,6 +915,7 @@ function ActiveAnnotationWorkspace({
   const relink = async (file: File | undefined) => {
     if (!file) return
     try {
+      await validateAudioFile(file)
       const selection = {
         name: file.name,
         size: file.size,
@@ -1219,7 +1224,7 @@ function ActiveAnnotationWorkspace({
                 tabIndex={-1}
                 aria-label="Relink original audio"
                 type="file"
-                accept="audio/*,.wav,.wave,.flac,.mp3,.m4a,.aac,.aif,.aiff,.ogg,.oga,.opus,.webm"
+                accept={AUDIO_FILE_ACCEPT}
                 onChange={(event) => {
                   const file = event.target.files?.[0]
                   event.target.value = ''

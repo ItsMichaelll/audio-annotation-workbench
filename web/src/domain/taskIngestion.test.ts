@@ -4,6 +4,8 @@ import {
   canTransitionTask,
   normalizeRelativePath,
   parseManifest,
+  parseManifestFile,
+  TASK_MANIFEST_FILE_SIZE_LIMIT,
   taskFromCandidate,
 } from './taskIngestion'
 import { TASK_SCHEMA_VERSION, type TaskRecord } from './models'
@@ -49,6 +51,30 @@ describe('task ingestion', () => {
     expect(() =>
       parseManifest('[{"audio":"a.wav","metadata":{"nested":{}}}]'),
     ).toThrow('unsupported')
+    expect(() => parseManifest('[{"audio":"a.wav","extra":true}]')).toThrow(
+      'field “extra” is not supported',
+    )
+    expect(() =>
+      parseManifest('{"tasks":[{"audio":"a.wav"}],"extra":true}'),
+    ).toThrow('field “extra” is not supported')
+    expect(() => parseManifest('[{"audio":"clip.exe"}]')).toThrow(
+      'must use a supported audio extension',
+    )
+  })
+  it('validates manifest file type and size before parsing', async () => {
+    await expect(
+      parseManifestFile(new File(['[]'], 'tasks.txt')),
+    ).rejects.toThrow('.json or .jsonl')
+    const oversized = new File(['[]'], 'tasks.json')
+    Object.defineProperty(oversized, 'size', {
+      value: TASK_MANIFEST_FILE_SIZE_LIMIT + 1,
+    })
+    await expect(parseManifestFile(oversized)).rejects.toThrow(
+      '5 MB or smaller',
+    )
+    await expect(
+      parseManifestFile(new File(['[{"audio":"clip.wav"}]'], 'tasks.json')),
+    ).resolves.toEqual([{ audio: 'clip.wav' }])
   })
   it('classifies duplicate, conflict, valid, and unresolved candidates', () => {
     const plan = buildImportPlan(

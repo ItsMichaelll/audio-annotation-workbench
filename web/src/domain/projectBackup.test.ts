@@ -12,6 +12,9 @@ import {
 import {
   createProjectBackup,
   parseProjectBackup,
+  parseProjectBackupFile,
+  PROJECT_BACKUP_FORMAT,
+  PROJECT_BACKUP_MAX_BYTES,
   serializeProjectBackup,
 } from './projectBackup'
 
@@ -152,6 +155,20 @@ describe('project backups', () => {
     expect(() => parseProjectBackup(JSON.stringify(value))).toThrow(
       'Unsupported project backup version 99',
     )
+  })
+  it('validates backup file type and size before parsing', async () => {
+    const source = serializeProjectBackup(backup())
+    await expect(
+      parseProjectBackupFile(new File([source], 'backup.txt')),
+    ).rejects.toThrow('.json extension')
+    const oversized = new File([source], 'backup.json')
+    Object.defineProperty(oversized, 'size', {
+      value: PROJECT_BACKUP_MAX_BYTES + 1,
+    })
+    await expect(parseProjectBackupFile(oversized)).rejects.toThrow('10 MB')
+    await expect(
+      parseProjectBackupFile(new File([source], 'backup.json')),
+    ).resolves.toMatchObject({ format: PROJECT_BACKUP_FORMAT })
   })
 
   it('rejects unsupported entity versions, duplicate IDs, and broken links', () => {
