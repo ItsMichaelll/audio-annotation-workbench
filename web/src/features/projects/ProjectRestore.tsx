@@ -4,10 +4,9 @@ import { Button } from '../../components/Button'
 import { Icon } from '../../components/Icon'
 import { useConfirmation } from '../../components/confirmationContext'
 import {
-  PROJECT_BACKUP_MAX_BYTES,
   backupRecordCounts,
   mediaRelinkCount,
-  parseProjectBackup,
+  parseProjectBackupFile,
   type ProjectBackup,
 } from '../../domain/projectBackup'
 import { projectPath } from '../../routes'
@@ -106,12 +105,8 @@ export function ProjectRestore() {
     setError(null)
     setFilename(file?.name ?? '')
     if (!file) return
-    if (file.size > PROJECT_BACKUP_MAX_BYTES) {
-      setError(`The backup exceeds the ${MAX_SIZE_LABEL} restore limit.`)
-      return
-    }
     try {
-      setBackup(parseProjectBackup(await file.text()))
+      setBackup(await parseProjectBackupFile(file))
     } catch (reason) {
       setError(
         reason instanceof Error ? reason.message : 'The backup is invalid.',

@@ -21,6 +21,24 @@ export const PROJECT_BACKUP_FORMAT =
 export const PROJECT_BACKUP_FORMAT_VERSION = 2 as const
 export const PROJECT_BACKUP_MAX_BYTES = 10 * 1024 * 1024
 
+export async function parseProjectBackupFile(
+  file: File,
+): Promise<ProjectBackup> {
+  if (!/\.json$/i.test(file.name)) {
+    throw new Error('Project backups must use the .json extension.')
+  }
+  if (file.size > PROJECT_BACKUP_MAX_BYTES) {
+    throw new Error('The backup exceeds the 10 MB restore limit.')
+  }
+  let source: string
+  try {
+    source = await file.text()
+  } catch (error) {
+    throw new Error('The backup could not be read.', { cause: error })
+  }
+  return parseProjectBackup(source)
+}
+
 export interface ProjectBackup {
   format: typeof PROJECT_BACKUP_FORMAT
   formatVersion: typeof PROJECT_BACKUP_FORMAT_VERSION

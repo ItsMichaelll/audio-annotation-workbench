@@ -16,6 +16,10 @@ import {
 } from './components/TransportBar'
 import { SnapshotHistory, type HistoryState } from './domain/history'
 import {
+  AUDIO_FILE_ACCEPT,
+  validateAudioFile,
+} from './domain/audioFileValidation'
+import {
   isDialogTarget,
   isEditableTarget,
   keyboardCommand,
@@ -42,9 +46,6 @@ import {
 import styles from './components/EditorWorkspace.module.css'
 
 type LoadStatus = 'idle' | 'loading' | 'ready' | 'error'
-
-const AUDIO_EXTENSION =
-  /\.(aac|aif|aiff|flac|m4a|mp3|oga|ogg|opus|wav|wave|webm)$/i
 
 const EMPTY_STATE_WAVE_HEIGHTS = [
   8, 15, 29, 41, 38, 63, 41, 28, 55, 37, 52, 69, 75, 48, 62, 31, 62, 52, 84, 59,
@@ -272,12 +273,14 @@ export function StandaloneEditor() {
     setIsPlaying(false)
   }, [applyHistoryState, setSelectedRegionId])
 
-  const handleFile = (file: File | undefined) => {
+  const handleFile = async (file: File | undefined) => {
     if (!file) return
-    const looksLikeAudio =
-      file.type.startsWith('audio/') || AUDIO_EXTENSION.test(file.name)
-    if (!looksLikeAudio) {
-      setError('Choose an audio file supported by your browser.')
+    try {
+      await validateAudioFile(file)
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : 'The audio file is invalid.',
+      )
       if (!audioUrl) setLoadStatus('error')
       return
     }
@@ -292,7 +295,6 @@ export function StandaloneEditor() {
     setError(null)
     setLoadStatus('loading')
     setAudioUrl(objectUrl)
-    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   useEffect(
@@ -505,8 +507,12 @@ export function StandaloneEditor() {
           tabIndex={-1}
           aria-label="Select local audio file"
           type="file"
-          accept="audio/*,.wav,.wave,.flac,.mp3,.m4a,.aac,.aif,.aiff,.ogg,.oga,.opus,.webm"
-          onChange={(event) => handleFile(event.target.files?.[0])}
+          accept={AUDIO_FILE_ACCEPT}
+          onChange={(event) => {
+            const file = event.target.files?.[0]
+            event.target.value = ''
+            void handleFile(file)
+          }}
         />
       </div>
       {error && (
