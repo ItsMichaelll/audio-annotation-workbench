@@ -148,9 +148,9 @@ describe('project backups', () => {
   it('rejects malformed JSON and unsupported versions', () => {
     expect(() => parseProjectBackup('{')).toThrow('not valid JSON')
     const value = backup() as unknown as Record<string, unknown>
-    value.formatVersion = 2
+    value.formatVersion = 99
     expect(() => parseProjectBackup(JSON.stringify(value))).toThrow(
-      'Unsupported project backup version 2',
+      'Unsupported project backup version 99',
     )
   })
 

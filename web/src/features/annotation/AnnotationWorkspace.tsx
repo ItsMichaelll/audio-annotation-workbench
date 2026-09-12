@@ -1189,7 +1189,9 @@ function ActiveAnnotationWorkspace({
                       type="button"
                       onClick={() => void grantPermission()}
                     >
-                      Grant file permission
+                      {task.primaryMedia.kind === 'folder'
+                        ? 'Reconnect folder'
+                        : 'Grant file permission'}
                     </button>
                   )}
                   <button

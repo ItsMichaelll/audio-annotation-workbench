@@ -37,6 +37,7 @@ import { PageNotice, ProjectLayout, ProjectPageState } from './ProjectLayout'
 import detailStyles from './ProjectDetail.module.css'
 import layoutStyles from './ProjectLayout.module.css'
 import { useProject } from './projectHooks'
+import { SourceFolders } from './SourceFolders'
 import { TaskImport } from './TaskImport'
 import { ProjectDataPortability } from './ProjectDataPortability'
 import statusStyles from './ProjectStatus.module.css'
@@ -364,6 +365,11 @@ export function ProjectDetail() {
             aria-label="Audio tasks"
           >
             <h2 className="u-visually-hidden">Audio tasks</h2>
+            <SourceFolders
+              project={project}
+              tasks={tasks}
+              onChanged={state.refresh}
+            />
             <details
               className={detailStyles.importPanel}
               open={tasks.length === 0 ? true : undefined}
@@ -567,7 +573,9 @@ export function ProjectDetail() {
                             ? 'Missing/unresolved'
                             : task.primaryMedia.kind === 'external-reference'
                               ? 'Session-only'
-                              : 'Available'}
+                              : task.primaryMedia.kind === 'folder'
+                                ? 'Connected folder (see source status)'
+                                : 'Available'}
                         </span>
                         <span role="cell" data-label="Updated">
                           {formatTimestamp(task.updatedAt)}

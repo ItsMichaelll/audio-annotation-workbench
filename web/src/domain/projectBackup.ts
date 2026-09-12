@@ -18,7 +18,7 @@ import { normalizeRelativePath } from './taskIngestion'
 
 export const PROJECT_BACKUP_FORMAT =
   'audio-annotation-workbench-project' as const
-export const PROJECT_BACKUP_FORMAT_VERSION = 1 as const
+export const PROJECT_BACKUP_FORMAT_VERSION = 2 as const
 export const PROJECT_BACKUP_MAX_BYTES = 10 * 1024 * 1024
 
 export interface ProjectBackup {
@@ -146,8 +146,21 @@ function validateProject(value: unknown): Project {
       'createdAt',
       'updatedAt',
     ],
-    ['description', 'instructionsId'],
+    ['description', 'instructionsId', 'sourceFolders'],
   )
+  if (item.sourceFolders !== undefined) {
+    const ids = new Set<string>()
+    for (const value of array(item.sourceFolders, 'project.sourceFolders')) {
+      const folder = object(value, 'source folder')
+      exactKeys(folder, 'source folder', ['id', 'name'])
+      const id = string(folder.id, 'source folder.id')
+      const name = string(folder.name, 'source folder.name')
+      if (/[\\/]/.test(name))
+        fail('source folder name must not contain a path.')
+      if (ids.has(id)) fail('duplicate source folder ID.')
+      ids.add(id)
+    }
+  }
   schemaVersion(item.schemaVersion, PROJECT_SCHEMA_VERSION, 'Project')
   string(item.id, 'project.id')
   string(item.name, 'project.name')
@@ -304,9 +317,27 @@ function validateTask(value: unknown, index: number): TaskRecord {
     }
   }
   const media = object(item.primaryMedia, `${name}.primaryMedia`)
-  exactKeys(media, `${name}.primaryMedia`, ['kind', 'displayName', 'reason'])
-  if (media.kind !== 'unresolved' || media.reason !== 'not-yet-linked') {
-    fail(`${name}.primaryMedia must be a portable unresolved source.`)
+  if (media.kind === 'folder') {
+    exactKeys(media, `${name}.primaryMedia`, [
+      'kind',
+      'projectId',
+      'sourceId',
+      'relativePath',
+      'displayName',
+      'permission',
+    ])
+    string(media.projectId, 'folder.projectId')
+    string(media.sourceId, 'folder.sourceId')
+    const path = string(media.relativePath, 'folder.relativePath')
+    if (!path || normalizeRelativePath(path) !== path)
+      fail('folder path must be normalized and relative.')
+    if (media.permission !== 'unknown')
+      fail('folder permission must not be backed up.')
+  } else {
+    exactKeys(media, `${name}.primaryMedia`, ['kind', 'displayName', 'reason'])
+    if (media.kind !== 'unresolved' || media.reason !== 'not-yet-linked') {
+      fail(`${name}.primaryMedia must be a portable unresolved source.`)
+    }
   }
   string(media.displayName, `${name}.primaryMedia.displayName`)
   if (item.sourceIdentity !== undefined)
@@ -480,6 +511,16 @@ function validateRelationships(records: ProjectBackupRecords): void {
   for (const task of tasks) {
     if (task.projectId !== project.id)
       fail(`task "${task.id}" references another project.`)
+    if (
+      task.primaryMedia.kind === 'folder' &&
+      (task.primaryMedia.projectId !== project.id ||
+        !project.sourceFolders?.some(
+          (folder) =>
+            folder.id === (task.primaryMedia as { sourceId: string }).sourceId,
+        ))
+    ) {
+      fail(`task "${task.id}" references a missing or foreign source folder.`)
+    }
     taskIds.add(task.id)
   }
   const annotationTasks = new Set<string>()
@@ -548,11 +589,21 @@ function portableTask(task: TaskRecord): TaskRecord {
     ...(relativePath ? { relativePath } : {}),
     displayName,
     ...(sourceIdentity ? { sourceIdentity } : {}),
-    primaryMedia: {
-      kind: 'unresolved',
-      displayName,
-      reason: 'not-yet-linked',
-    },
+    primaryMedia:
+      task.primaryMedia.kind === 'folder'
+        ? {
+            kind: 'folder',
+            projectId: task.projectId,
+            sourceId: task.primaryMedia.sourceId,
+            relativePath: normalizeRelativePath(task.primaryMedia.relativePath),
+            displayName,
+            permission: 'unknown',
+          }
+        : {
+            kind: 'unresolved',
+            displayName,
+            reason: 'not-yet-linked',
+          },
   }
 }
 
@@ -620,7 +671,10 @@ export function parseProjectBackup(source: string): ProjectBackup {
   if (envelope.format !== PROJECT_BACKUP_FORMAT) {
     fail('the file is not an Audio Annotation Workbench project backup.')
   }
-  if (envelope.formatVersion !== PROJECT_BACKUP_FORMAT_VERSION) {
+  if (
+    envelope.formatVersion !== 1 &&
+    envelope.formatVersion !== PROJECT_BACKUP_FORMAT_VERSION
+  ) {
     throw new Error(
       `Unsupported project backup version ${String(envelope.formatVersion)}.`,
     )

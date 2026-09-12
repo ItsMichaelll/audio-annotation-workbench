@@ -42,6 +42,13 @@ export function ProjectRestorePreview({
           <h2 className={styles.sectionTitle}>{backup.project.name}</h2>
         </div>
       </div>
+      {!!backup.project.sourceFolders?.length && (
+        <p>
+          Reconnect {backup.project.sourceFolders.length} source folder(s) after
+          restoration to recover all matching tasks. Audio and folder
+          permissions are not included in backups.
+        </p>
+      )}
       <dl className={styles.counts}>
         <div className={styles.count}>
           <dt className={styles.countLabel}>Exported</dt>
@@ -140,7 +147,7 @@ export function ProjectRestore() {
         state: {
           completionMessage: `Backup restored. ${relinkCount} media ${
             relinkCount === 1 ? 'source needs' : 'sources need'
-          } relinking.`,
+          } relinking.${backup.project.sourceFolders?.length ? ' Reconnect the saved source folders to restore all matching tasks.' : ''}`,
         },
       })
     } catch (reason) {
