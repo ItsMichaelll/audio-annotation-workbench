@@ -86,5 +86,6 @@ describe('task ingestion', () => {
     expect(canTransitionTask('unstarted', 'submitted')).toBe(true)
     expect(canTransitionTask('reopened', 'submitted')).toBe(true)
     expect(canTransitionTask('submitted', 'draft')).toBe(false)
+    expect(canTransitionTask('blocked', 'skipped')).toBe(false)
   })
 })

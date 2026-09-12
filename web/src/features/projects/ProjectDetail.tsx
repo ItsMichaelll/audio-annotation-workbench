@@ -22,6 +22,7 @@ import {
   instructionsEditorPath,
   taxonomyEditorPath,
 } from '../../routes'
+import { canTransitionTask } from '../../domain/taskIngestion'
 import { nextActionableTask, orderedTasks } from '../../domain/taskQueue'
 import { parseAnnotationTaxonomy } from '../../domain/annotationTaxonomy'
 import {
@@ -126,6 +127,14 @@ export function ProjectDetail() {
   const allPageSelected =
     pageIds.length > 0 && pageIds.every((id) => selectedTasks.includes(id))
   const somePageSelected = pageIds.some((id) => selectedTasks.includes(id))
+  const selectedSkippableTaskIds = tasks
+    .filter(
+      (task) =>
+        selectedTasks.includes(task.id) &&
+        task.status !== 'skipped' &&
+        canTransitionTask(task.status, 'skipped'),
+    )
+    .map((task) => task.id)
 
   let activeTaxonomy: ReturnType<typeof parseAnnotationTaxonomy> | null = null
   let taxonomyError: string | null = null
@@ -442,10 +451,14 @@ export function ProjectDetail() {
                     <Button
                       size="square"
                       type="button"
-                      disabled={!selectedTasks.length || acting}
+                      disabled={!selectedSkippableTaskIds.length || acting}
                       onClick={() =>
                         void taskAction(() =>
-                          setTaskStatus(project.id, selectedTasks, 'skipped'),
+                          setTaskStatus(
+                            project.id,
+                            selectedSkippableTaskIds,
+                            'skipped',
+                          ),
                         )
                       }
                     >
