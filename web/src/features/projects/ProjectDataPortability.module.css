@@ -1,7 +1,7 @@
 .section {
   display: grid;
   gap: 14px;
-  padding: 20px;
+  padding: 24px;
   margin-bottom: 16px;
   border: 1px solid var(--border-default);
   border-radius: 5px;
@@ -22,23 +22,74 @@
 
 .headingTitle {
   margin: 0;
-  font-size: 15px;
-  font-weight: 630;
+  font-size: 18px;
+  font-weight: 550;
 }
 
 .description {
-  max-width: 510px;
+  max-width: 680px;
   margin: 0;
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.55;
 }
 
+.feedback {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.feedback:not(:empty) {
+  margin-block: 4px 16px;
+}
+
+.feedback[data-phase='started'] {
+  color: var(--text-success);
+}
+
+.feedback[data-phase='failed'] {
+  color: var(--text-danger);
+}
+
 .actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+}
+
+.downloadOption {
+  padding: 16px 0;
+}
+
+.downloadOption > svg {
+  color: var(--accent-ink);
+}
+
+.downloadOption h3 {
+  margin: 16px 0 10px;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.downloadOption p {
+  max-width: 430px;
+  margin: 0 0 20px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+@media (max-width: 700px) {
+  .section {
+    padding: 16px;
+  }
+
+  .actions {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
 }
 
 .options {

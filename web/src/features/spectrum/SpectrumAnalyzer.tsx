@@ -55,6 +55,7 @@ interface SpectrumFrame {
   textColor: string
   mutedColor: string
   gridColor: string
+  fontFamily: string
 }
 
 const EMPTY_FRAME: SpectrumFrame = {
@@ -75,6 +76,7 @@ const EMPTY_FRAME: SpectrumFrame = {
   textColor: '#edf1f2',
   mutedColor: '#8d979e',
   gridColor: 'rgba(141, 151, 158, 0.16)',
+  fontFamily: 'system-ui, sans-serif',
 }
 
 function formatFrequency(frequency: number): string {
@@ -94,7 +96,7 @@ function drawGrid(
   context.lineWidth = 1
   context.strokeStyle = frame.gridColor
   context.fillStyle = frame.mutedColor
-  context.font = '10px Consolas, "SFMono-Regular", monospace'
+  context.font = `10px ${frame.fontFamily}`
 
   for (const decibels of DECIBEL_GRID) {
     const y = plotTop + dbToY(decibels, plotHeight)
@@ -232,7 +234,7 @@ function drawHover(
   )
   const decibels = yToDb(hover.y - plotTop, plotHeight)
   const label = `${formatFrequency(frequency)}  ${decibels.toFixed(1)} dB`
-  context.font = '11px Consolas, "SFMono-Regular", monospace'
+  context.font = `11px ${frame.fontFamily}`
   const labelWidth = context.measureText(label).width + 14
   const labelHeight = 24
   const labelX = Math.min(
@@ -302,7 +304,7 @@ export function SpectrumAnalyzer({
       context.fillStyle = analyzerError
         ? 'rgba(255, 133, 133, 0.88)'
         : 'rgba(141, 151, 158, 0.76)'
-      context.font = '12px Inter, ui-sans-serif, system-ui, sans-serif'
+      context.font = `12px ${frame.fontFamily}`
       context.textAlign = 'center'
       context.textBaseline = 'middle'
       context.fillText(
@@ -343,6 +345,7 @@ export function SpectrumAnalyzer({
       frameRef.current = {
         ...previousFrame,
         canvasWidth: cssWidth,
+        fontFamily: styles.fontFamily,
         canvasHeight: cssHeight,
         plotLeft,
         plotTop,

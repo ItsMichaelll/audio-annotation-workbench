@@ -1,5 +1,12 @@
 import { useRef, useState } from 'react'
-import { Link, useLocation, useNavigate, useParams } from 'react-router'
+import {
+  Link,
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from 'react-router'
+import { Icon } from '../../components/Icon'
 import { Button, ButtonLink } from '../../components/Button'
 import { useConfirmation } from '../../components/confirmationContext'
 import { CustomSelect } from '../../components/CustomSelect'
@@ -28,7 +35,6 @@ import { formatTimestamp } from './format'
 import { MarkdownInstructions } from './MarkdownInstructions'
 import { PageNotice, ProjectLayout, ProjectPageState } from './ProjectLayout'
 import detailStyles from './ProjectDetail.module.css'
-import formStyles from './ProjectForm.module.css'
 import layoutStyles from './ProjectLayout.module.css'
 import { useProject } from './projectHooks'
 import { TaskImport } from './TaskImport'
@@ -58,9 +64,19 @@ export function ProjectDetail() {
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [page, setPage] = useState(0)
+  const [searchParams] = useSearchParams()
+  const section = ['reference', 'data'].includes(searchParams.get('tab') ?? '')
+    ? searchParams.get('tab')
+    : 'tasks'
 
   if (state.loading) {
-    return <ProjectLayout>{null}</ProjectLayout>
+    return (
+      <ProjectLayout theme="light">
+        <main className={layoutStyles.page} aria-busy="true">
+          <p role="status">Loading project…</p>
+        </main>
+      </ProjectLayout>
+    )
   }
   if (state.error) {
     return (
@@ -96,7 +112,14 @@ export function ProjectDetail() {
       ),
   )
   const orderedVisibleTasks = orderedTasks(visibleTasks)
-  const pageTasks = orderedVisibleTasks.slice(page * 25, page * 25 + 25)
+  const currentPage = Math.min(
+    page,
+    Math.max(0, Math.ceil(orderedVisibleTasks.length / 25) - 1),
+  )
+  const pageTasks = orderedVisibleTasks.slice(
+    currentPage * 25,
+    currentPage * 25 + 25,
+  )
   const nextTask = nextActionableTask(tasks)
   const pageIds = pageTasks.map((task) => task.id)
   const allPageSelected =
@@ -187,7 +210,7 @@ export function ProjectDetail() {
   }
 
   return (
-    <ProjectLayout>
+    <ProjectLayout theme="light">
       <main className={layoutStyles.page}>
         <div className={layoutStyles.breadcrumbs}>
           <Link to="/projects">Projects</Link>
@@ -235,7 +258,7 @@ export function ProjectDetail() {
                 variant="primary"
                 to={annotationPath(project.id, nextTask.id)}
               >
-                Start Labeling
+                <Icon name="play" /> Start Labeling
               </ButtonLink>
             ) : (
               <Button
@@ -259,14 +282,6 @@ export function ProjectDetail() {
             >
               Edit project
             </ButtonLink>
-            <Button
-              className={detailStyles.heroAction}
-              type="button"
-              onClick={() => void toggleArchive()}
-              disabled={acting}
-            >
-              {project.status === 'active' ? 'Archive' : 'Restore'}
-            </Button>
           </div>
         </header>
 
@@ -284,52 +299,88 @@ export function ProjectDetail() {
           </PageNotice>
         )}
 
-        <section className={detailStyles.metadata} aria-label="Project dates">
-          <div className={detailStyles.metadataItem}>
-            <span className={detailStyles.metadataLabel}>Created</span>
-            <strong className={detailStyles.metadataValue}>
-              {formatTimestamp(project.createdAt)}
-            </strong>
+        <section
+          className={detailStyles.overview}
+          aria-label="Project progress"
+        >
+          <div className={detailStyles.completion}>
+            <span className={detailStyles.completionHeadline}>
+              <strong>
+                {progress.total
+                  ? Math.round((progress.completed / progress.total) * 100)
+                  : 0}
+                %
+              </strong>
+              <span>complete</span>
+            </span>
+            <progress
+              aria-label="Project task completion"
+              value={progress.completed}
+              max={Math.max(progress.total, 1)}
+            />
+            <small>
+              {progress.submitted} submitted · {progress.skipped} skipped
+            </small>
           </div>
-          <div className={detailStyles.metadataItem}>
-            <span className={detailStyles.metadataLabel}>Last updated</span>
-            <strong className={detailStyles.metadataValue}>
-              {formatTimestamp(project.updatedAt)}
-            </strong>
+          <div>
+            <strong>{progress.total}</strong>
+            <span>Total tasks</span>
           </div>
-          <div className={detailStyles.metadataItem}>
-            <span className={detailStyles.metadataLabel}>Project ID</span>
-            <strong className={detailStyles.metadataValue}>{project.id}</strong>
+          <div>
+            <strong>{progress.unstarted}</strong>
+            <span>Unstarted</span>
+          </div>
+          <div>
+            <strong>{progress.inProgress + progress.reopened}</strong>
+            <span>In progress</span>
+          </div>
+          <div data-attention={progress.blocked > 0}>
+            <strong>{progress.blocked}</strong>
+            <span>Blocked</span>
           </div>
         </section>
-
-        <div className={detailStyles.grid}>
+        <nav className={detailStyles.navigation} aria-label="Project sections">
+          {(
+            [
+              { value: 'tasks', label: 'Tasks', icon: 'waveform' },
+              { value: 'reference', label: 'Reference', icon: 'book' },
+              { value: 'data', label: 'Data & settings', icon: 'download' },
+            ] as const
+          ).map((item) => (
+            <Link
+              key={item.value}
+              to={item.value === 'tasks' ? '?' : `?tab=${item.value}`}
+              aria-current={section === item.value ? 'page' : undefined}
+            >
+              <Icon name={item.icon} />
+              {item.label}
+              {item.value === 'tasks' && <span>{tasks.length}</span>}
+            </Link>
+          ))}
+        </nav>
+        <div hidden={section !== 'tasks'}>
           <section
             className={`${detailStyles.section} ${detailStyles.sectionWide}`}
+            aria-label="Audio tasks"
           >
-            <div className={detailStyles.sectionHeading}>
-              <div>
-                <p
-                  className={`${layoutStyles.eyebrow} ${detailStyles.sectionHeadingEyebrow}`}
-                >
-                  Task manager
-                </p>
-                <h2 className={detailStyles.sectionTitle}>Audio tasks</h2>
-              </div>
-              <span className={detailStyles.countBadge}>{progress.total}</span>
-            </div>
-            <p className={detailStyles.progressSummary}>
-              {progress.submitted} submitted of {progress.total} tasks ·{' '}
-              {progress.unstarted} unstarted · {progress.blocked} blocked
-            </p>
-            <TaskImport
-              existing={tasks}
-              onReady={(candidates) =>
-                void taskAction(() =>
-                  importProjectTasks(project.id, candidates),
-                )
-              }
-            />
+            <h2 className="u-visually-hidden">Audio tasks</h2>
+            <details
+              className={detailStyles.importPanel}
+              open={tasks.length === 0 ? true : undefined}
+            >
+              <summary>
+                <Icon name="upload" /> Import audio{' '}
+                <span>Files, directories, or a manifest</span>
+              </summary>
+              <TaskImport
+                existing={tasks}
+                onReady={(candidates) =>
+                  void taskAction(() =>
+                    importProjectTasks(project.id, candidates),
+                  )
+                }
+              />
+            </details>
             {tasks.length === 0 ? (
               <div className={detailStyles.emptyState}>
                 <h3 className={detailStyles.emptyStateTitle}>
@@ -379,6 +430,9 @@ export function ProjectDetail() {
                     />
                   </div>
                   <div className={detailStyles.taskActions}>
+                    <span aria-live="polite">
+                      {selectedTasks.length} selected
+                    </span>
                     <Button
                       size="square"
                       type="button"
@@ -411,7 +465,7 @@ export function ProjectDetail() {
                     className={`${detailStyles.taskRow} ${detailStyles.taskHeader}`}
                     role="row"
                   >
-                    <span>
+                    <span role="columnheader">
                       <input
                         type="checkbox"
                         aria-label="Select all tasks on this page"
@@ -430,24 +484,48 @@ export function ProjectDetail() {
                           )
                         }
                       />
+                      <span
+                        className={detailStyles.selectPageLabel}
+                        aria-hidden="true"
+                      >
+                        Select this page
+                      </span>
                     </span>
-                    <span>Name / source</span>
-                    <span>External ID</span>
-                    <span>Status</span>
-                    <span>Availability</span>
-                    <span>Updated</span>
-                    <span>Action</span>
+                    <span role="columnheader">Name / source</span>
+                    <span role="columnheader">External ID</span>
+                    <span role="columnheader">Status</span>
+                    <span role="columnheader">Availability</span>
+                    <span role="columnheader">Updated</span>
+                    <span role="columnheader">Action</span>
                   </div>
+                  {pageTasks.length === 0 && (
+                    <div className={detailStyles.noMatches} role="row">
+                      <div role="cell" aria-colspan={7}>
+                        <strong>No matching tasks</strong>
+                        <p>Try another name, ID, path, or status.</p>
+                        <Button
+                          onClick={() => {
+                            setQuery('')
+                            setStatusFilter('all')
+                            setPage(0)
+                          }}
+                        >
+                          Clear filters
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                   {pageTasks.map((task) => {
                     const name =
                       task.displayName ?? task.primaryMedia.displayName
                     return (
                       <div
+                        data-selected={selectedTasks.includes(task.id)}
                         className={detailStyles.taskRow}
                         role="row"
                         key={task.id}
                       >
-                        <span>
+                        <span role="cell">
                           <input
                             aria-label={`Select ${name}`}
                             type="checkbox"
@@ -461,25 +539,40 @@ export function ProjectDetail() {
                             }
                           />
                         </span>
-                        <span>
+                        <span role="cell">
                           <strong className={detailStyles.taskName}>
                             {name}
                           </strong>
-                          <small className={detailStyles.taskPath}>
-                            {task.relativePath ?? task.primaryMedia.displayName}
-                          </small>
+                          {(task.relativePath ??
+                            task.primaryMedia.displayName) !== name && (
+                            <small className={detailStyles.taskPath}>
+                              {task.relativePath ??
+                                task.primaryMedia.displayName}
+                            </small>
+                          )}
                         </span>
-                        <span>{task.externalId ?? '—'}</span>
-                        <span>{task.status}</span>
-                        <span>
+                        <span role="cell" data-label="ID">
+                          {task.externalId ?? '—'}
+                        </span>
+                        <span role="cell">
+                          <span
+                            className={detailStyles.taskStatus}
+                            data-status={task.status}
+                          >
+                            {task.status}
+                          </span>
+                        </span>
+                        <span role="cell" data-label="Audio">
                           {task.primaryMedia.kind === 'unresolved'
                             ? 'Missing/unresolved'
                             : task.primaryMedia.kind === 'external-reference'
                               ? 'Session-only'
                               : 'Available'}
                         </span>
-                        <span>{formatTimestamp(task.updatedAt)}</span>
-                        <span className={detailStyles.taskAction}>
+                        <span role="cell" data-label="Updated">
+                          {formatTimestamp(task.updatedAt)}
+                        </span>
+                        <span role="cell" className={detailStyles.taskAction}>
                           {((project.status === 'active' &&
                             (task.status === 'unstarted' ||
                               task.status === 'draft' ||
@@ -541,19 +634,21 @@ export function ProjectDetail() {
                 <div className={detailStyles.taskPagination}>
                   <Button
                     type="button"
-                    disabled={page === 0}
-                    onClick={() => setPage((value) => value - 1)}
+                    disabled={currentPage === 0}
+                    onClick={() => setPage(currentPage - 1)}
                   >
                     Previous
                   </Button>
                   <span>
-                    {page + 1} /{' '}
+                    {currentPage + 1} /{' '}
                     {Math.max(1, Math.ceil(orderedVisibleTasks.length / 25))}
                   </span>
                   <Button
                     type="button"
-                    disabled={(page + 1) * 25 >= orderedVisibleTasks.length}
-                    onClick={() => setPage((value) => value + 1)}
+                    disabled={
+                      (currentPage + 1) * 25 >= orderedVisibleTasks.length
+                    }
+                    onClick={() => setPage(currentPage + 1)}
                   >
                     Next
                   </Button>
@@ -561,7 +656,8 @@ export function ProjectDetail() {
               </>
             )}
           </section>
-
+        </div>
+        <div hidden={section !== 'reference'}>
           <section className={detailStyles.section}>
             <div className={detailStyles.sectionHeading}>
               <div>
@@ -642,123 +738,162 @@ export function ProjectDetail() {
               </ButtonLink>
             </div>
           </section>
-        </div>
 
-        <section className={detailStyles.section}>
-          <div className={detailStyles.sectionHeading}>
-            <div>
-              <p
-                className={`${layoutStyles.eyebrow} ${detailStyles.sectionHeadingEyebrow}`}
-              >
-                Immutable history
-              </p>
-              <h2 className={detailStyles.sectionTitle}>Taxonomy versions</h2>
-            </div>
-            <span className={detailStyles.countBadge}>
-              {taxonomyVersions.length}
-            </span>
-          </div>
-          <div
-            className={detailStyles.history}
-            role="table"
-            aria-label="Taxonomy history"
-          >
-            <div
-              className={`${detailStyles.historyRow} ${detailStyles.historyHeader}`}
-              role="row"
-            >
-              <span role="columnheader">Version</span>
-              <span role="columnheader">Source</span>
-              <span role="columnheader">Created</span>
-              <span role="columnheader">State</span>
-            </div>
-            {taxonomyVersions.map((taxonomy) => (
-              <div
-                className={detailStyles.historyRow}
-                role="row"
-                key={taxonomy.id}
-              >
-                <strong role="cell">v{taxonomy.version}</strong>
-                <span role="cell">{taxonomy.sourceFilename}</span>
-                <span role="cell">{formatTimestamp(taxonomy.createdAt)}</span>
-                <span role="cell">
-                  {taxonomy.id === project.activeTaxonomyVersionId
-                    ? 'Active'
-                    : 'Historical'}
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section
-          className={`${detailStyles.section} ${detailStyles.instructionsSection}`}
-        >
-          <div className={detailStyles.sectionHeading}>
-            <div>
-              <p
-                className={`${layoutStyles.eyebrow} ${detailStyles.sectionHeadingEyebrow}`}
-              >
-                Reference
-              </p>
-              <h2 className={detailStyles.sectionTitle}>
-                Annotation instructions
-              </h2>
-            </div>
-            <div className={detailStyles.headingActions}>
-              {instructions && (
-                <span
-                  className={detailStyles.headingFilename}
-                  title={instructions.sourceFilename}
+          <section className={detailStyles.section}>
+            <div className={detailStyles.sectionHeading}>
+              <div>
+                <p
+                  className={`${layoutStyles.eyebrow} ${detailStyles.sectionHeadingEyebrow}`}
                 >
-                  {instructions.sourceFilename}
-                </span>
-              )}
-              <ButtonLink
-                size="compact"
-                to={instructionsEditorPath(project.id)}
-              >
-                Edit instructions
-              </ButtonLink>
+                  Immutable history
+                </p>
+                <h2 className={detailStyles.sectionTitle}>Taxonomy versions</h2>
+              </div>
+              <span className={detailStyles.countBadge}>
+                {taxonomyVersions.length}
+              </span>
             </div>
-          </div>
-          {instructions ? (
-            <MarkdownInstructions markdown={instructions.rawMarkdown} />
-          ) : (
-            <div className={detailStyles.emptyState}>
-              <h3 className={detailStyles.emptyStateTitle}>
-                No instructions have been added.
-              </h3>
-              <p className={detailStyles.emptyStateDescription}>
-                Add instructions to help annotators understand the project and
-                the tasks.
+            <div
+              className={detailStyles.history}
+              role="table"
+              aria-label="Taxonomy history"
+            >
+              <div
+                className={`${detailStyles.historyRow} ${detailStyles.historyHeader}`}
+                role="row"
+              >
+                <span role="columnheader">Version</span>
+                <span role="columnheader">Source</span>
+                <span role="columnheader">Created</span>
+                <span role="columnheader">State</span>
+              </div>
+              {taxonomyVersions.map((taxonomy) => (
+                <div
+                  className={detailStyles.historyRow}
+                  role="row"
+                  key={taxonomy.id}
+                >
+                  <strong role="cell">v{taxonomy.version}</strong>
+                  <span role="cell">{taxonomy.sourceFilename}</span>
+                  <span role="cell">{formatTimestamp(taxonomy.createdAt)}</span>
+                  <span role="cell">
+                    {taxonomy.id === project.activeTaxonomyVersionId
+                      ? 'Active'
+                      : 'Historical'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section
+            className={`${detailStyles.section} ${detailStyles.instructionsSection}`}
+          >
+            <div className={detailStyles.sectionHeading}>
+              <div>
+                <p
+                  className={`${layoutStyles.eyebrow} ${detailStyles.sectionHeadingEyebrow}`}
+                >
+                  Reference
+                </p>
+                <h2 className={detailStyles.sectionTitle}>
+                  Annotation instructions
+                </h2>
+              </div>
+              <div className={detailStyles.headingActions}>
+                {instructions && (
+                  <span
+                    className={detailStyles.headingFilename}
+                    title={instructions.sourceFilename}
+                  >
+                    {instructions.sourceFilename}
+                  </span>
+                )}
+                <ButtonLink
+                  size="compact"
+                  to={instructionsEditorPath(project.id)}
+                >
+                  Edit instructions
+                </ButtonLink>
+              </div>
+            </div>
+            {instructions ? (
+              <MarkdownInstructions markdown={instructions.rawMarkdown} />
+            ) : (
+              <div className={detailStyles.emptyState}>
+                <h3 className={detailStyles.emptyStateTitle}>
+                  No instructions have been added.
+                </h3>
+                <p className={detailStyles.emptyStateDescription}>
+                  Add instructions to help annotators understand the project and
+                  the tasks.
+                </p>
+              </div>
+            )}
+          </section>
+        </div>
+        <div hidden={section !== 'data'}>
+          <section className={detailStyles.metadata} aria-label="Project dates">
+            <div className={detailStyles.metadataItem}>
+              <span className={detailStyles.metadataLabel}>Created</span>
+              <strong className={detailStyles.metadataValue}>
+                {formatTimestamp(project.createdAt)}
+              </strong>
+            </div>
+            <div className={detailStyles.metadataItem}>
+              <span className={detailStyles.metadataLabel}>Last updated</span>
+              <strong className={detailStyles.metadataValue}>
+                {formatTimestamp(project.updatedAt)}
+              </strong>
+            </div>
+            <div className={detailStyles.metadataItem}>
+              <span className={detailStyles.metadataLabel}>Project ID</span>
+              <strong className={detailStyles.metadataValue}>
+                {project.id}
+              </strong>
+            </div>
+          </section>
+
+          <section className={detailStyles.administration}>
+            <div>
+              <h2>Project settings</h2>
+              <p>Manage project details and archive availability.</p>
+            </div>
+            <ButtonLink to={editProjectPath(project.id)}>
+              Edit project
+            </ButtonLink>{' '}
+            <Button
+              className={detailStyles.heroAction}
+              type="button"
+              onClick={() => void toggleArchive()}
+              disabled={acting}
+            >
+              {project.status === 'active' ? 'Archive' : 'Restore'}
+            </Button>
+          </section>
+          <ProjectDataPortability
+            projectId={project.id}
+            projectName={project.name}
+          />
+
+          <section className={detailStyles.dangerZone}>
+            <div>
+              <h2 className={detailStyles.dangerTitle}>Delete project</h2>
+              <p className={detailStyles.dangerDescription}>
+                Deletes project metadata, taxonomy history, instructions, and
+                task records from this browser. Source audio is never deleted.
               </p>
             </div>
-          )}
-        </section>
-
-        <ProjectDataPortability
-          projectId={project.id}
-          projectName={project.name}
-        />
-
-        <section className={detailStyles.dangerZone}>
-          <div>
-            <h2 className={detailStyles.dangerTitle}>Delete project</h2>
-            <p className={detailStyles.dangerDescription}>
-              Deletes project metadata, taxonomy history, instructions, and task
-              records from this browser. Source audio is never deleted.
-            </p>
-          </div>
-          <Button
-            ref={deleteProjectTriggerRef}
-            variant="danger"
-            type="button"
-            onClick={() => setDeleteOpen(true)}
-          >
-            Delete project
-          </Button>
-        </section>
+            <Button
+              ref={deleteProjectTriggerRef}
+              variant="danger"
+              type="button"
+              onClick={() => setDeleteOpen(true)}
+            >
+              Delete project
+            </Button>
+          </section>
+        </div>
       </main>
 
       <Modal
@@ -778,7 +913,7 @@ export function ProjectDetail() {
           This cannot be undone without a future project backup. Source audio
           files remain untouched.
         </ModalDescription>
-        <label className={formStyles.field}>
+        <label className={detailStyles.confirmField}>
           <span>Type the project name to confirm</span>
           <input
             ref={deleteProjectInputRef}
@@ -786,7 +921,7 @@ export function ProjectDetail() {
             onChange={(event) => setConfirmation(event.target.value)}
           />
         </label>
-        <ModalActions className={formStyles.actions}>
+        <ModalActions>
           <Button type="button" onClick={closeDeleteProject} disabled={acting}>
             Cancel
           </Button>

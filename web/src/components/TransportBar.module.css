@@ -121,7 +121,7 @@
   min-width: 124px;
   flex-direction: column;
   gap: 5px;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-variant-numeric: tabular-nums;
 }
 
@@ -146,7 +146,7 @@
 }
 
 .scale {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 10px;
 }
 

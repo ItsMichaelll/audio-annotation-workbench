@@ -254,7 +254,7 @@
 
 .emptySteps span {
   color: var(--accent-ink);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 10px;
 }
 

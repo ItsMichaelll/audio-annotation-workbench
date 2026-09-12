@@ -1,5 +1,5 @@
 .shell {
-  height: 100vh;
+  height: 100dvh;
   overflow-x: hidden;
   overflow-y: auto;
   background: var(--surface-canvas);
@@ -44,7 +44,7 @@
 .eyebrow {
   margin: 0;
   color: var(--color-blue-500);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.13em;
@@ -61,8 +61,14 @@
 }
 
 .breadcrumbs a {
+  flex-shrink: 0;
   color: var(--color-blue-500);
   text-decoration: none;
+}
+
+.breadcrumbs > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .notice {
@@ -115,4 +121,43 @@
   color: var(--text-secondary);
   font-size: 13px;
   line-height: 1.55;
+}
+
+.shell[data-project-theme='light'] .page {
+  width: min(1280px, calc(100% - 80px));
+  padding-top: 44px;
+}
+
+.shell[data-project-theme='light'] .pageHeadingTitle {
+  font-size: clamp(28px, 3vw, 36px);
+  font-weight: 550;
+  letter-spacing: -0.045em;
+}
+
+.shell[data-project-theme='light'] .pageNarrow {
+  max-width: 680px;
+}
+
+.shell[data-project-theme='light'] .notice {
+  border-left-width: 3px;
+}
+
+.shell[data-project-theme='light'] .statePanelTitle {
+  color: var(--text-primary);
+}
+
+.shell[data-project-theme='light'] .statePanelDescription {
+  margin-bottom: 20px;
+}
+
+@media (max-width: 700px) {
+  .shell[data-project-theme='light'] .page {
+    width: calc(100% - 32px);
+    padding-top: 24px;
+  }
+
+  .pageHeading {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
 }

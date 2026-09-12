@@ -94,7 +94,7 @@
   overflow: auto;
   background: var(--surface-waveform);
   color: var(--text-primary);
-  font-family: var(--font-mono);
+  font-family: var(--font-code);
   font-size: 12px;
   line-height: 1.55;
   resize: none;

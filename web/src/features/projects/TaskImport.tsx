@@ -78,7 +78,8 @@ export function TaskImport({
     <section className={styles.root}>
       <input
         ref={input}
-        className="u-visually-hidden"
+        hidden
+        aria-label="Audio files to import"
         type="file"
         multiple
         accept="audio/*,.wav,.flac"
@@ -92,7 +93,8 @@ export function TaskImport({
           directoryInput.current = node
           node?.setAttribute('webkitdirectory', '')
         }}
-        className="u-visually-hidden"
+        hidden
+        aria-label="Audio directory to import"
         type="file"
         multiple
         accept="audio/*,.wav,.flac"
@@ -103,7 +105,8 @@ export function TaskImport({
       />
       <input
         ref={manifestInput}
-        className="u-visually-hidden"
+        hidden
+        aria-label="Task manifest to import"
         type="file"
         accept=".json,.jsonl,application/json"
         onChange={(event) => {
@@ -140,7 +143,11 @@ export function TaskImport({
           session-only and may need relinking after restart.
         </p>
       </div>
-      {error && <p className={styles.error}>{error}</p>}
+      {error && (
+        <p className={styles.error} role="alert">
+          {error}
+        </p>
+      )}
       {plan && (
         <div className={styles.preview} aria-live="polite">
           <strong>Import preview</strong>

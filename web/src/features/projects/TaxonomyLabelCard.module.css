@@ -59,7 +59,7 @@
 
 .identityId {
   color: var(--text-secondary);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 10px;
 }
 
@@ -91,7 +91,7 @@
   border-radius: var(--radius-md);
   background: #0e1113;
   color: #d7dddf;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 10px;
 }
 
@@ -230,7 +230,7 @@
   height: 34px;
   min-width: 0;
   background: var(--surface-control);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
 }
 

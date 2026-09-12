@@ -1,5 +1,6 @@
 import { useId, useState } from 'react'
 import { Button } from '../../components/Button'
+import { Icon } from '../../components/Icon'
 import {
   Modal,
   ModalActions,
@@ -35,28 +36,43 @@ export function ProjectDataPortability({
   const [format, setFormat] = useState<AnnotationExportFormat>('jsonl')
   const [mode, setMode] = useState<AnnotationExportMode>('submitted')
   const [busy, setBusy] = useState(false)
-  const [status, setStatus] = useState<string | null>(null)
+  const [status, setStatus] = useState<{
+    phase: 'preparing' | 'started' | 'failed'
+    kind: 'Backup' | 'Export'
+    message: string
+  } | null>(null)
 
   const runDownload = async (
+    kind: 'Backup' | 'Export',
     build: () => Promise<{ source: string; filename: string; type: string }>,
   ) => {
     setBusy(true)
-    setStatus(null)
+    setStatus({
+      phase: 'preparing',
+      kind,
+      message: `Preparing ${kind.toLowerCase()}…`,
+    })
     try {
       const output = await build()
       downloadText(output.source, output.filename, output.type)
-      setStatus(`Download started: ${output.filename}`)
+      setStatus({
+        phase: 'started',
+        kind,
+        message: `Download started: ${output.filename}`,
+      })
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'The download failed.')
+      setStatus({
+        phase: 'failed',
+        kind,
+        message: `${kind} failed. ${error instanceof Error ? error.message : 'Unable to prepare the download.'} Please try again.`,
+      })
     } finally {
       setBusy(false)
-      setStatus('Download completed.')
-      setTimeout(() => setStatus(null), 5000)
     }
   }
 
   const downloadBackup = () =>
-    runDownload(async () => {
+    runDownload('Backup', async () => {
       const records = await loadProjectBackupRecords(projectId)
       const backup = createProjectBackup(records)
       return {
@@ -67,7 +83,7 @@ export function ProjectDataPortability({
     })
 
   const downloadAnnotations = () =>
-    runDownload(async () => {
+    runDownload('Export', async () => {
       const records = await loadProjectBackupRecords(projectId)
       const source = {
         project: records.project,
@@ -88,6 +104,17 @@ export function ProjectDataPortability({
           }
     })
 
+  const feedback = (
+    <div
+      className={styles.feedback}
+      aria-live="polite"
+      aria-atomic="true"
+      data-phase={status?.phase}
+    >
+      {status?.message}
+    </div>
+  )
+
   return (
     <section className={styles.section}>
       <div className={styles.heading}>
@@ -103,30 +130,55 @@ export function ProjectDataPortability({
         audio is never included and must be relinked after restoration.
       </p>
       <div className={styles.actions}>
-        <Button
-          type="button"
-          disabled={busy}
-          onClick={() => void downloadBackup()}
-        >
-          {busy ? 'Preparing…' : 'Download backup'}
-        </Button>
-        <Button type="button" disabled={busy} onClick={() => setOpen(true)}>
-          Export annotations
-        </Button>
+        <div className={styles.downloadOption}>
+          <Icon name="folder" size={24} />
+          <h3>Keep a recovery copy</h3>
+          <p>
+            Save the full project, including every taxonomy version and
+            annotation, in one backup file.
+          </p>
+          <Button
+            type="button"
+            disabled={busy}
+            onClick={() => void downloadBackup()}
+          >
+            {busy && status?.kind === 'Backup'
+              ? 'Preparing backup…'
+              : 'Download backup'}
+          </Button>
+        </div>
+        <div className={styles.downloadOption}>
+          <Icon name="download" size={24} />
+          <h3>Use your annotations</h3>
+          <p>
+            Export submitted work or all tasks as JSONL or CSV for analysis and
+            downstream tools.
+          </p>
+          <Button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              setStatus(null)
+              setOpen(true)
+            }}
+          >
+            Export annotations
+          </Button>
+        </div>
       </div>
-      {status && <p role="status">{status}</p>}
+      {!open && feedback}
 
       <Modal
         open={open}
         titleId={titleId}
         descriptionId={descriptionId}
-        onClose={() => !busy && setOpen(false)}
+        onClose={() => setOpen(false)}
       >
         <ModalTitle id={titleId}>Export annotations</ModalTitle>
         <ModalDescription id={descriptionId}>
           Choose a versioned machine-readable export. Audio is not included.
         </ModalDescription>
-        <fieldset className={styles.options}>
+        <fieldset className={styles.options} disabled={busy}>
           <legend>Format</legend>
           <label className={styles.option}>
             <input
@@ -151,7 +203,7 @@ export function ProjectDataPortability({
             Flattened CSV
           </label>
         </fieldset>
-        <fieldset className={styles.options}>
+        <fieldset className={styles.options} disabled={busy}>
           <legend>Tasks</legend>
           <label className={styles.option}>
             <input
@@ -176,10 +228,10 @@ export function ProjectDataPortability({
             All tasks
           </label>
         </fieldset>
-        {status && <p role="status">{status}</p>}
+        {feedback}
         <ModalActions>
-          <Button type="button" disabled={busy} onClick={() => setOpen(false)}>
-            Cancel
+          <Button type="button" onClick={() => setOpen(false)}>
+            {busy ? 'Close' : 'Cancel'}
           </Button>
           <Button
             variant="primary"
@@ -187,7 +239,7 @@ export function ProjectDataPortability({
             disabled={busy}
             onClick={() => void downloadAnnotations()}
           >
-            {busy ? 'Preparing…' : `Download ${format.toUpperCase()}`}
+            {busy ? 'Preparing export…' : `Download ${format.toUpperCase()}`}
           </Button>
         </ModalActions>
       </Modal>

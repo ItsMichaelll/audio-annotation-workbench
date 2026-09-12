@@ -78,7 +78,7 @@
   padding: 1px 4px;
   border-radius: var(--radius-sm);
   background: var(--surface-code);
-  font-family: var(--font-mono);
+  font-family: var(--font-code);
 }
 
 .root pre {
