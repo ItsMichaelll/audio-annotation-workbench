@@ -1,3 +1,5 @@
+import { useRegionSelection } from './components/useRegionSelection'
+import { deleteSelectedRegions } from './domain/regionSelection'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { ApplicationHeader } from './components/ApplicationHeader'
@@ -30,7 +32,6 @@ import type { MarkerAnnotation } from './domain/models'
 import {
   adjacentRegion,
   regionSnapshotsEqual,
-  removeRegion,
   type RegionMetadata,
   upsertRegion,
 } from './domain/region'
@@ -72,7 +73,14 @@ export function StandaloneEditor() {
   const [isPlaying, setIsPlaying] = useState(false)
   const [regions, setRegions] = useState<RegionMetadata[]>([])
   const [markers, setMarkers] = useState<MarkerAnnotation[]>([])
-  const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null)
+  const {
+    selectedRegionId,
+    selectedRegionIds,
+    setSelectedRegionId,
+    selectRegion,
+    onSelectionKeyDown,
+    onSelectionClick,
+  } = useRegionSelection(regions)
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null)
   const [waveformFocused, setWaveformFocused] = useState(false)
   const [loopEnabled, setLoopEnabled] = useState(false)
@@ -116,7 +124,7 @@ export function StandaloneEditor() {
       setLoopEnabled(true)
       waveformRef.current?.revealRegion(destination.start, destination.end)
     },
-    [regions, selectedRegionId],
+    [regions, selectedRegionId, setSelectedRegionId],
   )
 
   const navigateMarker = useCallback(
@@ -134,7 +142,7 @@ export function StandaloneEditor() {
       waveformRef.current?.seekToMarker(destination.time)
       return true
     },
-    [currentTime, selectedMarkerId],
+    [currentTime, selectedMarkerId, setSelectedRegionId],
   )
 
   const applyHistoryState = useCallback(
@@ -150,7 +158,7 @@ export function StandaloneEditor() {
         setLoopEnabled(false)
       }
     },
-    [selectedRegionId],
+    [selectedRegionId, setSelectedRegionId],
   )
 
   const commitRegions = useCallback(
@@ -180,18 +188,19 @@ export function StandaloneEditor() {
     [commitRegions],
   )
 
-  const handleRegionSelect = useCallback((regionId: string) => {
-    setSelectedMarkerId(null)
-    setSelectedRegionId((currentRegionId) => {
-      if (currentRegionId !== regionId) setLoopEnabled(true)
-      return regionId
-    })
-  }, [])
+  const handleRegionSelect = useCallback(
+    (regionId: string, toggle = false) => {
+      setSelectedMarkerId(null)
+      selectRegion(regionId, toggle)
+      setLoopEnabled(!toggle)
+    },
+    [selectRegion],
+  )
 
   const clearRegionSelection = useCallback(() => {
     setSelectedRegionId(null)
     setLoopEnabled(false)
-  }, [])
+  }, [setSelectedRegionId])
 
   const createMarkerAtPlayhead = useCallback(() => {
     if (!isLoaded) return
@@ -210,7 +219,7 @@ export function StandaloneEditor() {
     markersRef.current = next
     setMarkers(next)
     setSelectedMarkerId(marker.id)
-  }, [currentTime, duration, isLoaded])
+  }, [currentTime, duration, isLoaded, setSelectedRegionId])
 
   const commitMarker = useCallback(
     (marker: MarkerAnnotation) => {
@@ -232,10 +241,10 @@ export function StandaloneEditor() {
 
   const deleteSelectedRegion = useCallback(() => {
     if (!selectedRegionId) return
-    commitRegions(removeRegion(regionsRef.current, selectedRegionId))
+    commitRegions(deleteSelectedRegions(regionsRef.current, selectedRegionIds))
     setSelectedRegionId(null)
     setLoopEnabled(false)
-  }, [commitRegions, selectedRegionId])
+  }, [commitRegions, selectedRegionId, selectedRegionIds, setSelectedRegionId])
 
   const undo = useCallback(() => {
     applyHistoryState(historyRef.current.undo())
@@ -261,7 +270,7 @@ export function StandaloneEditor() {
     setZoom(0)
     setVerticalScale(1)
     setIsPlaying(false)
-  }, [applyHistoryState])
+  }, [applyHistoryState, setSelectedRegionId])
 
   const handleFile = (file: File | undefined) => {
     if (!file) return
@@ -304,6 +313,7 @@ export function StandaloneEditor() {
       )
         return
       const command = keyboardCommand(event)
+      if (command?.type === 'select-all-regions') return
       if (command?.type === 'create-marker') {
         if (waveformFocused) {
           event.preventDefault()
@@ -351,7 +361,8 @@ export function StandaloneEditor() {
           if (isLoaded) waveformRef.current?.zoom(command.direction)
           break
         case 'toggle-loop':
-          if (selectedRegionId) setLoopEnabled((enabled) => !enabled)
+          if (selectedRegionIds.length === 1)
+            setLoopEnabled((enabled) => !enabled)
           break
         case 'delete-selection':
           deleteSelectedRegion()
@@ -388,6 +399,8 @@ export function StandaloneEditor() {
     selectedMarkerId,
     undo,
     waveformFocused,
+    setSelectedRegionId,
+    selectedRegionIds.length,
   ])
 
   const controls: TransportBarProps = {
@@ -397,9 +410,7 @@ export function StandaloneEditor() {
     spectrogramEnabled,
     spectrumEnabled,
     meterEnabled,
-    hasSelection: selectedRegion !== null,
-    canPreviousRegion: previousRegion !== null,
-    canNextRegion: nextRegion !== null,
+    hasSelection: selectedRegionIds.length === 1,
     verticalScale,
     currentTime,
     duration,
@@ -409,9 +420,14 @@ export function StandaloneEditor() {
     onZoomOut: () => waveformRef.current?.zoom('out'),
     onResetVerticalScale: () => waveformRef.current?.resetVerticalScale(),
     onToggleLoop: () => setLoopEnabled((value) => !value),
-    onDelete: deleteSelectedRegion,
-    onPreviousRegion: () => navigateRegion('previous'),
-    onNextRegion: () => navigateRegion('next'),
+    onJumpToStart: () => {
+      setLoopEnabled(false)
+      waveformRef.current?.jumpToBoundary('start')
+    },
+    onJumpToEnd: () => {
+      setLoopEnabled(false)
+      waveformRef.current?.jumpToBoundary('end')
+    },
     onToggleSpectrogram: () => setSpectrogramEnabled((value) => !value),
     onToggleSpectrum: () => {
       setSpectrumEnabled(!spectrumEnabled)
@@ -449,7 +465,20 @@ export function StandaloneEditor() {
   }
 
   return (
-    <div className={styles.shell} data-editor-theme="light">
+    <div
+      className={styles.shell}
+      data-editor-theme="light"
+      onKeyDownCapture={(event) => {
+        onSelectionKeyDown(event)
+        if (event.defaultPrevented) {
+          setSelectedMarkerId(null)
+          setLoopEnabled(false)
+        }
+      }}
+      onClick={(event) => {
+        if (onSelectionClick(event)) setLoopEnabled(false)
+      }}
+    >
       <ApplicationHeader>
         <KeyboardHelp />
       </ApplicationHeader>
@@ -565,6 +594,7 @@ export function StandaloneEditor() {
                 regions={regions}
                 markers={markers}
                 selectedRegionId={selectedRegionId}
+                selectedRegionIds={selectedRegionIds}
                 selectedMarkerId={selectedMarkerId}
                 loopEnabled={loopEnabled}
                 meterEnabled={meterEnabled}
@@ -606,7 +636,7 @@ export function StandaloneEditor() {
               />
             </div>
           )}
-          {selectedRegion && (
+          {selectedRegion && selectedRegionIds.length === 1 && (
             <div className={styles.selectionEditor}>
               <strong>Selected region</strong>
               <RegionTiming
@@ -624,17 +654,27 @@ export function StandaloneEditor() {
             <AnnotationList
               regions={regions}
               selectedRegionId={selectedRegionId}
+              selectedRegionIds={selectedRegionIds}
               markers={markers}
               selectedMarkerId={selectedMarkerId}
               markerControls={markerControls}
+              regionControls={{
+                isLoaded: isLoaded,
+                editingEnabled: true,
+                canPrevious: previousRegion !== null,
+                canNext: nextRegion !== null,
+                onPrevious: () => navigateRegion('previous'),
+                onNext: () => navigateRegion('next'),
+                onDelete: deleteSelectedRegion,
+              }}
               onSelectMarker={(marker) => {
                 setSelectedRegionId(null)
                 setLoopEnabled(false)
                 setSelectedMarkerId(marker.id)
                 waveformRef.current?.seekToMarker(marker.time)
               }}
-              onSelect={(region) => {
-                handleRegionSelect(region.id)
+              onSelect={(region, toggle) => {
+                handleRegionSelect(region.id, toggle)
                 waveformRef.current?.revealRegion(region.start, region.end)
               }}
               onAdd={addRegion}

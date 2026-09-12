@@ -174,6 +174,7 @@ export interface WaveformEditorHandle {
   resetVerticalScale(): void
   seekBy(seconds: number): void
   seekTo(seconds: number): void
+  jumpToBoundary(boundary: 'start' | 'end'): void
   revealRegion(start: number, end: number): void
   seekToMarker(time: number): void
   zoom(direction: 'in' | 'out'): void
@@ -184,6 +185,7 @@ interface WaveformEditorProps {
   regions: readonly RegionMetadata[]
   markers: readonly MarkerAnnotation[]
   selectedRegionId: string | null
+  selectedRegionIds?: readonly string[]
   selectedMarkerId: string | null
   loopEnabled: boolean
   meterEnabled: boolean
@@ -201,7 +203,7 @@ interface WaveformEditorProps {
   onRegionCreate(region: RegionMetadata): void
   onRegionLiveChange(region: RegionMetadata): void
   onRegionCommit(region: RegionMetadata): void
-  onRegionSelect(regionId: string): void
+  onRegionSelect(regionId: string, toggle?: boolean): void
   onMarkerCommit(marker: MarkerAnnotation): void
   onMarkerSelect(markerId: string): void
   onClearRegionSelection(): void
@@ -266,6 +268,7 @@ export const WaveformEditor = forwardRef<
     regions,
     markers,
     selectedRegionId,
+    selectedRegionIds,
     selectedMarkerId,
     loopEnabled,
     meterEnabled,
@@ -458,6 +461,15 @@ export const WaveformEditor = forwardRef<
         const wavesurfer = wavesurferRef.current
         if (!wavesurfer) return
         wavesurfer.setTime(clampTime(seconds, wavesurfer.getDuration()))
+      },
+      jumpToBoundary(boundary: 'start' | 'end') {
+        const wavesurfer = wavesurferRef.current
+        if (!wavesurfer) return
+        loopEnabledRef.current = false
+        pendingPlaybackRegionIdRef.current = null
+        const time = boundary === 'start' ? 0 : wavesurfer.getDuration()
+        wavesurfer.setTime(time)
+        wavesurfer.setScrollTime(time)
       },
       revealRegion(start: number, end: number) {
         const wavesurfer = wavesurferRef.current
@@ -996,6 +1008,12 @@ export const WaveformEditor = forwardRef<
             wavesurfer.getDuration(),
             (time) => wavesurfer.setTime(time),
           )
+          return
+        }
+        if (event.ctrlKey || event.metaKey) {
+          pendingPlaybackRegionIdRef.current = null
+          loopEnabledRef.current = false
+          callbacksRef.current.onRegionSelect(region.id, true)
           return
         }
         selectRegion(region.id)
@@ -1707,7 +1725,9 @@ export const WaveformEditor = forwardRef<
           typeof metadata.data.color === 'string'
             ? metadata.data.color
             : '#4166e8',
-          metadata.id === selectedRegionId,
+          selectedRegionIds
+            ? selectedRegionIds.includes(metadata.id)
+            : metadata.id === selectedRegionId,
         )
         const content = `${String(regionOrder.get(metadata.id)).padStart(2, '0')} · ${typeof metadata.data.label === 'string' ? metadata.data.label : 'Region'}`
         if (renderedRegion) {
@@ -1778,6 +1798,7 @@ export const WaveformEditor = forwardRef<
     regions,
     selectedMarkerId,
     selectedRegionId,
+    selectedRegionIds,
   ])
 
   useEffect(() => {
@@ -1862,6 +1883,7 @@ export const WaveformEditor = forwardRef<
 
   return (
     <div
+      data-region-selection
       className={`${styles.root}${meterEnabled ? ` ${styles.withMeter}` : ''}`}
     >
       <div className={styles.stack}>

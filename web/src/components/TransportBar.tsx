@@ -10,9 +10,6 @@ export interface TransportBarProps {
   spectrumEnabled: boolean
   meterEnabled: boolean
   hasSelection: boolean
-  canDelete?: boolean
-  canPreviousRegion?: boolean
-  canNextRegion?: boolean
   verticalScale: number
   currentTime: number
   duration: number
@@ -22,9 +19,8 @@ export interface TransportBarProps {
   onZoomOut(): void
   onResetVerticalScale(): void
   onToggleLoop(): void
-  onDelete(): void
-  onPreviousRegion?(): void
-  onNextRegion?(): void
+  onJumpToStart(): void
+  onJumpToEnd(): void
   onToggleSpectrogram(): void
   onToggleSpectrum(): void
   onToggleMeter(): void
@@ -99,9 +95,6 @@ export function TransportBar({
   isPlaying,
   loopEnabled,
   hasSelection,
-  canDelete = hasSelection,
-  canPreviousRegion = false,
-  canNextRegion = false,
   verticalScale,
   currentTime,
   duration,
@@ -111,9 +104,8 @@ export function TransportBar({
   onZoomOut,
   onResetVerticalScale,
   onToggleLoop,
-  onDelete,
-  onPreviousRegion,
-  onNextRegion,
+  onJumpToStart,
+  onJumpToEnd,
 }: TransportBarProps) {
   return (
     <nav className={styles.root} aria-label="Transport and editing controls">
@@ -121,10 +113,10 @@ export function TransportBar({
         <button
           className={styles.iconButton}
           type="button"
-          onClick={onPreviousRegion}
-          disabled={!isLoaded || !canPreviousRegion}
-          aria-label="Previous region"
-          title="Previous region (Ctrl+Left)"
+          onClick={onJumpToStart}
+          disabled={!isLoaded}
+          aria-label="Jump to start"
+          title="Jump to start of audio"
         >
           <Icon name="previous" />
         </button>
@@ -141,10 +133,10 @@ export function TransportBar({
         <button
           className={styles.iconButton}
           type="button"
-          onClick={onNextRegion}
-          disabled={!isLoaded || !canNextRegion}
-          aria-label="Next region"
-          title="Next region (Ctrl+Right)"
+          onClick={onJumpToEnd}
+          disabled={!isLoaded}
+          aria-label="Jump to end"
+          title="Jump to end of audio"
         >
           <Icon name="next" />
         </button>
@@ -164,16 +156,6 @@ export function TransportBar({
         >
           <Icon name="loop" />
           <span>Loop</span>
-        </button>
-        <button
-          type="button"
-          className={styles.iconButton}
-          onClick={onDelete}
-          disabled={!canDelete}
-          aria-label="Delete selected region"
-          title="Delete selected region (Delete)"
-        >
-          <Icon name="trash" />
         </button>
       </div>
       <div className={styles.zoom} role="group" aria-label="Waveform zoom">
