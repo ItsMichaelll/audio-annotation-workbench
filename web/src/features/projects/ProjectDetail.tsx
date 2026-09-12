@@ -135,6 +135,13 @@ export function ProjectDetail() {
         canTransitionTask(task.status, 'skipped'),
     )
     .map((task) => task.id)
+  const selectedRestorableTaskIds = tasks
+    .filter(
+      (task) =>
+        selectedTasks.includes(task.id) &&
+        (task.status === 'skipped' || task.status === 'blocked'),
+    )
+    .map((task) => task.id)
 
   let activeTaxonomy: ReturnType<typeof parseAnnotationTaxonomy> | null = null
   let taxonomyError: string | null = null
@@ -448,6 +455,22 @@ export function ProjectDetail() {
                     <span aria-live="polite">
                       {selectedTasks.length} selected
                     </span>
+                    <Button
+                      size="square"
+                      type="button"
+                      disabled={!selectedRestorableTaskIds.length || acting}
+                      onClick={() =>
+                        void taskAction(() =>
+                          setTaskStatus(
+                            project.id,
+                            selectedRestorableTaskIds,
+                            'unstarted',
+                          ),
+                        )
+                      }
+                    >
+                      Restore selected
+                    </Button>
                     <Button
                       size="square"
                       type="button"
