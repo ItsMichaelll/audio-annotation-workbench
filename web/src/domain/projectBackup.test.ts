@@ -84,6 +84,7 @@ function annotation(taskId: string): AnnotationDocument {
         assignments: [{ labelId: 'noise' }],
       },
     ],
+    markers: [{ id: `marker-${taskId}`, time: 1.5 }],
     clipAssignments: [],
     createdAt: NOW,
     updatedAt: NOW,
@@ -120,7 +121,28 @@ describe('project backups', () => {
       displayName: 'first.wav',
       reason: 'not-yet-linked',
     })
+    expect(parsed.annotations[0]?.markers).toEqual([
+      { id: 'marker-first', time: 1.5 },
+    ])
     expect(serializeProjectBackup(backup())).toBe(serialized)
+  })
+
+  it('restores version-one annotations with an empty marker collection', () => {
+    const legacy = structuredClone(backup())
+    for (const annotation of legacy.annotations) {
+      ;(annotation as { schemaVersion: number }).schemaVersion = 1
+      delete (annotation as unknown as { markers?: unknown }).markers
+    }
+
+    const parsed = parseProjectBackup(JSON.stringify(legacy))
+    expect(
+      parsed.annotations.every(({ markers }) => markers.length === 0),
+    ).toBe(true)
+    expect(
+      parsed.annotations.every(
+        ({ schemaVersion }) => schemaVersion === ANNOTATION_SCHEMA_VERSION,
+      ),
+    ).toBe(true)
   })
 
   it('rejects malformed JSON and unsupported versions', () => {

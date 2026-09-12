@@ -41,6 +41,28 @@ describe('annotation domain', () => {
     expect(normalized.regions[0]).toMatchObject({ start: 0, end: 10 })
   })
 
+  it('defaults legacy markers and normalizes marker timing separately from regions', () => {
+    const legacy = { ...document() } as Partial<ReturnType<typeof document>>
+    delete legacy.markers
+    expect(
+      normalizeAnnotationCardinality(legacy as ReturnType<typeof document>)
+        .markers,
+    ).toEqual([])
+
+    const normalized = normalizeAnnotation(
+      {
+        ...document(),
+        regions: [{ id: 'shared', start: 1, end: 2, assignments: [] }],
+        markers: [
+          { id: 'shared', time: 1.5 },
+          { id: 'marker', time: 12 },
+        ],
+      },
+      10,
+    )
+    expect(normalized.markers).toEqual([{ id: 'marker', time: 10 }])
+  })
+
   it('prevents duplicate target assignments and deletes assignments with their region', () => {
     const once = setLabelAssignment([], 'region-label', true)
     expect(setLabelAssignment(once, 'region-label', true)).toEqual(once)

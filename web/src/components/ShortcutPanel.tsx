@@ -1,58 +1,41 @@
 import styles from './ShortcutPanel.module.css'
+import {
+  EDITOR_SHORTCUT_GROUPS,
+  type EditorShortcutGroup,
+} from './editorShortcuts'
 
-const shortcutGroups = [
-  {
-    title: 'Transport',
-    items: [
-      ['Space', 'Play / pause'],
-      ['← / →', 'Step 50 ms'],
-      ['Shift + ← / →', 'Step 250 ms'],
-      ['A / D', 'Step 1 second'],
-      ['Home / End', 'File bounds'],
-    ],
-  },
-  {
-    title: 'View',
-    items: [
-      ['Wheel', 'Zoom at pointer'],
-      ['Alt + wheel', 'Scale waveform height'],
-      ['Shift + wheel', 'Pan or nudge selected region'],
-      ['Middle drag', 'Pan'],
-      ['Alt + left drag', 'Pan'],
-      ['F', 'Fit file'],
-      ['+ / −', 'Zoom at playhead'],
-    ],
-  },
-  {
-    title: 'Task workflow',
-    items: [
-      ['Ctrl + Enter', 'Submit and next'],
-      ['Ctrl + Shift + Enter', 'Skip and next'],
-      ['1–9 / assigned key', 'Apply taxonomy label'],
-    ],
-  },
-  {
-    title: 'Regions',
-    items: [
-      ['Left drag', 'Create region'],
-      ['Double-click', 'Play region'],
-      ['Ctrl + ← / →', 'Previous / next region'],
-      ['L', 'Toggle loop'],
-      ['Delete / Backspace', 'Delete region'],
-      ['Ctrl + D', 'Delete region'],
-      ['Escape', 'Clear selection'],
-      ['Ctrl + Z', 'Undo'],
-      ['Ctrl + Y', 'Redo'],
-    ],
-  },
-]
+export interface ShortcutPanelProps {
+  labels?: readonly { name: string; shortcut?: string }[]
+}
 
-export function ShortcutPanel() {
+export function ShortcutPanel({ labels }: ShortcutPanelProps) {
+  const shortcutGroups: EditorShortcutGroup[] = [...EDITOR_SHORTCUT_GROUPS]
+  if (labels) {
+    shortcutGroups.push({
+      title: 'Task workflow',
+      items: [
+        ['Ctrl + Enter', 'Submit and next'],
+        ['Ctrl + Shift + Enter', 'Skip and next'],
+        ...labels.flatMap((label): [string, string][] =>
+          label.shortcut
+            ? [[label.shortcut, `Select or toggle ${label.name}`]]
+            : [],
+        ),
+      ],
+    })
+  }
   return (
     <div className={styles.content}>
       {shortcutGroups.map((group) => (
         <section className={styles.group} key={group.title}>
           <h3 className={styles.heading}>{group.title}</h3>
+          {group.title === 'Markers' && (
+            <p className={styles.scopeNote}>
+              Focus the waveform for these shortcuts; Ctrl+D also works outside
+              it. At either boundary, Tab navigation returns to normal focus
+              movement.
+            </p>
+          )}
           <dl className={styles.list}>
             {group.items.map(([keys, action]) => (
               <div className={styles.item} key={keys}>

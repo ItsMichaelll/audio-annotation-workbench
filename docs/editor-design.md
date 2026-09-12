@@ -19,9 +19,18 @@ domain and feature layers. No runtime dependencies were introduced.
 - Playback, current time, region navigation, loop, deletion, fit, time zoom,
   and amplitude reset are grouped in a persistent transport dock outside the
   scrolling workspace, so analysis panels never displace playback controls.
-- A chronological region ledger replaces the permanent shortcut reference.
-  It selects and reveals regions, exposes annotation state, filters unlabeled
-  regions, and supplies visible undo, redo, and Add region actions.
+- A chronological annotation ledger replaces the permanent shortcut reference.
+  Regions and Markers have keyboard-operable tabs with live counts. Regions
+  retain annotation state, unlabeled filtering, and Add region; Markers expose
+  exact timestamps, seek-on-select rows, previous/next, creation, and deletion.
+  Undo and redo remain available in either tab. Marker controls belong here
+  rather than in another persistent transport row, preserving waveform space
+  on narrow screens. Switching tabs does not change selection or playback.
+- Orange marker flags, selected rows, and status distinguish timestamp markers
+  from blue interval selections. The waveform keeps its original marker hit
+  geometry, dragging, duplicate handling, keyboard scope, and seek behavior.
+  The footer always reports marker count or the selected marker's ordinal and
+  timestamp, even when the Regions tab is open.
 - A collapsible, resizable task inspector provides Region, Clip & info, and
   Guide tabs. Region labels and bounds belong to the selected time interval;
   clip labels, task notes, and source metadata belong to the entire recording.
@@ -51,8 +60,11 @@ rail is a working inspector, justified by persistent annotation controls.
 - Fitted waveforms stay fitted as the viewport or inspector width changes.
   Explicitly zoomed views retain their zoom. Local keyboard controls take
   precedence over global transport shortcuts.
-- Standalone session limits are explicit: these regions are temporary; saved
-  taxonomy annotations require a project.
+- Standalone session limits are explicit: regions and markers are temporary;
+  saved taxonomy annotations require a project. The incoming feature's history
+  behavior is unchanged: standalone history covers regions, while project
+  history covers the complete annotation, including markers. Project markers
+  retain autosave, reload/relink, export, backup, and read-only review behavior.
 
 ## Responsive and accessibility foundations
 
@@ -69,7 +81,8 @@ animation and control transitions.
 
 Shared foundations live in `styles/tokens.css`; the shell and workspace live
 in `ApplicationHeader` and `EditorWorkspace.module.css`. Small reusable
-components own icons, transport, region ledger, exact timing, status, and help.
+components own icons, transport, annotation ledger, marker controls, exact timing,
+status, and help.
 The editor opts into the light tokens at the root (including portaled dialogs).
 The shared application header uses the same light theme. Unrelated project pages
 retain their existing route bodies, dark theme, and workflows until their own
@@ -86,6 +99,14 @@ validation, labels and notes, history, playback and analysis, inspector navigati
 autosave/relink, task transitions, and read-only review. Automated accessibility
 scans complement checks of visible focus, responsive overflow, and native controls.
 
+Marker integration was checked at 1440, 1024, 768, 390, and 320 px, including
+scrolled ledger views. Browser checks cover duplicate creation, waveform drag,
+seek without playback changes, focus-scoped shortcuts, boundary Tab exit,
+ledger tab navigation and visible focus, marker/region selection isolation,
+project undo/redo, autosave/relink, and read-only review. All 199 automated tests
+and the production build pass; browser checks report no console errors,
+horizontal overflow, or WCAG 2 A/AA and 2.1 AA scan violations.
+
 ## Materially changed files
 
 Paths below are relative to the repository root. Component names include their
@@ -98,7 +119,8 @@ colocated `.module.css` files where present.
   `web/src/features/waveform/`; `SpectrumAnalyzer.tsx` under
   `web/src/features/spectrum/`; `web/src/features/loudness/LoudnessMeter.module.css`.
 - Shared components under `web/src/components/`: `ApplicationHeader`,
-  `TransportBar`, `RegionList`, `RegionTiming`, `KeyboardHelp`, `ShortcutPanel`,
+  `TransportBar`, `AnnotationList` (replacing `RegionList`), `MarkerControls`,
+  `RegionTiming`, `KeyboardHelp`, `ShortcutPanel`,
   `StatusReadout`, `Icon.tsx`, `EditorWorkspace.module.css`, and
   `CustomSelect.module.css`.
 - Shared project shell: `web/src/features/projects/ProjectLayout.tsx` and its

@@ -1,10 +1,10 @@
 import { useId, useState } from 'react'
 import { Icon } from './Icon'
 import { Modal, ModalTitle } from './Modal'
-import { ShortcutPanel } from './ShortcutPanel'
+import { ShortcutPanel, type ShortcutPanelProps } from './ShortcutPanel'
 import styles from './KeyboardHelp.module.css'
 
-export function KeyboardHelp() {
+export function KeyboardHelp({ labels }: ShortcutPanelProps) {
   const [open, setOpen] = useState(false)
   const titleId = useId()
   return (
@@ -38,7 +38,7 @@ export function KeyboardHelp() {
           Keyboard and pointer controls. Shortcuts pause while a form control
           has focus.
         </p>
-        <ShortcutPanel />
+        <ShortcutPanel {...(labels ? { labels } : {})} />
       </Modal>
     </>
   )

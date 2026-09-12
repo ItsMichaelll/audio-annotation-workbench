@@ -5,6 +5,7 @@ import {
   type RegionAnnotation,
 } from './models'
 import type { AnnotationScope, AnnotationTaxonomy } from './annotationTaxonomy'
+import { normalizeMarkers } from './marker'
 import { normalizeRegion } from './region'
 
 export interface SubmissionValidation {
@@ -28,6 +29,7 @@ export function createAnnotationDocument(input: {
     taxonomyVersionId: input.taxonomyVersionId,
     revision: 0,
     regions: [],
+    markers: [],
     clipAssignments: [],
     createdAt: input.now,
     updatedAt: input.now,
@@ -65,7 +67,9 @@ export function normalizeAnnotation(
   }
   return {
     ...document,
+    schemaVersion: ANNOTATION_SCHEMA_VERSION,
     regions,
+    markers: normalizeMarkers(document.markers, duration, ids),
     clipAssignments: uniqueAssignments(document.clipAssignments),
   }
 }
@@ -75,10 +79,16 @@ export function normalizeAnnotationCardinality(
 ): AnnotationDocument {
   return {
     ...document,
+    schemaVersion: ANNOTATION_SCHEMA_VERSION,
     regions: document.regions.map((region) => ({
       ...region,
       assignments: normalizeRegionAssignments(region.assignments),
     })),
+    markers: normalizeMarkers(
+      document.markers,
+      undefined,
+      new Set(document.regions.map(({ id }) => id)),
+    ),
     clipAssignments: uniqueAssignments(document.clipAssignments),
   }
 }
@@ -214,6 +224,19 @@ export function validateSubmission(
       `Region ${region.id}`,
       errors,
     )
+  }
+  const markerIds = new Set(regionIds)
+  for (const marker of document.markers) {
+    if (markerIds.has(marker.id))
+      errors.push(`Marker id ${marker.id} is duplicated.`)
+    markerIds.add(marker.id)
+    if (
+      !Number.isFinite(marker.time) ||
+      marker.time < 0 ||
+      marker.time > duration
+    ) {
+      errors.push(`Marker ${marker.id} has invalid timing.`)
+    }
   }
   validateAssignments(
     document.clipAssignments,

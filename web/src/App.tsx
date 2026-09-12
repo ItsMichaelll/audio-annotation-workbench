@@ -3,7 +3,8 @@ import { Link } from 'react-router'
 import { ApplicationHeader } from './components/ApplicationHeader'
 import { KeyboardHelp } from './components/KeyboardHelp'
 import { Icon } from './components/Icon'
-import { RegionList } from './components/RegionList'
+import { AnnotationList } from './components/AnnotationList'
+import type { MarkerControlsProps } from './components/MarkerControls'
 import { RegionTiming } from './components/RegionTiming'
 import { StatusReadout } from './components/StatusReadout'
 import {
@@ -12,7 +13,20 @@ import {
   type TransportBarProps,
 } from './components/TransportBar'
 import { SnapshotHistory, type HistoryState } from './domain/history'
-import { isEditableTarget, keyboardCommand } from './domain/keyboard'
+import {
+  isDialogTarget,
+  isEditableTarget,
+  keyboardCommand,
+} from './domain/keyboard'
+import {
+  addMarker,
+  adjacentMarker,
+  MARKER_TIME_TOLERANCE_SECONDS,
+  markerOrdinal,
+  removeMarker,
+  updateMarker,
+} from './domain/marker'
+import type { MarkerAnnotation } from './domain/models'
 import {
   adjacentRegion,
   regionSnapshotsEqual,
@@ -42,6 +56,7 @@ export function StandaloneEditor() {
   const waveformRef = useRef<WaveformEditorHandle>(null)
   const activeObjectUrlRef = useRef<string | null>(null)
   const regionsRef = useRef<RegionMetadata[]>([])
+  const markersRef = useRef<MarkerAnnotation[]>([])
   const historyRef = useRef(
     new SnapshotHistory<RegionMetadata[]>([], regionSnapshotsEqual),
   )
@@ -56,7 +71,10 @@ export function StandaloneEditor() {
   const [verticalScale, setVerticalScale] = useState(1)
   const [isPlaying, setIsPlaying] = useState(false)
   const [regions, setRegions] = useState<RegionMetadata[]>([])
+  const [markers, setMarkers] = useState<MarkerAnnotation[]>([])
   const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null)
+  const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null)
+  const [waveformFocused, setWaveformFocused] = useState(false)
   const [loopEnabled, setLoopEnabled] = useState(false)
   const [spectrumEnabled, setSpectrumEnabled] = useState(false)
   const [spectrogramEnabled, setSpectrogramEnabled] = useState(false)
@@ -71,18 +89,52 @@ export function StandaloneEditor() {
     [regions, selectedRegionId],
   )
   const isLoaded = loadStatus === 'ready'
+  const selectedMarker =
+    markers.find((marker) => marker.id === selectedMarkerId) ?? null
+  const selectedMarkerOrdinal = markerOrdinal(markers, selectedMarkerId)
   const previousRegion = adjacentRegion(regions, selectedRegionId, 'previous')
   const nextRegion = adjacentRegion(regions, selectedRegionId, 'next')
+  const previousMarker = adjacentMarker(
+    markers,
+    selectedMarkerId,
+    currentTime,
+    'previous',
+  )
+  const nextMarker = adjacentMarker(
+    markers,
+    selectedMarkerId,
+    currentTime,
+    'next',
+  )
 
   const navigateRegion = useCallback(
     (direction: 'previous' | 'next') => {
       const destination = adjacentRegion(regions, selectedRegionId, direction)
       if (!destination) return
+      setSelectedMarkerId(null)
       setSelectedRegionId(destination.id)
       setLoopEnabled(true)
       waveformRef.current?.revealRegion(destination.start, destination.end)
     },
     [regions, selectedRegionId],
+  )
+
+  const navigateMarker = useCallback(
+    (direction: 'previous' | 'next'): boolean => {
+      const destination = adjacentMarker(
+        markersRef.current,
+        selectedMarkerId,
+        waveformRef.current?.getCurrentTime() ?? currentTime,
+        direction,
+      )
+      if (!destination) return false
+      setSelectedRegionId(null)
+      setLoopEnabled(false)
+      setSelectedMarkerId(destination.id)
+      waveformRef.current?.seekToMarker(destination.time)
+      return true
+    },
+    [currentTime, selectedMarkerId],
   )
 
   const applyHistoryState = useCallback(
@@ -129,6 +181,7 @@ export function StandaloneEditor() {
   )
 
   const handleRegionSelect = useCallback((regionId: string) => {
+    setSelectedMarkerId(null)
     setSelectedRegionId((currentRegionId) => {
       if (currentRegionId !== regionId) setLoopEnabled(true)
       return regionId
@@ -139,6 +192,43 @@ export function StandaloneEditor() {
     setSelectedRegionId(null)
     setLoopEnabled(false)
   }, [])
+
+  const createMarkerAtPlayhead = useCallback(() => {
+    if (!isLoaded) return
+    const time = waveformRef.current?.getCurrentTime() ?? currentTime
+    const existing = markersRef.current.find(
+      (marker) => Math.abs(marker.time - time) <= MARKER_TIME_TOLERANCE_SECONDS,
+    )
+    setSelectedRegionId(null)
+    setLoopEnabled(false)
+    if (existing) {
+      setSelectedMarkerId(existing.id)
+      return
+    }
+    const marker = { id: crypto.randomUUID(), time }
+    const next = addMarker(markersRef.current, marker, duration)
+    markersRef.current = next
+    setMarkers(next)
+    setSelectedMarkerId(marker.id)
+  }, [currentTime, duration, isLoaded])
+
+  const commitMarker = useCallback(
+    (marker: MarkerAnnotation) => {
+      const next = updateMarker(markersRef.current, marker, duration)
+      markersRef.current = next
+      setMarkers(next)
+      setSelectedMarkerId(marker.id)
+    },
+    [duration],
+  )
+
+  const deleteSelectedMarker = useCallback(() => {
+    if (!selectedMarkerId) return
+    const next = removeMarker(markersRef.current, selectedMarkerId)
+    markersRef.current = next
+    setMarkers(next)
+    setSelectedMarkerId(null)
+  }, [selectedMarkerId])
 
   const deleteSelectedRegion = useCallback(() => {
     if (!selectedRegionId) return
@@ -157,8 +247,11 @@ export function StandaloneEditor() {
 
   const resetEditorState = useCallback(() => {
     regionsRef.current = []
+    markersRef.current = []
+    setMarkers([])
     applyHistoryState(historyRef.current.reset([]))
     setSelectedRegionId(null)
+    setSelectedMarkerId(null)
     setLoopEnabled(false)
     setSpectrumEnabled(false)
     setSpectrogramEnabled(false)
@@ -204,8 +297,31 @@ export function StandaloneEditor() {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || isEditableTarget(event.target)) return
+      if (
+        event.defaultPrevented ||
+        isEditableTarget(event.target) ||
+        isDialogTarget(event.target)
+      )
+        return
       const command = keyboardCommand(event)
+      if (command?.type === 'create-marker') {
+        if (waveformFocused) {
+          event.preventDefault()
+          createMarkerAtPlayhead()
+        }
+        return
+      }
+      if (command?.type === 'navigate-marker') {
+        if (!waveformFocused) return
+        if (navigateMarker(command.direction)) event.preventDefault()
+        return
+      }
+      if (command?.type === 'delete-selection' && selectedMarkerId) {
+        if (command.markerRequiresWaveformFocus && !waveformFocused) return
+        event.preventDefault()
+        deleteSelectedMarker()
+        return
+      }
       if (
         !command ||
         command.type === 'submit-next' ||
@@ -237,11 +353,12 @@ export function StandaloneEditor() {
         case 'toggle-loop':
           if (selectedRegionId) setLoopEnabled((enabled) => !enabled)
           break
-        case 'delete-region':
+        case 'delete-selection':
           deleteSelectedRegion()
           break
         case 'clear-selection':
           setSelectedRegionId(null)
+          setSelectedMarkerId(null)
           setLoopEnabled(false)
           break
         case 'undo':
@@ -259,13 +376,18 @@ export function StandaloneEditor() {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [
+    createMarkerAtPlayhead,
+    deleteSelectedMarker,
     deleteSelectedRegion,
     duration,
     isLoaded,
     navigateRegion,
+    navigateMarker,
     redo,
     selectedRegionId,
+    selectedMarkerId,
     undo,
+    waveformFocused,
   ])
 
   const controls: TransportBarProps = {
@@ -299,6 +421,18 @@ export function StandaloneEditor() {
       setMeterEnabled(!meterEnabled)
       if (!meterEnabled) waveformRef.current?.activateMeter()
     },
+  }
+  const markerControls: MarkerControlsProps = {
+    isLoaded,
+    markerEditingEnabled: true,
+    canCreateMarker: isLoaded,
+    canPreviousMarker: previousMarker !== null,
+    canNextMarker: nextMarker !== null,
+    canDeleteMarker: selectedMarker !== null,
+    onCreateMarker: createMarkerAtPlayhead,
+    onPreviousMarker: () => navigateMarker('previous'),
+    onNextMarker: () => navigateMarker('next'),
+    onDeleteMarker: deleteSelectedMarker,
   }
   const addRegion = () => {
     if (!isLoaded || duration <= 0) return
@@ -429,7 +563,9 @@ export function StandaloneEditor() {
                 ref={waveformRef}
                 audioUrl={audioUrl}
                 regions={regions}
+                markers={markers}
                 selectedRegionId={selectedRegionId}
+                selectedMarkerId={selectedMarkerId}
                 loopEnabled={loopEnabled}
                 meterEnabled={meterEnabled}
                 spectrumEnabled={spectrumEnabled}
@@ -456,6 +592,14 @@ export function StandaloneEditor() {
                 onRegionCommit={handleRegionCommit}
                 onRegionSelect={handleRegionSelect}
                 onClearRegionSelection={clearRegionSelection}
+                onMarkerCommit={commitMarker}
+                onMarkerSelect={(id) => {
+                  setSelectedRegionId(null)
+                  setLoopEnabled(false)
+                  setSelectedMarkerId(id)
+                }}
+                onClearMarkerSelection={() => setSelectedMarkerId(null)}
+                onEditorFocusChange={setWaveformFocused}
                 onHideSpectrogram={() => setSpectrogramEnabled(false)}
                 onHideSpectrum={() => setSpectrumEnabled(false)}
                 onHideMeter={() => setMeterEnabled(false)}
@@ -477,9 +621,18 @@ export function StandaloneEditor() {
             </div>
           )}
           {audioUrl && (
-            <RegionList
+            <AnnotationList
               regions={regions}
               selectedRegionId={selectedRegionId}
+              markers={markers}
+              selectedMarkerId={selectedMarkerId}
+              markerControls={markerControls}
+              onSelectMarker={(marker) => {
+                setSelectedRegionId(null)
+                setLoopEnabled(false)
+                setSelectedMarkerId(marker.id)
+                waveformRef.current?.seekToMarker(marker.time)
+              }}
               onSelect={(region) => {
                 handleRegionSelect(region.id)
                 waveformRef.current?.revealRegion(region.start, region.end)
@@ -493,8 +646,8 @@ export function StandaloneEditor() {
           )}
           <div className={styles.sessionNote}>
             <span>
-              Standalone regions last for this session. Use a project for saved
-              annotations.
+              Standalone regions and markers last for this session. Use a
+              project for saved annotations.
             </span>
             <Link to="/projects">Go to projects →</Link>
           </div>
@@ -510,6 +663,9 @@ export function StandaloneEditor() {
         verticalScale={verticalScale}
         isPlaying={isPlaying}
         selectedRegion={selectedRegion}
+        selectedMarker={selectedMarker}
+        selectedMarkerOrdinal={selectedMarkerOrdinal}
+        markerCount={markers.length}
       />
     </div>
   )

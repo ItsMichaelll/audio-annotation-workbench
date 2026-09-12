@@ -43,7 +43,7 @@ chronological, does not wrap or autoplay, selects and reveals the destination,
 and seeks to its start.
 
 Loop and Delete are disabled when no region is selected. The amplitude control
-restores `1.00×`. Undo and redo are available in the region ledger and through
+restores `1.00×`. Undo and redo are available in both annotation ledger tabs and through
 `Ctrl+Z`, `Ctrl+Y`, and `Ctrl+Shift+Z`.
 
 The chronological region ledger selects and reveals an interval. Add region
@@ -51,6 +51,14 @@ creates a one-second interval at the playhead, clamped to the recording, and
 selects it without autoplay. Start and end fields accept seconds and commit
 one undoable edit on blur or Enter. Invalid bounds restore the previous value
 and show an inline error.
+
+The adjacent Markers tab lists timestamp markers chronologically. Selecting a
+row seeks without changing playback and clears region selection and looping.
+Its contextual toolbar retains previous/next, Add marker, and Delete controls;
+read-only tasks retain navigation but omit editing controls. Switching ledger
+tabs never changes selection or playback. Arrow keys, Home, and End navigate
+the tabs without triggering transport shortcuts. Marker count and selected
+ordinal/time remain visible in the status footer regardless of the active tab.
 
 The task inspector is collapsible and resizable on desktop; below 700 px it
 follows the audio workspace. Region, Clip & info, and Guide tabs separate
@@ -95,6 +103,12 @@ input, textarea, select, button, or editable element has focus.
 
 `Ctrl+Left` and `Ctrl+Right` select the previous or next chronological region,
 reveal it in the waveform viewport, and seek to its start without autoplaying.
+
+With waveform editor focus, `T` creates a marker at the playhead, `Tab` and
+`Shift+Tab` select and seek between markers, and `Delete` or `Backspace` removes
+the selected marker. Boundary Tab navigation yields to normal browser focus
+movement. `Ctrl+D` deletes the selected region or marker through the existing
+application shortcut scope.
 
 `Ctrl+Enter` runs normal submission validation and empty-annotation
 confirmation before submitting and advancing. `Ctrl+Shift+Enter` flushes the

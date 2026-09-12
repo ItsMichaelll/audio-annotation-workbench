@@ -8,6 +8,7 @@ const paths = {
   upload: 'M12 16V3m-5 5 5-5 5 5M4 15v6h16v-6',
   plus: 'M12 5v14M5 12h14',
   minus: 'M5 12h14',
+  marker: 'M7 21V4h11l-3 4 3 4H7',
   play: 'm8 5 11 7-11 7V5Z',
   pause: 'M8 5v14M16 5v14',
   previous: 'M5 5v14m13-14L8 12l10 7V5Z',

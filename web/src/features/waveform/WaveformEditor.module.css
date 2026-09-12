@@ -63,6 +63,18 @@
   scrollbar-width: none;
 }
 
+.surface > :global(div)::part(marker):hover {
+  filter: brightness(0.8);
+}
+
+.surface:focus-visible,
+.surface > :global(div)::part(scroll):focus,
+.surface > :global(div)::part(scroll):focus-visible,
+.surface > :global(div)::part(wrapper):focus,
+.surface > :global(div)::part(wrapper):focus-visible {
+  outline: none;
+}
+
 .panning > :global(div)::part(scroll) {
   cursor: grabbing;
   user-select: none;
@@ -77,6 +89,12 @@
 .minimap > :global([part~='minimap']) {
   cursor: grab;
   touch-action: none;
+}
+
+.minimap :global([part~='minimap-overlay']) {
+  box-sizing: border-box;
+  border: 1px solid var(--accent-primary);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 45%);
 }
 
 .minimap > :global([part~='minimap']:active),

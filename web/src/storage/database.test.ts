@@ -107,9 +107,11 @@ describe('annotation database migration', () => {
         annotations.createIndex('by-task', 'taskId', { unique: true })
       },
     })
-    const annotation: AnnotationDocument = {
+    const annotation: Omit<AnnotationDocument, 'markers' | 'schemaVersion'> & {
+      schemaVersion: 1
+    } = {
       id: 'annotation',
-      schemaVersion: ANNOTATION_SCHEMA_VERSION,
+      schemaVersion: 1,
       projectId: 'project',
       taskId: 'task',
       taxonomyVersionId: 'taxonomy',
@@ -138,6 +140,8 @@ describe('annotation database migration', () => {
       { labelId: 'first', severity: 'minor' },
     ])
     expect(stored?.clipAssignments).toEqual(annotation.clipAssignments)
+    expect(stored?.markers).toEqual([])
+    expect(stored?.schemaVersion).toBe(ANNOTATION_SCHEMA_VERSION)
     migrated.close()
   })
 })

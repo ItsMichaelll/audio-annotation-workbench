@@ -1,4 +1,5 @@
 import { parseAnnotationTaxonomy } from './annotationTaxonomy'
+import { normalizeAnnotationCardinality } from './annotations'
 import {
   ANNOTATION_SCHEMA_VERSION,
   INSTRUCTIONS_SCHEMA_VERSION,
@@ -346,9 +347,16 @@ function validateAnnotation(value: unknown, index: number): AnnotationDocument {
       'createdAt',
       'updatedAt',
     ],
-    ['taskNotes', 'submittedAt'],
+    ['markers', 'taskNotes', 'submittedAt'],
   )
-  schemaVersion(item.schemaVersion, ANNOTATION_SCHEMA_VERSION, 'Annotation')
+  if (
+    item.schemaVersion !== 1 &&
+    item.schemaVersion !== ANNOTATION_SCHEMA_VERSION
+  ) {
+    fail(
+      `Annotation schema version ${String(item.schemaVersion)} is unsupported.`,
+    )
+  }
   string(item.id, `${name}.id`)
   string(item.projectId, `${name}.projectId`)
   string(item.taskId, `${name}.taskId`)
@@ -381,6 +389,19 @@ function validateAnnotation(value: unknown, index: number): AnnotationDocument {
     if (region.notes !== undefined)
       string(region.notes, `${regionName}.notes`, true)
   })
+  const markerIds = new Set(regionIds)
+  array(item.markers ?? [], `${name}.markers`).forEach((value, markerIndex) => {
+    const markerName = `${name}.markers[${markerIndex}]`
+    const marker = object(value, markerName)
+    exactKeys(marker, markerName, ['id', 'time'])
+    const id = string(marker.id, `${markerName}.id`)
+    if (markerIds.has(id)) {
+      fail(`${name} contains duplicate entity id "${id}".`)
+    }
+    markerIds.add(id)
+    const time = finiteNumber(marker.time, `${markerName}.time`)
+    if (time < 0) fail(`${markerName} has invalid timing.`)
+  })
   array(item.clipAssignments, `${name}.clipAssignments`).forEach(
     (assignment, assignmentIndex) =>
       validateAssignment(
@@ -394,7 +415,7 @@ function validateAnnotation(value: unknown, index: number): AnnotationDocument {
   isoDate(item.updatedAt, `${name}.updatedAt`)
   if (item.submittedAt !== undefined)
     isoDate(item.submittedAt, `${name}.submittedAt`)
-  return item as unknown as AnnotationDocument
+  return normalizeAnnotationCardinality(item as unknown as AnnotationDocument)
 }
 
 function uniqueIds<T extends { id: string }>(items: T[], name: string): void {

@@ -430,17 +430,22 @@ export function AnnotationInspector(props: AnnotationInspectorProps) {
               ) : (
                 <div className={styles.emptyState}>
                   <Icon name="waveform" size={32} />
-                  <strong className={styles.emptyTitle}>Select a moment</strong>
+                  <strong className={styles.emptyTitle}>Select a region</strong>
                   <p className={styles.emptyDescription}>
-                    Drag across the waveform or select a region from the list to
-                    annotate it.
+                    {props.readOnly
+                      ? 'Choose an interval in Regions to review its labels and timing.'
+                      : 'Drag across the waveform or choose an interval in Regions to add labels.'}{' '}
+                    Markers are timestamp-only references.
                   </p>
                   <button
                     type="button"
                     className={styles.clipLink}
                     onClick={() => setTab('clip')}
                   >
-                    Annotate the whole clip <Icon name="arrow" size={14} />
+                    {props.readOnly
+                      ? 'Review clip labels'
+                      : 'Annotate the whole clip'}{' '}
+                    <Icon name="arrow" size={14} />
                   </button>
                 </div>
               )}

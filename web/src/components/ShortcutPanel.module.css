@@ -16,6 +16,13 @@
   margin: 0;
 }
 
+.scopeNote {
+  margin: -4px 0 8px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
 .item {
   display: grid;
   grid-template-columns: 1fr 1fr;

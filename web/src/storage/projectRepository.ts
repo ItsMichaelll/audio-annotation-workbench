@@ -691,7 +691,9 @@ export class IndexedDbProjectRepository implements ProjectRepository {
         await transaction.objectStore('tasks').add(task)
       }
       for (const annotation of backup.annotations) {
-        await transaction.objectStore('annotations').add(annotation)
+        await transaction
+          .objectStore('annotations')
+          .add(normalizeAnnotationCardinality(annotation))
       }
       this.beforeRestoreCommit?.()
       await transaction.done

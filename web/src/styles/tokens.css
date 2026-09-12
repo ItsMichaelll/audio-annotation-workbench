@@ -91,6 +91,9 @@
   --accent-active: #2846b8;
   --accent-muted: #edf2ff;
   --accent-timing: #f17439;
+  --accent-marker: #c75b29;
+  --accent-marker-selected: #9f4017;
+  --accent-marker-muted: #f4cbb3;
   --color-blue-500: #4166e8;
   --color-blue-500-rgb: 65 102 232;
   --color-blue-600: #3156d4;

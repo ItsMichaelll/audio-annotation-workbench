@@ -40,14 +40,18 @@ export function WaveformToolbar(
     | 'onToggleSpectrogram'
     | 'onToggleSpectrum'
     | 'onToggleMeter'
-  >,
+  > & { readOnly?: boolean },
 ) {
   return (
     <div className={styles.toolbar}>
       <div className={styles.surfaceTitle}>
         <Icon name="waveform" />
         <h2>Waveform</h2>
-        <span className={styles.gesture}>Drag to mark a region</span>
+        <span className={styles.gesture}>
+          {props.readOnly
+            ? 'Click to seek · Tab through markers'
+            : 'Drag for a region · T for a marker'}
+        </span>
       </div>
       <div
         className={styles.views}

@@ -14,16 +14,37 @@
   padding: 0 24px;
 }
 
-.title {
+.tabs {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
+  align-self: stretch;
+  gap: 16px;
 }
 
-.title > span {
+.tabs > button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.tabs > button[aria-selected='true'] {
+  border-bottom-color: var(--accent-primary);
+  color: var(--accent-ink);
+}
+
+.tabs > button[data-tab='markers'][aria-selected='true'] {
+  border-bottom-color: var(--accent-marker);
+  color: var(--accent-marker-selected);
+}
+
+.tabs span {
   color: var(--text-secondary);
   font-family: var(--font-mono);
   font-size: 11px;
@@ -113,6 +134,19 @@
   box-shadow: inset 2px 0 var(--accent-primary);
 }
 
+.markerColumns {
+  grid-template-columns: 30px minmax(110px, 1fr) minmax(110px, 0.55fr) 100px;
+}
+
+.markerRow .name > svg {
+  color: var(--accent-marker-selected);
+}
+
+.markerRow[aria-pressed='true'] {
+  background: var(--surface-warning);
+  box-shadow: inset 2px 0 var(--accent-marker);
+}
+
 .row:focus-visible {
   outline: 2px solid var(--focus-ring-color);
   outline-offset: -2px;
@@ -200,6 +234,10 @@
   .row > :nth-child(n + 5) {
     display: none;
   }
+
+  .markerColumns {
+    grid-template-columns: 24px minmax(90px, 1fr) 90px 70px;
+  }
 }
 
 @container (max-width: 520px) {
@@ -218,6 +256,18 @@
     margin-left: 0;
   }
 
+  .tabs {
+    min-height: 36px;
+  }
+
+  .actions {
+    gap: 0;
+  }
+
+  .actions > button {
+    padding-inline: 6px;
+  }
+
   .columnLabels,
   .row {
     grid-template-columns: 20px minmax(80px, 1fr) 72px 72px;
@@ -226,5 +276,13 @@
 
   .time {
     font-size: 10px;
+  }
+
+  .markerColumns {
+    grid-template-columns: 20px minmax(80px, 1fr) 90px;
+  }
+
+  .markerColumns > :nth-child(4) {
+    display: none;
   }
 }
