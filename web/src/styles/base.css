@@ -1,5 +1,5 @@
 :root {
-  color-scheme: dark;
+  color-scheme: var(--theme-color-scheme, dark);
   font-family: var(--font-sans);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -18,9 +18,9 @@ body {
 button {
   min-height: var(--control-height-sm);
   padding: 0 12px;
-  border: 1px solid rgb(255 255 255 / 10%);
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
-  background: rgb(255 255 255 / 4%);
+  background: var(--surface-button);
   color: var(--text-primary);
   cursor: pointer;
   font-size: 12px;
@@ -32,7 +32,7 @@ button {
 }
 
 button:hover:not(:disabled) {
-  background: rgb(255 255 255 / 10%);
+  background: var(--surface-button-hover);
 }
 
 button:disabled {
@@ -67,12 +67,12 @@ select {
   background-position: right 9px center;
   background-repeat: no-repeat;
   color: var(--text-primary);
-  color-scheme: dark;
+  color-scheme: inherit;
   cursor: pointer;
 }
 
 select:hover:not(:disabled) {
-  border-color: rgb(255 255 255 / 24%);
+  border-color: var(--border-strong);
   background-color: var(--surface-control-hover);
 }
 
@@ -91,7 +91,7 @@ select option {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :where(button) {
+  :where(*, *::before, *::after) {
     animation: none;
     transition: none;
   }

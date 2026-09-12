@@ -1,7 +1,7 @@
 .root {
   margin-top: 10px;
   overflow: hidden;
-  border: 1px solid #252b2e;
+  border: 1px solid var(--border-default);
   background: var(--color-neutral-950);
 }
 
@@ -11,14 +11,15 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  flex-wrap: wrap;
   padding: 5px 8px 5px 12px;
-  border-bottom: 1px solid #252b2e;
+  border-bottom: 1px solid var(--border-default);
   background: var(--surface-panel);
 }
 
 .title {
   margin: 0;
-  color: #cfd6d9;
+  color: var(--text-primary);
   font-size: 11px;
   font-weight: 650;
   letter-spacing: 0.055em;
@@ -32,21 +33,22 @@
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
+  flex-wrap: wrap;
 }
 
 .control {
   min-height: 25px;
   padding: 2px 8px;
-  border: 1px solid rgb(255 255 255 / 10%);
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-sm);
-  background: #171b1d;
-  color: #d9dfe1;
+  background: var(--surface-control);
+  color: var(--text-primary);
   font: inherit;
   font-size: 10px;
 }
 
 .control:hover:where(:not(:disabled)) {
-  background: rgb(255 255 255 / 10%);
+  background: var(--surface-button-hover);
 }
 
 .control:focus-visible {
@@ -60,7 +62,7 @@
 .control[aria-pressed='true'] {
   border-color: rgb(var(--color-blue-500-rgb) / 55%);
   background: rgb(var(--color-blue-500-rgb) / 13%);
-  color: color-mix(in srgb, var(--color-blue-500) 25%, white);
+  color: var(--accent-ink);
 }
 
 .control:disabled {

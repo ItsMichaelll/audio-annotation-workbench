@@ -67,10 +67,10 @@ importers:
         version: 3.9.6
       stylelint:
         specifier: ^17.14.1
-        version: 17.14.1(typescript@6.0.2)
+        version: 17.15.0(typescript@6.0.2)
       stylelint-config-standard:
         specifier: ^40.0.0
-        version: 40.0.0(stylelint@17.14.1(typescript@6.0.2))
+        version: 40.0.0(stylelint@17.15.0(typescript@6.0.2))
       typescript:
         specifier: ^6.0.2
         version: 6.0.2
@@ -172,8 +172,8 @@ packages:
     peerDependencies:
       '@csstools/css-tokenizer': ^4.0.0
 
-  '@csstools/css-syntax-patches-for-csstree@1.1.12':
-    resolution: {integrity: sha512-3vLQK+dXxhBMR2Wx99PTCifE+vHtW2ndZWyla8yK813ev6oGhyn8Lja8jCyGAWTJ+LEYZK7EVtJxrDj8ztevJw==}
+  '@csstools/css-syntax-patches-for-csstree@1.1.13':
+    resolution: {integrity: sha512-i9ZylF5QNhmNfPA9l0vHAWK4kPrbIp6g9lKgaiIFsIBz2F/WNB7OLrzlNNcCOm+h42bkaSD2v1PG+IBPHhc3ZA==}
     peerDependencies:
       css-tree: ^3.2.1
     peerDependenciesMeta:
@@ -1339,8 +1339,8 @@ packages:
     resolution: {integrity: sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==}
     engines: {node: '>=12'}
 
-  postcss-safe-parser@7.0.1:
-    resolution: {integrity: sha512-0AioNCJZ2DPYz5ABT6bddIqlhgwhpHZ/l65YAYo0BCIn0xiDpsnTHz0gnoTGk0OXZW0JRs+cDwL8u/teRdz+8A==}
+  postcss-safe-parser@7.1.0:
+    resolution: {integrity: sha512-1WzZxRLaAFwEh6Do+zyGpjWV3nGJNxxhuh7Ubu/q1ICImMgZJnLwhoaEpRbG4pJppp2Y1ncL9ffA2f+LhrefQg==}
     engines: {node: '>=18.0'}
     peerDependencies:
       postcss: ^8.4.31
@@ -1515,8 +1515,8 @@ packages:
     peerDependencies:
       stylelint: ^17.0.0
 
-  stylelint@17.14.1:
-    resolution: {integrity: sha512-xVQwyiuxALUBNB2fBe0tmNemg9KqLtdj3T64mioFDar79B2cU8LIyz+3KL6LdiHs9NkeNfwxpKSaIVOY8f112g==}
+  stylelint@17.15.0:
+    resolution: {integrity: sha512-mWIkesYQvQjf4Kvdeu9ns0IL8/K/wtjaGxPqsPd6DlLZvaQxGysJsocxUDrBcyHQ5VleAk4uSMat4yMrVED7PA==}
     engines: {node: '>=20.19.0'}
     hasBin: true
 
@@ -1878,7 +1878,7 @@ snapshots:
     dependencies:
       '@csstools/css-tokenizer': 4.0.0
 
-  '@csstools/css-syntax-patches-for-csstree@1.1.12(css-tree@3.2.1)':
+  '@csstools/css-syntax-patches-for-csstree@1.1.13(css-tree@3.2.1)':
     optionalDependencies:
       css-tree: 3.2.1
 
@@ -3058,7 +3058,7 @@ snapshots:
 
   picomatch@4.0.7: {}
 
-  postcss-safe-parser@7.0.1(postcss@8.5.26):
+  postcss-safe-parser@7.1.0(postcss@8.5.26):
     dependencies:
       postcss: 8.5.26
 
@@ -3233,20 +3233,20 @@ snapshots:
     dependencies:
       inline-style-parser: 0.2.7
 
-  stylelint-config-recommended@18.0.0(stylelint@17.14.1(typescript@6.0.2)):
+  stylelint-config-recommended@18.0.0(stylelint@17.15.0(typescript@6.0.2)):
     dependencies:
-      stylelint: 17.14.1(typescript@6.0.2)
+      stylelint: 17.15.0(typescript@6.0.2)
 
-  stylelint-config-standard@40.0.0(stylelint@17.14.1(typescript@6.0.2)):
+  stylelint-config-standard@40.0.0(stylelint@17.15.0(typescript@6.0.2)):
     dependencies:
-      stylelint: 17.14.1(typescript@6.0.2)
-      stylelint-config-recommended: 18.0.0(stylelint@17.14.1(typescript@6.0.2))
+      stylelint: 17.15.0(typescript@6.0.2)
+      stylelint-config-recommended: 18.0.0(stylelint@17.15.0(typescript@6.0.2))
 
-  stylelint@17.14.1(typescript@6.0.2):
+  stylelint@17.15.0(typescript@6.0.2):
     dependencies:
       '@csstools/css-calc': 3.3.0(@csstools/css-parser-algorithms@4.0.0(@csstools/css-tokenizer@4.0.0))(@csstools/css-tokenizer@4.0.0)
       '@csstools/css-parser-algorithms': 4.0.0(@csstools/css-tokenizer@4.0.0)
-      '@csstools/css-syntax-patches-for-csstree': 1.1.12(css-tree@3.2.1)
+      '@csstools/css-syntax-patches-for-csstree': 1.1.13(css-tree@3.2.1)
       '@csstools/css-tokenizer': 4.0.0
       '@csstools/media-query-list-parser': 5.0.0(@csstools/css-parser-algorithms@4.0.0(@csstools/css-tokenizer@4.0.0))(@csstools/css-tokenizer@4.0.0)
       '@csstools/selector-resolve-nested': 4.0.1(postcss-selector-parser@7.1.6)
@@ -3271,7 +3271,7 @@ snapshots:
       normalize-path: 3.0.0
       picocolors: 1.1.1
       postcss: 8.5.26
-      postcss-safe-parser: 7.0.1(postcss@8.5.26)
+      postcss-safe-parser: 7.1.0(postcss@8.5.26)
       postcss-selector-parser: 7.1.6
       postcss-value-parser: 4.2.0
       string-width: 8.2.2

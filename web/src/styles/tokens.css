@@ -1,4 +1,14 @@
 :root {
+  --accent-primary: #4690ff;
+  --accent-ink: #4690ff;
+  --accent-hover: #65a2ff;
+  --accent-active: #2f70cf;
+  --accent-muted: rgb(70 144 255 / 10%);
+  --surface-button: rgb(255 255 255 / 4%);
+  --surface-button-hover: rgb(255 255 255 / 10%);
+  --surface-warning: #332621;
+  --border-warning: #6c493e;
+
   /* Palette and current compatibility values. */
   --color-neutral-950: #0b0d0e;
   --color-neutral-925: #0d0f10;
@@ -32,14 +42,14 @@
   --border-subtle: #24292c;
   --border-default: #2b3135;
   --border-strong: #3a4348;
-  --focus-ring-color: var(--color-blue-500);
+  --focus-ring-color: var(--accent-primary);
   --focus-ring-offset-color: var(--surface-canvas);
 
   /* Typography, spacing, controls, elevation, and motion. */
   --font-sans:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     'Segoe UI', sans-serif;
-  --font-mono: Consolas, 'SFMono-Regular', monospace;
+  --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
   --font-size-ui-xs: 0.5625rem;
   --font-size-ui-sm: 0.625rem;
   --font-size-body-sm: 0.6875rem;
@@ -67,4 +77,53 @@
   --duration-fast: 140ms;
   --duration-normal: 180ms;
   --easing-standard: ease;
+}
+
+/* Route-scoped migration keeps legacy project views intact. Root inheritance
+   also themes portaled dialogs and dropdowns opened from an editor. */
+:root:has([data-editor-theme='light']),
+[data-theme='light'] {
+  color-scheme: light;
+  --theme-color-scheme: light;
+  --accent-primary: #4166e8;
+  --accent-ink: #3156d4;
+  --accent-hover: #3156d4;
+  --accent-active: #2846b8;
+  --accent-muted: #edf2ff;
+  --accent-timing: #f17439;
+  --accent-marker: #c75b29;
+  --accent-marker-selected: #9f4017;
+  --accent-marker-muted: #f4cbb3;
+  --color-blue-500: #4166e8;
+  --color-blue-500-rgb: 65 102 232;
+  --color-blue-600: #3156d4;
+  --color-green-500: #24824e;
+  --color-amber-500: #c14f1c;
+  --color-red-500: #c23836;
+  --surface-canvas: #f5f6f8;
+  --surface-panel: #fff;
+  --surface-panel-raised: #eef1f6;
+  --surface-control: #fff;
+  --surface-control-hover: #f0f3fa;
+  --surface-button: #fff;
+  --surface-button-hover: #edf2ff;
+  --surface-overlay: #fff;
+  --surface-waveform: #fff;
+  --surface-code: #f0f2f6;
+  --surface-warning: #fff3e9;
+  --border-warning: #edc1a7;
+  --text-primary: #202a3d;
+  --text-secondary: #586479;
+  --text-tertiary: #657187;
+  --text-inverse: #fff;
+  --text-link: #3156d4;
+  --text-danger: #b73430;
+  --text-warning: #a44217;
+  --text-success: #237346;
+  --border-subtle: #e8ebf0;
+  --border-default: #dce1e9;
+  --border-strong: #b4bece;
+  --focus-ring-color: #3156d4;
+  --focus-ring-offset-color: #fff;
+  --shadow-overlay: 0 18px 60px rgb(32 42 61 / 18%);
 }

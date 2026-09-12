@@ -4,6 +4,7 @@ import { StatusReadout } from './StatusReadout'
 
 const baseProps = {
   fileName: 'sample.wav',
+  loadStatus: 'ready' as const,
   duration: 10,
   currentTime: 4,
   zoom: 100,

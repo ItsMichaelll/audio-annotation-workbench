@@ -1,8 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
-import { ShortcutPanel } from './components/ShortcutPanel'
+import { ApplicationHeader } from './components/ApplicationHeader'
+import { KeyboardHelp } from './components/KeyboardHelp'
+import { Icon } from './components/Icon'
+import { AnnotationList } from './components/AnnotationList'
+import type { MarkerControlsProps } from './components/MarkerControls'
+import { RegionTiming } from './components/RegionTiming'
 import { StatusReadout } from './components/StatusReadout'
-import { TransportBar } from './components/TransportBar'
+import {
+  TransportBar,
+  WaveformToolbar,
+  type TransportBarProps,
+} from './components/TransportBar'
 import { SnapshotHistory, type HistoryState } from './domain/history'
 import {
   isDialogTarget,
@@ -29,7 +38,7 @@ import {
   WaveformEditor,
   type WaveformEditorHandle,
 } from './features/waveform/WaveformEditor'
-import styles from './App.module.css'
+import styles from './components/EditorWorkspace.module.css'
 
 type LoadStatus = 'idle' | 'loading' | 'ready' | 'error'
 
@@ -70,7 +79,10 @@ export function StandaloneEditor() {
   const [spectrumEnabled, setSpectrumEnabled] = useState(false)
   const [spectrogramEnabled, setSpectrogramEnabled] = useState(false)
   const [meterEnabled, setMeterEnabled] = useState(false)
-  const [shortcutsCollapsed, setShortcutsCollapsed] = useState(false)
+  const [historyAvailability, setHistoryAvailability] = useState({
+    canUndo: false,
+    canRedo: false,
+  })
 
   const selectedRegion = useMemo(
     () => regions.find((region) => region.id === selectedRegionId) ?? null,
@@ -127,6 +139,7 @@ export function StandaloneEditor() {
 
   const applyHistoryState = useCallback(
     (state: HistoryState<RegionMetadata[]>) => {
+      setHistoryAvailability({ canUndo: state.canUndo, canRedo: state.canRedo })
       regionsRef.current = state.present
       setRegions(state.present)
       if (
@@ -256,7 +269,7 @@ export function StandaloneEditor() {
       file.type.startsWith('audio/') || AUDIO_EXTENSION.test(file.name)
     if (!looksLikeAudio) {
       setError('Choose an audio file supported by your browser.')
-      setLoadStatus('error')
+      if (!audioUrl) setLoadStatus('error')
       return
     }
 
@@ -284,7 +297,12 @@ export function StandaloneEditor() {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (isEditableTarget(event.target) || isDialogTarget(event.target)) return
+      if (
+        event.defaultPrevented ||
+        isEditableTarget(event.target) ||
+        isDialogTarget(event.target)
+      )
+        return
       const command = keyboardCommand(event)
       if (command?.type === 'create-marker') {
         if (waveformFocused) {
@@ -372,115 +390,113 @@ export function StandaloneEditor() {
     waveformFocused,
   ])
 
+  const controls: TransportBarProps = {
+    isLoaded,
+    isPlaying,
+    loopEnabled,
+    spectrogramEnabled,
+    spectrumEnabled,
+    meterEnabled,
+    hasSelection: selectedRegion !== null,
+    canPreviousRegion: previousRegion !== null,
+    canNextRegion: nextRegion !== null,
+    verticalScale,
+    currentTime,
+    duration,
+    onPlayPause: () => waveformRef.current?.playPause(),
+    onFit: () => waveformRef.current?.fit(),
+    onZoomIn: () => waveformRef.current?.zoom('in'),
+    onZoomOut: () => waveformRef.current?.zoom('out'),
+    onResetVerticalScale: () => waveformRef.current?.resetVerticalScale(),
+    onToggleLoop: () => setLoopEnabled((value) => !value),
+    onDelete: deleteSelectedRegion,
+    onPreviousRegion: () => navigateRegion('previous'),
+    onNextRegion: () => navigateRegion('next'),
+    onToggleSpectrogram: () => setSpectrogramEnabled((value) => !value),
+    onToggleSpectrum: () => {
+      setSpectrumEnabled(!spectrumEnabled)
+      if (!spectrumEnabled) waveformRef.current?.activateSpectrum()
+    },
+    onToggleMeter: () => {
+      setMeterEnabled(!meterEnabled)
+      if (!meterEnabled) waveformRef.current?.activateMeter()
+    },
+  }
+  const markerControls: MarkerControlsProps = {
+    isLoaded,
+    markerEditingEnabled: true,
+    canCreateMarker: isLoaded,
+    canPreviousMarker: previousMarker !== null,
+    canNextMarker: nextMarker !== null,
+    canDeleteMarker: selectedMarker !== null,
+    onCreateMarker: createMarkerAtPlayhead,
+    onPreviousMarker: () => navigateMarker('previous'),
+    onNextMarker: () => navigateMarker('next'),
+    onDeleteMarker: deleteSelectedMarker,
+  }
+  const addRegion = () => {
+    if (!isLoaded || duration <= 0) return
+    const start = Math.min(currentTime, Math.max(0, duration - 1))
+    const region = {
+      id: crypto.randomUUID(),
+      start,
+      end: Math.min(start + 1, duration),
+      data: {},
+    }
+    handleRegionCreate(region)
+    handleRegionSelect(region.id)
+    waveformRef.current?.revealRegion(region.start, region.end)
+  }
+
   return (
-    <div className={styles.shell}>
-      <header className={styles.header}>
-        <Link
-          className={`${styles.brand} ${styles.brandLink}`}
-          to="/"
-          aria-label="Projects dashboard"
-        >
-          <span className={styles.brandMark} aria-hidden="true">
-            AAW
-          </span>
-          <div>
-            <h1 className={styles.brandTitle}>Audio Annotation Workbench</h1>
-            <p className={styles.brandSubtitle}>
-              A minimalistic audio annotation tool
-            </p>
+    <div className={styles.shell} data-editor-theme="light">
+      <ApplicationHeader>
+        <KeyboardHelp />
+      </ApplicationHeader>
+      <div className={styles.documentBar}>
+        <div className={styles.identity}>
+          <div className={styles.eyebrow}>
+            Standalone editor <span> / </span> Local session
           </div>
-        </Link>
+          <h1 className={styles.title}>{fileName ?? 'A closer listen.'}</h1>
+        </div>
         <div className={styles.headerActions}>
-          <span className={styles.privacyNote}>Data stays in this browser</span>
-          <input
-            ref={fileInputRef}
-            className="u-visually-hidden"
-            type="file"
-            accept="audio/*,.wav,.wave,.flac,.mp3,.m4a,.aac,.aif,.aiff,.ogg,.oga,.opus,.webm"
-            onChange={(event) => handleFile(event.target.files?.[0])}
-          />
           <button
-            className={styles.uploadButton}
+            className={styles.button}
             type="button"
             onClick={() => fileInputRef.current?.click()}
           >
-            {audioUrl ? 'Upload new file' : 'Upload audio file'}
+            <Icon name="upload" />
+            {audioUrl ? 'Open another file' : 'Open audio'}
           </button>
         </div>
-      </header>
-
-      <StatusReadout
-        fileName={fileName}
-        duration={duration}
-        currentTime={currentTime}
-        zoom={zoom}
-        verticalScale={verticalScale}
-        isPlaying={isPlaying}
-        selectedRegion={selectedRegion}
-        selectedMarker={selectedMarker}
-        selectedMarkerOrdinal={selectedMarkerOrdinal}
-        markerCount={markers.length}
-      />
-
-      <TransportBar
-        isLoaded={isLoaded}
-        isPlaying={isPlaying}
-        loopEnabled={loopEnabled}
-        spectrogramEnabled={spectrogramEnabled}
-        spectrumEnabled={spectrumEnabled}
-        meterEnabled={meterEnabled}
-        hasSelection={selectedRegion !== null}
-        canPreviousRegion={previousRegion !== null}
-        canNextRegion={nextRegion !== null}
-        markerEditingEnabled
-        canCreateMarker={isLoaded}
-        canPreviousMarker={previousMarker !== null}
-        canNextMarker={nextMarker !== null}
-        canDeleteMarker={selectedMarker !== null}
-        verticalScale={verticalScale}
-        onPlayPause={() => waveformRef.current?.playPause()}
-        onFit={() => waveformRef.current?.fit()}
-        onZoomIn={() => waveformRef.current?.zoom('in')}
-        onZoomOut={() => waveformRef.current?.zoom('out')}
-        onResetVerticalScale={() => waveformRef.current?.resetVerticalScale()}
-        onToggleLoop={() => setLoopEnabled((enabled) => !enabled)}
-        onDelete={deleteSelectedRegion}
-        onPreviousRegion={() => navigateRegion('previous')}
-        onNextRegion={() => navigateRegion('next')}
-        onCreateMarker={createMarkerAtPlayhead}
-        onPreviousMarker={() => navigateMarker('previous')}
-        onNextMarker={() => navigateMarker('next')}
-        onDeleteMarker={deleteSelectedMarker}
-        onToggleSpectrogram={() => setSpectrogramEnabled((enabled) => !enabled)}
-        onToggleSpectrum={() => {
-          const enabled = !spectrumEnabled
-          setSpectrumEnabled(enabled)
-          if (enabled) waveformRef.current?.activateSpectrum()
-        }}
-        onToggleMeter={() => {
-          const enabled = !meterEnabled
-          setMeterEnabled(enabled)
-          if (enabled) waveformRef.current?.activateMeter()
-        }}
-      />
-
-      <main className={styles.workspace}>
-        <section className={styles.editor} aria-label="Waveform editor">
-          {error && (
-            <div className={styles.errorBanner} role="alert">
-              <strong className={styles.errorTitle}>Audio notice</strong>
-              <span>{error}</span>
-              <button
-                type="button"
-                className={styles.errorDismiss}
-                onClick={() => setError(null)}
-                aria-label="Dismiss error"
-              >
-                ×
-              </button>
-            </div>
-          )}
-
+        <input
+          ref={fileInputRef}
+          className="u-visually-hidden"
+          tabIndex={-1}
+          aria-label="Select local audio file"
+          type="file"
+          accept="audio/*,.wav,.wave,.flac,.mp3,.m4a,.aac,.aif,.aiff,.ogg,.oga,.opus,.webm"
+          onChange={(event) => handleFile(event.target.files?.[0])}
+        />
+      </div>
+      {error && (
+        <div className={styles.errorBanner} role="alert">
+          <strong className={styles.errorTitle}>Audio notice</strong>
+          <span>{error}</span>
+          <button
+            className={styles.errorDismiss}
+            type="button"
+            onClick={() => setError(null)}
+            aria-label="Dismiss error"
+          >
+            <Icon name="close" />
+          </button>
+        </div>
+      )}
+      <main className={styles.workspace} id="editor-workspace" tabIndex={-1}>
+        <section className={styles.editor} aria-label="Audio editor">
+          <WaveformToolbar {...controls} />
           {!audioUrl ? (
             <div className={styles.emptyState}>
               <div className={styles.emptyWave} aria-hidden="true">
@@ -488,27 +504,49 @@ export function StandaloneEditor() {
                   <i
                     className={styles.emptyWaveBar}
                     key={index}
-                    style={{
-                      height: `${height}%`,
-                      animationDelay: `${-(index % 11) * 0.18}s`,
-                    }}
+                    style={{ height: `${height}%` }}
                   />
                 ))}
               </div>
               <h2 className={styles.emptyTitle}>
-                Upload an audio file to begin
+                Every detail deserves a listen.
               </h2>
               <p className={styles.emptyDescription}>
-                Supported formats: AAC, AIF, AIFF, FLAC, M4A, MP3, OGA, OGG,
-                OPUS, WAV, WAVE, WEBM
+                Open an audio file to explore its waveform, mark precise
+                regions, and inspect the sound.
               </p>
               <button
-                className={styles.emptyAction}
+                className={styles.primaryButton}
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
               >
-                Upload audio file
+                <Icon name="plus" />
+                Open audio file
               </button>
+              <p className={styles.emptyFootnote}>
+                WAV, FLAC, MP3, AAC, OGG and other browser-supported audio.
+                <br />
+                Your audio stays on this device.
+              </p>
+              <div className={styles.emptySteps}>
+                <div>
+                  <span>01 / LISTEN</span>
+                  <strong>Find the moment</strong>
+                  <p>Navigate with the waveform and full-file overview.</p>
+                </div>
+                <div>
+                  <span>02 / MARK</span>
+                  <strong>Get precise</strong>
+                  <p>
+                    Drag a region. Refine its boundaries to the millisecond.
+                  </p>
+                </div>
+                <div>
+                  <span>03 / INSPECT</span>
+                  <strong>Look deeper</strong>
+                  <p>Explore frequency, spectral detail, and loudness.</p>
+                </div>
+              </div>
             </div>
           ) : (
             <div className={styles.editorSurface}>
@@ -568,24 +606,67 @@ export function StandaloneEditor() {
               />
             </div>
           )}
-
-          <footer className={styles.editorFooter}>
+          {selectedRegion && (
+            <div className={styles.selectionEditor}>
+              <strong>Selected region</strong>
+              <RegionTiming
+                key={selectedRegion.id}
+                region={selectedRegion}
+                duration={duration}
+                onChange={(start, end) =>
+                  handleRegionCommit({ ...selectedRegion, start, end })
+                }
+              />
+              <span>Changes are undoable</span>
+            </div>
+          )}
+          {audioUrl && (
+            <AnnotationList
+              regions={regions}
+              selectedRegionId={selectedRegionId}
+              markers={markers}
+              selectedMarkerId={selectedMarkerId}
+              markerControls={markerControls}
+              onSelectMarker={(marker) => {
+                setSelectedRegionId(null)
+                setLoopEnabled(false)
+                setSelectedMarkerId(marker.id)
+                waveformRef.current?.seekToMarker(marker.time)
+              }}
+              onSelect={(region) => {
+                handleRegionSelect(region.id)
+                waveformRef.current?.revealRegion(region.start, region.end)
+              }}
+              onAdd={addRegion}
+              canAdd={isLoaded}
+              onUndo={undo}
+              onRedo={redo}
+              {...historyAvailability}
+            />
+          )}
+          <div className={styles.sessionNote}>
             <span>
-              {regions.length} {regions.length === 1 ? 'region' : 'regions'}
+              Standalone regions and markers last for this session. Use a
+              project for saved annotations.
             </span>
-            <span>
-              {markers.length} {markers.length === 1 ? 'marker' : 'markers'}
-            </span>
-            <span>{loopEnabled ? 'Selected region loops' : 'Loop off'}</span>
-            <span>Times shown to 1 ms</span>
-          </footer>
+            <Link to="/projects">Go to projects →</Link>
+          </div>
         </section>
-
-        <ShortcutPanel
-          collapsed={shortcutsCollapsed}
-          onToggle={() => setShortcutsCollapsed((collapsed) => !collapsed)}
-        />
       </main>
+      <TransportBar {...controls} />
+      <StatusReadout
+        loadStatus={loadStatus}
+        fileName={fileName}
+        duration={duration}
+        currentTime={currentTime}
+        zoom={zoom}
+        verticalScale={verticalScale}
+        isPlaying={isPlaying}
+        selectedRegion={selectedRegion}
+        selectedMarker={selectedMarker}
+        selectedMarkerOrdinal={selectedMarkerOrdinal}
+        markerCount={markers.length}
+      />
     </div>
   )
 }

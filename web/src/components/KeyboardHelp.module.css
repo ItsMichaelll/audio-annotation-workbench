@@ -1,0 +1,36 @@
+.trigger {
+  display: grid;
+  width: 32px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.dialog {
+  width: min(720px, calc(100vw - 32px));
+  max-height: calc(100dvh - 60px);
+  overflow: auto;
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.heading > button {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  width: 32px;
+  border: 0;
+}
+
+.description {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}

@@ -6,7 +6,7 @@
   min-height: 100%;
   border-left: 1px solid var(--border-strong);
   background: var(--surface-control);
-  color: #d5dcde;
+  color: var(--text-primary);
   font-size: 10px;
 }
 
@@ -59,7 +59,7 @@
 .close:hover:where(:not(:disabled)),
 .scopeButton:hover:where(:not(:disabled)),
 .statisticsToggle:hover:where(:not(:disabled)) {
-  background: rgb(255 255 255 / 10%);
+  background: var(--surface-button-hover);
 }
 
 .close:focus-visible,
@@ -74,7 +74,7 @@
 .scopeButton[aria-pressed='true'] {
   border-color: rgb(var(--color-blue-500-rgb) / 55%);
   background: rgb(var(--color-blue-500-rgb) / 14%);
-  color: color-mix(in srgb, var(--color-blue-500) 25%, white);
+  color: var(--accent-ink);
 }
 
 .close:disabled,
@@ -100,7 +100,7 @@
   position: absolute;
   left: 0;
   width: 24px;
-  color: #727d83;
+  color: var(--text-tertiary);
   font-family: var(--font-mono);
   font-size: 8px;
   text-align: right;
@@ -111,8 +111,8 @@
   position: absolute;
   inset: 0 0 0 30px;
   overflow: hidden;
-  border: 1px solid #31383c;
-  background: var(--color-neutral-950);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-panel-raised);
 }
 
 .bar {
@@ -160,7 +160,7 @@
   grid-template-columns: 1fr auto;
   align-items: baseline;
   padding-bottom: 6px;
-  border-bottom: 1px solid #242a2d;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .readoutLabel {
@@ -172,7 +172,7 @@
 }
 
 .readoutValue {
-  color: #ecf2f4;
+  color: var(--text-primary);
   font-family: var(--font-mono);
   font-size: 17px;
   font-variant-numeric: tabular-nums;
@@ -199,7 +199,7 @@
 }
 
 .error {
-  color: color-mix(in srgb, var(--color-red-500) 55%, white);
+  color: var(--text-danger);
 }
 
 .target {
@@ -258,7 +258,7 @@
   border: 0;
   border-radius: 0;
   background: var(--surface-panel);
-  color: #ccd4d7;
+  color: var(--text-primary);
   font-size: 9px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -281,7 +281,7 @@
   min-height: 22px;
   align-items: baseline;
   justify-content: space-between;
-  border-bottom: 1px solid #22282b;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .statisticsTerm {

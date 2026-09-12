@@ -1,44 +1,27 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
-import { TransportBar } from './TransportBar'
+import { MarkerControls } from './MarkerControls'
 
 const noop = () => undefined
 
 function render(markerEditingEnabled: boolean) {
   return renderToStaticMarkup(
-    <TransportBar
+    <MarkerControls
       isLoaded
-      isPlaying={false}
-      loopEnabled={false}
-      spectrogramEnabled={false}
-      spectrumEnabled={false}
-      meterEnabled={false}
-      hasSelection={false}
       markerEditingEnabled={markerEditingEnabled}
       canCreateMarker={markerEditingEnabled}
       canPreviousMarker
       canNextMarker
       canDeleteMarker={markerEditingEnabled}
-      verticalScale={1}
-      onPlayPause={noop}
-      onFit={noop}
-      onZoomIn={noop}
-      onZoomOut={noop}
-      onResetVerticalScale={noop}
-      onToggleLoop={noop}
-      onDelete={noop}
       onCreateMarker={noop}
       onPreviousMarker={noop}
       onNextMarker={noop}
       onDeleteMarker={noop}
-      onToggleSpectrogram={noop}
-      onToggleSpectrum={noop}
-      onToggleMeter={noop}
     />,
   )
 }
 
-describe('TransportBar marker controls', () => {
+describe('MarkerControls', () => {
   it('exposes accessible navigation, creation, and deletion controls', () => {
     const html = render(true)
     expect(html).toContain('aria-label="Previous marker"')

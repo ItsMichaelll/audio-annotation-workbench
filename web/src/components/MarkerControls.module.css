@@ -1,0 +1,67 @@
+.root,
+.editing {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.root {
+  min-height: 50px;
+  padding: 8px 24px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.root button {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background: transparent;
+  font-size: 11px;
+}
+
+.iconButton {
+  width: 32px;
+  padding: 0;
+  border-color: transparent;
+  color: var(--text-secondary);
+}
+
+.hint {
+  margin-left: 12px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
+.editing {
+  margin-left: auto;
+}
+
+.add {
+  border-color: var(--accent-marker);
+  color: var(--accent-marker-selected);
+}
+
+.add:hover:not(:disabled) {
+  background: var(--surface-warning);
+}
+
+.add:active:not(:disabled) {
+  background: var(--accent-marker-muted);
+}
+
+.add kbd {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+@container (max-width: 650px) {
+  .root {
+    padding-inline: 16px;
+  }
+
+  .hint {
+    display: none;
+  }
+}

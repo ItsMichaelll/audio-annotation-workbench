@@ -1,38 +1,84 @@
 .root {
-  display: grid;
-  grid-template-columns:
-    minmax(200px, 1.6fr) repeat(8, minmax(82px, 0.7fr))
-    minmax(180px, 1.2fr);
-  min-height: 49px;
-  border-bottom: 1px solid var(--border-default);
+  display: flex;
+  flex-wrap: wrap;
+  min-height: 30px;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 24px;
+  padding: 6px 24px;
+  border-top: 1px solid var(--border-default);
   background: var(--surface-panel);
+  color: var(--text-tertiary);
+  font-size: 10px;
 }
 
-.file,
-.readout {
-  min-width: 0;
-  padding: 7px 10px 6px;
-  border-right: 1px solid #252a2d;
+.state {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 64px;
 }
 
-.label {
-  display: block;
-  margin-bottom: 3px;
-  color: #768087;
-  font-size: 9px;
-  font-weight: 650;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
+.state > i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--text-secondary);
 }
 
-.value {
-  display: block;
-  overflow: hidden;
-  color: #e0e6e8;
+.state > .playing {
+  background: var(--accent-primary);
+}
+
+.selection {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.selection > span {
+  color: var(--text-secondary);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 10px;
   font-variant-numeric: tabular-nums;
-  font-weight: var(--font-weight-medium);
-  text-overflow: ellipsis;
+}
+
+.zoom {
+  margin-left: auto;
+  font-family: var(--font-mono);
+}
+
+.markerStatus {
+  font-family: var(--font-mono);
   white-space: nowrap;
+}
+
+.markerSelected {
+  color: var(--accent-marker-selected);
+}
+
+@media (max-width: 700px) {
+  .root {
+    min-height: 30px;
+    gap: 12px;
+    padding-inline: 16px;
+    font-size: 9px;
+  }
+
+  .precision,
+  .selection .length {
+    display: none;
+  }
+
+  .selection {
+    gap: 6px;
+  }
+
+  .selection > span {
+    font-size: 9px;
+  }
+
+  .zoom {
+    display: none;
+  }
 }

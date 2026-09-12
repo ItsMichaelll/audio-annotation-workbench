@@ -106,7 +106,8 @@ persistent storage, but persistence is not a replacement for project backup.
 Download backups regularly and store them somewhere appropriate for the
 dataset.
 
-See [frontend architecture](docs/architecture.md) and
+See [editor design and interaction decisions](docs/editor-design.md),
+[frontend architecture](docs/architecture.md), and
 [ADR 0004](docs/adr/0004-project-persistence-and-routing.md).
 
 ## Backup, restore, and annotation export

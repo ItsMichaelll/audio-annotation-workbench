@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { Icon } from '../../components/Icon'
+import { RegionTiming } from '../../components/RegionTiming'
 import { CustomSelectField } from '../../components/CustomSelect'
-import { EDITOR_SHORTCUT_GROUPS } from '../../components/editorShortcuts'
 import {
   clampInspectorWidth,
   DEFAULT_INSPECTOR_WIDTH,
@@ -15,7 +16,7 @@ import { formatTime } from '../../domain/transport'
 import { MarkdownInstructions } from '../projects/MarkdownInstructions'
 import styles from './AnnotationInspector.module.css'
 
-type InspectorTab = 'labels' | 'instructions' | 'shortcuts'
+type InspectorTab = 'labels' | 'clip' | 'instructions'
 
 interface AnnotationInspectorProps {
   annotation: AnnotationDocument
@@ -23,6 +24,12 @@ interface AnnotationInspectorProps {
   selectedRegionId: string | null
   instructions: string | null
   readOnly: boolean
+  duration: number
+  sourceName: string
+  taxonomyVersion: number
+  metadata: Record<string, unknown>
+  onClose(): void
+  onRegionBoundsChange(start: number, end: number): void
   onToggleLabel(target: 'region' | 'clip', labelId: string): void
   onAssignmentChange(
     target: 'region' | 'clip',
@@ -128,9 +135,7 @@ function LabelControls({
     <section className={styles.inspectorSection}>
       <h3 className={styles.sectionTitle}>{title}</h3>
       {labels.length === 0 ? (
-        <p className={styles.mutedCopy}>
-          No taxonomy labels support this target.
-        </p>
+        <p className={styles.mutedCopy}>No matching labels.</p>
       ) : (
         <div
           className={styles.labelList}
@@ -194,6 +199,13 @@ function LabelControls({
 export function AnnotationInspector(props: AnnotationInspectorProps) {
   const [tab, setTab] = useState<InspectorTab>('labels')
   const [query, setQuery] = useState('')
+  const [previousSelection, setPreviousSelection] = useState(
+    props.selectedRegionId,
+  )
+  if (previousSelection !== props.selectedRegionId) {
+    setPreviousSelection(props.selectedRegionId)
+    if (props.selectedRegionId) setTab('labels')
+  }
   const tabId = useId()
   const inspectorRef = useRef<HTMLElement>(null)
   const resizeRef = useRef<
@@ -226,8 +238,17 @@ export function AnnotationInspector(props: AnnotationInspectorProps) {
       .filter(Boolean)
       .some((value) => value!.toLowerCase().includes(query.toLowerCase())),
   )
+  const tabs: { value: InspectorTab; label: string }[] = [
+    { value: 'labels', label: 'Region' },
+    { value: 'clip', label: 'Clip & info' },
+    { value: 'instructions', label: 'Guide' },
+  ]
+  const regionIndex = [...props.annotation.regions]
+    .sort((a, b) => a.start - b.start)
+    .findIndex((region) => region.id === props.selectedRegionId)
   return (
     <aside
+      id="annotation-inspector"
       ref={inspectorRef}
       className={`${styles.root}${props.readOnly ? ` ${styles.readOnly}` : ''}`}
       aria-label="Annotation inspector"
@@ -271,12 +292,22 @@ export function AnnotationInspector(props: AnnotationInspectorProps) {
           updateWidth(width + (event.key === 'ArrowLeft' ? 10 : -10))
         }}
       />
+      <div className={styles.heading}>
+        <strong>Inspector</strong>
+        <button
+          type="button"
+          onClick={props.onClose}
+          aria-label="Close annotation inspector"
+        >
+          <Icon name="close" />
+        </button>
+      </div>
       <div
         className={styles.tabs}
         role="tablist"
         aria-label="Inspector sections"
       >
-        {(['labels', 'instructions', 'shortcuts'] as const).map((name) => (
+        {tabs.map(({ value: name, label }) => (
           <button
             type="button"
             className={styles.tab}
@@ -287,12 +318,7 @@ export function AnnotationInspector(props: AnnotationInspectorProps) {
             tabIndex={tab === name ? 0 : -1}
             onClick={() => setTab(name)}
             onKeyDown={(event) => {
-              const tabs: InspectorTab[] = [
-                'labels',
-                'instructions',
-                'shortcuts',
-              ]
-              const current = tabs.indexOf(name)
+              const current = tabs.findIndex((item) => item.value === name)
               const next =
                 event.key === 'ArrowRight'
                   ? (current + 1) % tabs.length
@@ -305,169 +331,222 @@ export function AnnotationInspector(props: AnnotationInspectorProps) {
                         : -1
               if (next < 0) return
               event.preventDefault()
-              const nextTab = tabs[next]!
+              const nextTab = tabs[next]!.value
               setTab(nextTab)
               document.getElementById(`${tabId}-${nextTab}-tab`)?.focus()
             }}
             key={name}
           >
-            {name[0]!.toUpperCase() + name.slice(1)}
+            {label}
+            {name === 'clip' && props.annotation.clipAssignments.length > 0 && (
+              <span className={styles.tabCount}>
+                {props.annotation.clipAssignments.length}
+              </span>
+            )}
           </button>
         ))}
       </div>
       <div className={styles.scroll}>
-        {tab === 'labels' && (
-          <div
-            role="tabpanel"
-            id={`${tabId}-labels-panel`}
-            aria-labelledby={`${tabId}-labels-tab`}
-          >
-            {props.taxonomy.labels.length > 8 && (
-              <input
-                className={styles.search}
-                type="search"
-                aria-label="Filter taxonomy labels"
-                placeholder="Filter labels"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-              />
-            )}
-            {selectedRegion ? (
-              <>
-                <div className={styles.selectedRegionSummary}>
-                  <span>Selected region</span>
-                  <strong className={styles.selectedRegionTime}>
-                    {formatTime(selectedRegion.start)} –{' '}
-                    {formatTime(selectedRegion.end)}
-                  </strong>
-                </div>
-                <LabelControls
-                  title="Region labels"
-                  target="region"
-                  labels={matchingLabels.filter((label) =>
-                    label.scopes.includes('region'),
+        <div
+          role="tabpanel"
+          id={`${tabId}-${tab}-panel`}
+          aria-labelledby={`${tabId}-${tab}-tab`}
+        >
+          {tab === 'labels' && (
+            <>
+              {selectedRegion ? (
+                <>
+                  <div className={styles.selectedRegionSummary}>
+                    <div>
+                      <span className={styles.overline}>Selected region</span>
+                      <strong className={styles.regionTitle}>
+                        Region {String(regionIndex + 1).padStart(2, '0')}
+                      </strong>
+                    </div>
+                    <span className={styles.selectedRegionTime}>
+                      {formatTime(selectedRegion.end - selectedRegion.start)}
+                    </span>
+                  </div>
+                  <RegionTiming
+                    key={selectedRegion.id}
+                    region={selectedRegion}
+                    duration={props.duration}
+                    readOnly={props.readOnly}
+                    onChange={props.onRegionBoundsChange}
+                  />
+                  <div className={styles.sectionHeading}>
+                    <h3 className={styles.sectionTitle}>Annotation label</h3>
+                    <span>Choose one</span>
+                  </div>
+                  {props.taxonomy.labels.length > 8 && (
+                    <input
+                      className={styles.search}
+                      type="search"
+                      aria-label="Filter taxonomy labels"
+                      placeholder="Find a label…"
+                      value={query}
+                      onChange={(event) => setQuery(event.target.value)}
+                    />
                   )}
-                  assignments={selectedRegion.assignments}
-                  taxonomy={props.taxonomy}
-                  disabled={props.readOnly}
-                  onToggle={(labelId) => props.onToggleLabel('region', labelId)}
-                  onAssignmentChange={(labelId, values) =>
-                    props.onAssignmentChange('region', labelId, values)
-                  }
-                />
-                <label className={styles.notes}>
-                  <span className={styles.notesLabel}>Region notes</span>
-                  <textarea
-                    className={styles.notesInput}
-                    rows={3}
-                    value={selectedRegion.notes ?? ''}
+                  <LabelControls
+                    title="Region labels"
+                    target="region"
+                    labels={matchingLabels.filter((label) =>
+                      label.scopes.includes('region'),
+                    )}
+                    assignments={selectedRegion.assignments}
+                    taxonomy={props.taxonomy}
                     disabled={props.readOnly}
-                    onChange={(event) =>
-                      props.onRegionNotesChange(event.target.value)
+                    onToggle={(labelId) =>
+                      props.onToggleLabel('region', labelId)
+                    }
+                    onAssignmentChange={(labelId, values) =>
+                      props.onAssignmentChange('region', labelId, values)
                     }
                   />
-                </label>
-              </>
-            ) : (
-              <div className={styles.emptyState}>
-                <strong className={styles.emptyTitle}>
-                  No region selected
-                </strong>
-                <p className={styles.emptyDescription}>
-                  Create or select a region to apply region labels. Shortcut
-                  labels apply to the clip while no region is selected.
-                </p>
-              </div>
-            )}
-            <LabelControls
-              title="Clip labels"
-              target="clip"
-              labels={matchingLabels.filter((label) =>
-                label.scopes.includes('clip'),
+                  {selectedRegion.assignments.length === 0 &&
+                    !props.readOnly && (
+                      <p className={styles.validation}>
+                        <Icon name="info" size={13} />
+                        Choose a label before submitting.
+                      </p>
+                    )}
+                  <label className={styles.notes}>
+                    <span className={styles.notesLabel}>
+                      Region notes <small>Optional</small>
+                    </span>
+                    <textarea
+                      className={styles.notesInput}
+                      rows={3}
+                      placeholder="Add context about this moment…"
+                      value={selectedRegion.notes ?? ''}
+                      disabled={props.readOnly}
+                      onChange={(event) =>
+                        props.onRegionNotesChange(event.target.value)
+                      }
+                    />
+                  </label>
+                </>
+              ) : (
+                <div className={styles.emptyState}>
+                  <Icon name="waveform" size={32} />
+                  <strong className={styles.emptyTitle}>Select a region</strong>
+                  <p className={styles.emptyDescription}>
+                    {props.readOnly
+                      ? 'Choose an interval in Regions to review its labels and timing.'
+                      : 'Drag across the waveform or choose an interval in Regions to add labels.'}{' '}
+                    Markers are timestamp-only references.
+                  </p>
+                  <button
+                    type="button"
+                    className={styles.clipLink}
+                    onClick={() => setTab('clip')}
+                  >
+                    {props.readOnly
+                      ? 'Review clip labels'
+                      : 'Annotate the whole clip'}{' '}
+                    <Icon name="arrow" size={14} />
+                  </button>
+                </div>
               )}
-              assignments={props.annotation.clipAssignments}
-              taxonomy={props.taxonomy}
-              disabled={props.readOnly}
-              onToggle={(labelId) => props.onToggleLabel('clip', labelId)}
-              onAssignmentChange={(labelId, values) =>
-                props.onAssignmentChange('clip', labelId, values)
-              }
-            />
-            <label className={styles.notes}>
-              <span className={styles.notesLabel}>Task notes</span>
-              <textarea
-                className={styles.notesInput}
-                rows={4}
-                value={props.annotation.taskNotes ?? ''}
+            </>
+          )}
+          {tab === 'clip' && (
+            <>
+              <div className={styles.selectedRegionSummary}>
+                <div>
+                  <span className={styles.overline}>Whole recording</span>
+                  <strong className={styles.regionTitle}>
+                    Clip annotation
+                  </strong>
+                </div>
+                <span className={styles.selectedRegionTime}>
+                  {formatTime(props.duration)}
+                </span>
+              </div>
+              <p className={styles.mutedCopy}>
+                These labels apply to the entire file. Multiple labels are
+                allowed.
+              </p>
+              <LabelControls
+                title="Clip labels"
+                target="clip"
+                labels={props.taxonomy.labels.filter((label) =>
+                  label.scopes.includes('clip'),
+                )}
+                assignments={props.annotation.clipAssignments}
+                taxonomy={props.taxonomy}
                 disabled={props.readOnly}
-                onChange={(event) =>
-                  props.onTaskNotesChange(event.target.value)
+                onToggle={(labelId) => props.onToggleLabel('clip', labelId)}
+                onAssignmentChange={(labelId, values) =>
+                  props.onAssignmentChange('clip', labelId, values)
                 }
               />
-            </label>
-          </div>
-        )}
-        {tab === 'instructions' && (
-          <div
-            role="tabpanel"
-            id={`${tabId}-instructions-panel`}
-            aria-labelledby={`${tabId}-instructions-tab`}
-          >
-            {props.instructions ? (
-              <MarkdownInstructions markdown={props.instructions} />
-            ) : (
-              <div className={styles.emptyState}>
-                <strong className={styles.emptyTitle}>No instructions</strong>
-                <p className={styles.emptyDescription}>
-                  This project does not include annotation instructions.
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-        {tab === 'shortcuts' && (
-          <div
-            role="tabpanel"
-            id={`${tabId}-shortcuts-panel`}
-            aria-labelledby={`${tabId}-shortcuts-tab`}
-            className={styles.shortcutReference}
-          >
-            {EDITOR_SHORTCUT_GROUPS.map((group) => (
-              <section key={group.title}>
-                <h3 className={styles.shortcutTitle}>{group.title}</h3>
-                <dl className={styles.shortcutList}>
-                  {group.items.map(([keys, action]) => (
-                    <div className={styles.shortcutItem} key={keys}>
-                      <dt className={styles.shortcutKeys}>{keys}</dt>
-                      <dd className={styles.shortcutAction}>{action}</dd>
+              <label className={styles.notes}>
+                <span className={styles.notesLabel}>
+                  Task notes <small>Optional</small>
+                </span>
+                <textarea
+                  className={styles.notesInput}
+                  rows={4}
+                  placeholder="Leave context for this recording…"
+                  value={props.annotation.taskNotes ?? ''}
+                  disabled={props.readOnly}
+                  onChange={(event) =>
+                    props.onTaskNotesChange(event.target.value)
+                  }
+                />
+              </label>
+              <section className={styles.metadata}>
+                <h3 className={styles.sectionTitle}>Source & metadata</h3>
+                <dl>
+                  <div>
+                    <dt>File</dt>
+                    <dd>{props.sourceName}</dd>
+                  </div>
+                  <div>
+                    <dt>Taxonomy</dt>
+                    <dd>Version {props.taxonomyVersion} · pinned</dd>
+                  </div>
+                  {Object.entries(props.metadata).map(([key, value]) => (
+                    <div key={key}>
+                      <dt>{key}</dt>
+                      <dd>
+                        {Array.isArray(value)
+                          ? value.join(', ')
+                          : String(value ?? '—')}
+                      </dd>
                     </div>
                   ))}
                 </dl>
               </section>
-            ))}
-            <h3 className={styles.shortcutTitle}>Workflow</h3>
-            <dl className={styles.shortcutList}>
-              <div className={styles.shortcutItem}>
-                <dt className={styles.shortcutKeys}>Ctrl + Enter</dt>
-                <dd className={styles.shortcutAction}>Submit and next</dd>
-              </div>
-              <div className={styles.shortcutItem}>
-                <dt className={styles.shortcutKeys}>Ctrl + Shift + Enter</dt>
-                <dd className={styles.shortcutAction}>Skip and next</dd>
-              </div>
-              {props.taxonomy.labels
-                .filter((label) => label.shortcut)
-                .map((label) => (
-                  <div className={styles.shortcutItem} key={label.id}>
-                    <dt className={styles.shortcutKeys}>{label.shortcut}</dt>
-                    <dd className={styles.shortcutAction}>
-                      Select or toggle {label.name}
-                    </dd>
-                  </div>
-                ))}
-            </dl>
-          </div>
-        )}
+            </>
+          )}
+          {tab === 'instructions' && (
+            <>
+              {props.instructions ? (
+                <MarkdownInstructions markdown={props.instructions} />
+              ) : (
+                <div className={styles.emptyState}>
+                  <Icon name="info" size={28} />
+                  <strong className={styles.emptyTitle}>
+                    No project guide yet
+                  </strong>
+                  <p className={styles.emptyDescription}>
+                    Project instructions will appear here when added in project
+                    settings.
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+      <div className={styles.footer}>
+        <Icon name={props.readOnly ? 'lock' : 'keyboard'} size={14} />
+        {props.readOnly
+          ? 'Submitted · read-only'
+          : 'Select a region, then use a label shortcut.'}
       </div>
     </aside>
   )

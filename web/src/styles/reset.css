@@ -4,7 +4,7 @@
 
 :where(html, body, #root) {
   width: 100%;
-  min-width: 960px;
+  min-width: 0;
   height: 100%;
   margin: 0;
 }
