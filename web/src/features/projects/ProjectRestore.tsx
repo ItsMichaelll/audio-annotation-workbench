@@ -1,6 +1,7 @@
 import { useRef, useState, type ChangeEvent } from 'react'
-import { useNavigate } from 'react-router'
-import { Button, ButtonLink } from '../../components/Button'
+import { Link, useNavigate } from 'react-router'
+import { Button } from '../../components/Button'
+import { Icon } from '../../components/Icon'
 import { useConfirmation } from '../../components/confirmationContext'
 import {
   PROJECT_BACKUP_MAX_BYTES,
@@ -154,10 +155,13 @@ export function ProjectRestore() {
   }
 
   return (
-    <ProjectLayout
-      actions={<ButtonLink to="/projects">Back to projects</ButtonLink>}
-    >
+    <ProjectLayout>
       <main className={layoutStyles.page}>
+        <div className={layoutStyles.breadcrumbs}>
+          <Link to="/projects">Projects</Link>
+          <span aria-hidden="true">/</span>
+          <span>Restore backup</span>
+        </div>
         <div className={layoutStyles.pageHeading}>
           <div>
             <p className={layoutStyles.eyebrow}>Recovery</p>
@@ -171,57 +175,73 @@ export function ProjectRestore() {
           </div>
         </div>
 
-        <section className={styles.panel}>
-          <label className={styles.fieldLabel} htmlFor="backup-file">
-            Project backup JSON
-          </label>
-          <input
-            ref={backupInput}
-            id="backup-file"
-            className="u-visually-hidden"
-            type="file"
-            accept=".json,application/json"
-            disabled={busy}
-            onChange={(event) => void selectFile(event)}
-          />
-          <Button
-            size="square"
-            type="button"
-            disabled={busy}
-            onClick={() => backupInput.current?.click()}
-          >
-            {filename ? 'Choose another backup' : 'Choose backup file'}
-          </Button>
-          <span className={styles.helper}>
-            <p className={styles.mutedCopy}>
-              Maximum file size: {MAX_SIZE_LABEL}
-            </p>
-            <p className={styles.mutedCopy}>
-              Imported content is treated as untrusted JSON. Source audio is not
-              part of a backup.
-            </p>
-          </span>
-          {filename && (
-            <div className={styles.fileSelection}>
-              <strong>{filename}</strong>
-              <span className={styles.fileSelectionName}>Selected backup</span>
+        <div className={styles.workspace}>
+          <section className={styles.panel}>
+            <Icon name="upload" size={28} />
+            <h2 className={styles.sectionTitle}>Choose your recovery file</h2>
+            <label className={styles.fieldLabel} htmlFor="backup-file">
+              Project backup JSON
+            </label>
+            <input
+              ref={backupInput}
+              id="backup-file"
+              hidden
+              type="file"
+              accept=".json,application/json"
+              disabled={busy}
+              onChange={(event) => void selectFile(event)}
+            />
+            <Button
+              size="square"
+              type="button"
+              disabled={busy}
+              onClick={() => backupInput.current?.click()}
+            >
+              {filename ? 'Choose another backup' : 'Choose backup file'}
+            </Button>
+            <div className={styles.helper}>
+              <p className={styles.mutedCopy}>
+                Maximum file size: {MAX_SIZE_LABEL}
+              </p>
+              <p className={styles.mutedCopy}>
+                We’ll check the file before restoring anything. Backups don’t
+                include source audio; keep your original recordings available.
+              </p>
             </div>
-          )}
-        </section>
+            {filename && (
+              <div className={styles.fileSelection}>
+                <strong>{filename}</strong>
+                <span className={styles.fileSelectionName}>
+                  Selected backup
+                </span>
+              </div>
+            )}
+          </section>
+          <div>
+            {error && (
+              <PageNotice title="Backup could not be restored" tone="error">
+                <p>{error}</p>
+              </PageNotice>
+            )}
 
-        {error && (
-          <PageNotice title="Backup could not be restored" tone="error">
-            <p>{error}</p>
-          </PageNotice>
-        )}
-
-        {backup && (
-          <ProjectRestorePreview
-            backup={backup}
-            busy={busy}
-            onRestore={() => void restore()}
-          />
-        )}
+            {backup ? (
+              <ProjectRestorePreview
+                backup={backup}
+                busy={busy}
+                onRestore={() => void restore()}
+              />
+            ) : (
+              <section className={styles.emptyPreview}>
+                <Icon name="folder" size={32} />
+                <h2>Review before you restore</h2>
+                <p>
+                  Select a backup to review its project, annotations, and media
+                  requirements here. Nothing changes until you confirm.
+                </p>
+              </section>
+            )}
+          </div>
+        </div>
       </main>
     </ProjectLayout>
   )

@@ -1,9 +1,9 @@
 .root {
   min-width: 0;
-  padding: 11px;
+  padding: 16px;
   border: 1px solid var(--border-default);
   border-radius: 5px;
-  background: #14181a;
+  background: var(--surface-panel);
 }
 
 .empty {
@@ -70,7 +70,7 @@
   padding: 0 6px;
   border-color: transparent;
   background: transparent;
-  color: #c9d0d4;
+  color: var(--text-secondary);
   font-size: 10px;
 }
 
@@ -78,9 +78,9 @@
   position: relative;
   width: 26px;
   height: 14px;
-  border: 1px solid #536068;
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-pill);
-  background: #20262a;
+  background: var(--surface-panel-raised);
 }
 
 .requiredIndicator::after {
@@ -90,7 +90,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #879198;
+  background: var(--text-tertiary);
   content: '';
   transition: transform var(--duration-fast) var(--easing-standard);
 }
@@ -111,7 +111,7 @@
   border-color: transparent;
   border-radius: var(--radius-sm);
   background: transparent;
-  color: #8e7777;
+  color: var(--text-danger);
   font-size: 10px;
 }
 
@@ -125,7 +125,7 @@
 .optionsHeader,
 .option {
   display: grid;
-  grid-template-columns: 28px minmax(105px, 0.72fr) minmax(140px, 1.28fr) 88px;
+  grid-template-columns: 28px minmax(0, 0.72fr) minmax(0, 1.28fr) 88px;
   align-items: center;
   gap: 6px;
 }
@@ -134,7 +134,7 @@
   padding: 6px 0;
   border-top: 1px solid var(--border-default);
   border-bottom: 1px solid var(--border-default);
-  color: #6f7a80;
+  color: var(--text-tertiary);
   font-size: 8px;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -148,7 +148,7 @@
 .option {
   min-height: 42px;
   padding: 5px 0;
-  border-bottom: 1px solid rgb(255 255 255 / 6%);
+  border-bottom: 1px solid var(--border-subtle);
   transition:
     border-color var(--duration-fast) var(--easing-standard),
     box-shadow var(--duration-fast) var(--easing-standard),
@@ -184,7 +184,7 @@
 .fieldError {
   display: block;
   margin-top: 4px;
-  color: #ff9e9e;
+  color: var(--text-danger);
   font-size: 9px;
   line-height: 1.35;
 }
@@ -197,7 +197,7 @@
 .inlineEmpty {
   padding: 10px;
   border-bottom: 1px solid var(--border-default);
-  color: #ffadad;
+  color: var(--text-danger);
   font-size: 10px;
   line-height: 1.4;
 }
@@ -212,11 +212,20 @@
   }
 
   .option {
-    grid-template-columns: 28px minmax(90px, 0.8fr) minmax(120px, 1.2fr);
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+
+  .option > label {
+    grid-column: 2;
   }
 
   .optionActions {
     grid-column: 2 / -1;
     justify-content: flex-end;
+  }
+
+  .header,
+  .empty {
+    flex-wrap: wrap;
   }
 }

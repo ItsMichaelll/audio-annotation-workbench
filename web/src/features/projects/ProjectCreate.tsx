@@ -114,7 +114,8 @@ export function ProjectCreate() {
             <p className={layoutStyles.eyebrow}>Project foundation</p>
             <h1 className={layoutStyles.pageHeadingTitle}>Create project</h1>
             <p className={layoutStyles.pageHeadingDescription}>
-              Define the project and taxonomy, then optionally preflight tasks.
+              Start with a name and label set. Add instructions and audio now or
+              later.
             </p>
           </div>
         </div>
@@ -135,50 +136,31 @@ export function ProjectCreate() {
               <div>
                 <h2 className={formStyles.sectionTitle}>Project details</h2>
                 <p className={formStyles.sectionDescription}>
-                  Names are display values; projects use independent UUIDs.
+                  Give this collection a recognizable name and a little context.
                 </p>
               </div>
             </div>
-            <label className={formStyles.field}>
-              <span>Project name *</span>
-              <input
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                maxLength={160}
-                autoFocus
-                required
-              />
-            </label>
-            <label className={formStyles.field}>
-              <span>Description</span>
-              <textarea
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                rows={4}
-                maxLength={2000}
-              />
-            </label>
-          </section>
-
-          <section className={formStyles.section}>
-            <div className={formStyles.sectionHeading}>
-              <span className={formStyles.sectionNumber}>04</span>
-              <div>
-                <h2 className={formStyles.sectionTitle}>Initial tasks</h2>
-                <p className={formStyles.sectionDescription}>
-                  Optional. Review the preview before task records are written.
-                </p>
-              </div>
+            <div className={formStyles.sectionBody}>
+              <label className={formStyles.field}>
+                <span>Project name *</span>
+                <input
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  maxLength={160}
+                  autoFocus
+                  required
+                />
+              </label>
+              <label className={formStyles.field}>
+                <span>Description</span>
+                <textarea
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  rows={4}
+                  maxLength={2000}
+                />
+              </label>
             </div>
-            <TaskImport onReady={setTasks} />
-            {tasks.length > 0 && (
-              <div className={formStyles.fileSelection}>
-                <strong>{tasks.length} tasks ready for creation</strong>
-                <Button type="button" onClick={() => setTasks([])}>
-                  Clear
-                </Button>
-              </div>
-            )}
           </section>
 
           <section className={formStyles.section}>
@@ -192,35 +174,37 @@ export function ProjectCreate() {
                 </p>
               </div>
             </div>
-            <input
-              ref={taxonomyInput}
-              className="u-visually-hidden"
-              type="file"
-              accept=".json,.yaml,.yml,application/json,application/yaml,text/yaml"
-              onChange={(event) => {
-                const file = event.target.files?.[0]
-                event.target.value = ''
-                void selectTaxonomy(file)
-              }}
-            />
-            <Button
-              type="button"
-              onClick={() => taxonomyInput.current?.click()}
-            >
-              {taxonomy ? 'Replace taxonomy file' : 'Upload taxonomy file'}
-            </Button>
-            {taxonomy && (
-              <div className={formStyles.fileSelection}>
-                <strong>{taxonomy.sourceFilename}</strong>
-                <span className={formStyles.fileSelectionName}>
-                  {taxonomy.sourceFormat.toUpperCase()} · SHA-256{' '}
-                  {taxonomy.contentHash.slice(0, 12)}…
-                </span>
-              </div>
-            )}
-            {taxonomyError && (
-              <p className={formStyles.fieldError}>{taxonomyError}</p>
-            )}
+            <div className={formStyles.sectionBody}>
+              <input
+                ref={taxonomyInput}
+                hidden
+                type="file"
+                accept=".json,.yaml,.yml,application/json,application/yaml,text/yaml"
+                onChange={(event) => {
+                  const file = event.target.files?.[0]
+                  event.target.value = ''
+                  void selectTaxonomy(file)
+                }}
+              />
+              <Button
+                type="button"
+                onClick={() => taxonomyInput.current?.click()}
+              >
+                {taxonomy ? 'Replace taxonomy file' : 'Upload taxonomy file'}
+              </Button>
+              {taxonomy && (
+                <div className={formStyles.fileSelection}>
+                  <strong>{taxonomy.sourceFilename}</strong>
+                  <span className={formStyles.fileSelectionName}>
+                    {taxonomy.sourceFormat.toUpperCase()} · SHA-256{' '}
+                    {taxonomy.contentHash.slice(0, 12)}…
+                  </span>
+                </div>
+              )}
+              {taxonomyError && (
+                <p className={formStyles.fieldError}>{taxonomyError}</p>
+              )}
+            </div>
           </section>
 
           <section className={formStyles.section}>
@@ -235,39 +219,64 @@ export function ProjectCreate() {
                 </p>
               </div>
             </div>
-            <input
-              ref={instructionsInput}
-              className="u-visually-hidden"
-              type="file"
-              accept=".md,text/markdown"
-              onChange={(event) => {
-                const file = event.target.files?.[0]
-                event.target.value = ''
-                void selectInstructions(file)
-              }}
-            />
-            <Button
-              type="button"
-              onClick={() => instructionsInput.current?.click()}
-            >
-              {instructions ? 'Replace instructions' : 'Upload Markdown file'}
-            </Button>
-            {instructions && (
-              <div className={formStyles.fileSelection}>
-                <strong>{instructions.sourceFilename}</strong>
-                <Button type="button" onClick={() => setInstructions(null)}>
-                  Remove
-                </Button>
+            <div className={formStyles.sectionBody}>
+              <input
+                ref={instructionsInput}
+                hidden
+                type="file"
+                accept=".md,text/markdown"
+                onChange={(event) => {
+                  const file = event.target.files?.[0]
+                  event.target.value = ''
+                  void selectInstructions(file)
+                }}
+              />
+              <Button
+                type="button"
+                onClick={() => instructionsInput.current?.click()}
+              >
+                {instructions ? 'Replace instructions' : 'Upload Markdown file'}
+              </Button>
+              {instructions && (
+                <div className={formStyles.fileSelection}>
+                  <strong>{instructions.sourceFilename}</strong>
+                  <Button type="button" onClick={() => setInstructions(null)}>
+                    Remove
+                  </Button>
+                </div>
+              )}
+              {instructionsError && (
+                <p className={formStyles.fieldError}>{instructionsError}</p>
+              )}
+            </div>
+          </section>
+
+          <section className={formStyles.section}>
+            <div className={formStyles.sectionHeading}>
+              <span className={formStyles.sectionNumber}>04</span>
+              <div>
+                <h2 className={formStyles.sectionTitle}>Initial tasks</h2>
+                <p className={formStyles.sectionDescription}>
+                  Optional. Review the preview before task records are written.
+                </p>
               </div>
-            )}
-            {instructionsError && (
-              <p className={formStyles.fieldError}>{instructionsError}</p>
-            )}
+            </div>
+            <div className={formStyles.sectionBody}>
+              <TaskImport onReady={setTasks} />
+              {tasks.length > 0 && (
+                <div className={formStyles.fileSelection}>
+                  <strong>{tasks.length} tasks ready for creation</strong>
+                  <Button type="button" onClick={() => setTasks([])}>
+                    Clear
+                  </Button>
+                </div>
+              )}
+            </div>
           </section>
 
           <section className={formStyles.validationSummary} aria-live="polite">
             <h2 className={formStyles.validationSummaryTitle}>
-              Validation summary
+              Before you create
             </h2>
             {problems.length === 0 ? (
               <p className={formStyles.validationSummaryReady}>

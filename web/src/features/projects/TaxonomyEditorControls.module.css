@@ -8,25 +8,25 @@
   border-color: transparent;
   border-radius: var(--radius-sm);
   background: transparent;
-  color: #aeb7bc;
+  color: var(--text-secondary);
   line-height: 1;
 }
 
 .iconButton:hover:not(:disabled),
 .iconButton:focus-visible {
   border-color: var(--border-strong);
-  background: rgb(255 255 255 / 5%);
-  color: #eef2f3;
+  background: var(--surface-control-hover);
+  color: var(--text-primary);
 }
 
 .iconButton:disabled {
-  color: #4f585d;
+  color: var(--text-tertiary);
   cursor: not-allowed;
   opacity: 0.55;
 }
 
 .dangerButton {
-  color: #8e7777;
+  color: var(--text-danger);
 }
 
 .dangerButton:hover:not(:disabled),
@@ -63,14 +63,14 @@
   flex: 0 0 auto;
   overflow: hidden;
   padding: 0;
-  border: 1px solid rgb(255 255 255 / 24%);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
   cursor: pointer;
 }
 
 .swatchEmpty {
   border-style: dashed;
-  background: #242a2d;
+  background: var(--surface-panel-raised);
 }
 
 .colorPickerDialog {
@@ -138,7 +138,7 @@
   align-items: center;
   gap: 10px;
   margin-top: 14px;
-  color: #818c92;
+  color: var(--text-secondary);
   font-size: 9px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -206,7 +206,7 @@
 .valueField {
   display: grid;
   gap: 5px;
-  color: #818c92;
+  color: var(--text-secondary);
   font-size: 9px;
   letter-spacing: 0.06em;
   text-transform: uppercase;

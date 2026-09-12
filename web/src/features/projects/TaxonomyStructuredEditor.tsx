@@ -71,6 +71,7 @@ export function StructuredTaxonomyEditor({
   onChange: ChangeTaxonomy
 }) {
   const instanceId = useId().replaceAll(':', '')
+  const [section, setSection] = useState<'labels' | 'scales'>('labels')
   const nextUiIdentity = useRef(
     taxonomy.labels.length +
       (taxonomy.scales.severity?.options.length ?? 0) +
@@ -154,6 +155,24 @@ export function StructuredTaxonomyEditor({
 
   return (
     <section className={styles.root} aria-label="Structured taxonomy editor">
+      <div
+        className={styles.sectionNavigation}
+        role="group"
+        aria-label="Taxonomy sections"
+      >
+        <Button
+          aria-pressed={section === 'labels'}
+          onClick={() => setSection('labels')}
+        >
+          Labels <span>{taxonomy.labels.length}</span>
+        </Button>
+        <Button
+          aria-pressed={section === 'scales'}
+          onClick={() => setSection('scales')}
+        >
+          Scales <span>{Object.keys(taxonomy.scales).length}</span>
+        </Button>
+      </div>
       {validationError && (
         <div className={styles.validation} role="alert">
           <strong className={styles.validationTitle}>
@@ -167,6 +186,7 @@ export function StructuredTaxonomyEditor({
       )}
 
       <section
+        hidden={section !== 'labels'}
         className={styles.section}
         aria-labelledby="taxonomy-labels-heading"
       >
@@ -276,6 +296,7 @@ export function StructuredTaxonomyEditor({
       </section>
 
       <section
+        hidden={section !== 'scales'}
         className={`${styles.section} ${styles.scalesSection}`}
         aria-labelledby="taxonomy-scales-heading"
       >

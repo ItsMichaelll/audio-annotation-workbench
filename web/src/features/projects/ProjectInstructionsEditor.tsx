@@ -35,6 +35,7 @@ function LoadedInstructionsEditor({
   const initialSource = instructions?.rawMarkdown ?? ''
   const filename = instructions?.sourceFilename ?? 'instructions.md'
   const [source, setSource] = useState(initialSource)
+  const [view, setView] = useState<'write' | 'split' | 'preview'>('split')
   const [savedSource, setSavedSource] = useState(initialSource)
   const [dirty, setDirty] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -154,9 +155,25 @@ function LoadedInstructionsEditor({
         )}
 
         <div className={styles.toolbar}>
-          <span className={styles.mutedCopy}>
-            {filename} · 512 KB maximum file size
-          </span>
+          <div
+            className={styles.viewSwitch}
+            role="group"
+            aria-label="Instructions view"
+          >
+            {(['write', 'split', 'preview'] as const).map((option) => (
+              <Button
+                key={option}
+                aria-pressed={view === option}
+                onClick={() => setView(option)}
+              >
+                {option === 'write'
+                  ? 'Write'
+                  : option === 'split'
+                    ? 'Split'
+                    : 'Preview'}
+              </Button>
+            ))}
+          </div>
           <div className={styles.toolbarActions}>
             <Button
               type="button"
@@ -184,12 +201,17 @@ function LoadedInstructionsEditor({
           </div>
         </div>
 
-        <div className={styles.grid}>
+        <div className={styles.documentMeta}>
+          {filename} · Markdown · 512 KB maximum
+        </div>
+        <div className={styles.grid} data-view={view}>
           <section className={styles.sourcePanel}>
+            <h2 className={styles.sourceHeading}>Markdown</h2>
             <label className={styles.sourceField} htmlFor="instructions-source">
               <textarea
                 ref={sourceRef}
                 id="instructions-source"
+                aria-label="Instructions Markdown"
                 className={styles.sourceTextarea}
                 value={source}
                 onChange={(event) => changeSource(event.target.value)}
@@ -216,7 +238,6 @@ function LoadedInstructionsEditor({
           >
             <div className={styles.previewHeading}>
               <div>
-                <p className={layoutStyles.eyebrow}>Safe rendering</p>
                 <h2 className={styles.previewTitle}>Preview</h2>
               </div>
             </div>

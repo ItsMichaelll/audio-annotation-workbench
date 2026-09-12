@@ -158,8 +158,8 @@ function LoadedProjectEdit({ aggregate }: { aggregate: ProjectAggregate }) {
             <p className={layoutStyles.eyebrow}>Project settings</p>
             <h1 className={layoutStyles.pageHeadingTitle}>Edit project</h1>
             <p className={layoutStyles.pageHeadingDescription}>
-              Metadata can change. Taxonomy history remains immutable and new
-              content creates a new version.
+              Manage the details, labels, and guidance your annotators work
+              with.
             </p>
           </div>
           <Button
@@ -201,24 +201,26 @@ function LoadedProjectEdit({ aggregate }: { aggregate: ProjectAggregate }) {
                 </p>
               </div>
             </div>
-            <label className={formStyles.field}>
-              <span>Project name *</span>
-              <input
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                maxLength={160}
-                required
-              />
-            </label>
-            <label className={formStyles.field}>
-              <span>Description</span>
-              <textarea
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                rows={4}
-                maxLength={2000}
-              />
-            </label>
+            <div className={formStyles.sectionBody}>
+              <label className={formStyles.field}>
+                <span>Project name *</span>
+                <input
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  maxLength={160}
+                  required
+                />
+              </label>
+              <label className={formStyles.field}>
+                <span>Description</span>
+                <textarea
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  rows={4}
+                  maxLength={2000}
+                />
+              </label>
+            </div>
           </section>
 
           <section className={formStyles.section}>
@@ -232,50 +234,52 @@ function LoadedProjectEdit({ aggregate }: { aggregate: ProjectAggregate }) {
                 </p>
               </div>
             </div>
-            <input
-              ref={taxonomyInput}
-              className="u-visually-hidden"
-              type="file"
-              accept=".json,.yaml,.yml,application/json,application/yaml,text/yaml"
-              onChange={(event) => {
-                const file = event.target.files?.[0]
-                event.target.value = ''
-                void selectTaxonomy(file)
-              }}
-            />
-            <div className={formStyles.sectionActions}>
-              <Button
-                type="button"
-                onClick={() => taxonomyInput.current?.click()}
-              >
-                Upload replacement taxonomy
-              </Button>
-              <ButtonLink to={taxonomyEditorPath(project.id)}>
-                Edit taxonomy in browser
-              </ButtonLink>
-            </div>
-            {taxonomy && (
-              <div className={formStyles.fileSelection}>
-                <strong>{taxonomy.sourceFilename}</strong>
-                <span className={formStyles.fileSelectionName}>
-                  Pending new version
-                </span>
-                <Button type="button" onClick={() => setTaxonomy(null)}>
-                  Clear
+            <div className={formStyles.sectionBody}>
+              <input
+                ref={taxonomyInput}
+                hidden
+                type="file"
+                accept=".json,.yaml,.yml,application/json,application/yaml,text/yaml"
+                onChange={(event) => {
+                  const file = event.target.files?.[0]
+                  event.target.value = ''
+                  void selectTaxonomy(file)
+                }}
+              />
+              <div className={formStyles.sectionActions}>
+                <Button
+                  type="button"
+                  onClick={() => taxonomyInput.current?.click()}
+                >
+                  Upload replacement taxonomy
                 </Button>
+                <ButtonLink to={taxonomyEditorPath(project.id)}>
+                  Edit taxonomy in browser
+                </ButtonLink>
               </div>
-            )}
-            {taxonomyError && (
-              <p className={formStyles.fieldError}>{taxonomyError}</p>
-            )}
-            <div className={formStyles.compactHistory}>
-              {taxonomyVersions.map((version) => (
-                <div className={formStyles.historyRow} key={version.id}>
-                  <strong>v{version.version}</strong>
-                  <span>{version.sourceFilename}</span>
-                  <span>{formatTimestamp(version.createdAt)}</span>
+              {taxonomy && (
+                <div className={formStyles.fileSelection}>
+                  <strong>{taxonomy.sourceFilename}</strong>
+                  <span className={formStyles.fileSelectionName}>
+                    Pending new version
+                  </span>
+                  <Button type="button" onClick={() => setTaxonomy(null)}>
+                    Clear
+                  </Button>
                 </div>
-              ))}
+              )}
+              {taxonomyError && (
+                <p className={formStyles.fieldError}>{taxonomyError}</p>
+              )}
+              <div className={formStyles.compactHistory}>
+                {taxonomyVersions.map((version) => (
+                  <div className={formStyles.historyRow} key={version.id}>
+                    <strong>v{version.version}</strong>
+                    <span>{version.sourceFilename}</span>
+                    <span>{formatTimestamp(version.createdAt)}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </section>
 
@@ -291,52 +295,54 @@ function LoadedProjectEdit({ aggregate }: { aggregate: ProjectAggregate }) {
                 </p>
               </div>
             </div>
-            <input
-              ref={instructionsInput}
-              className="u-visually-hidden"
-              type="file"
-              accept=".md,text/markdown"
-              onChange={(event) => {
-                const file = event.target.files?.[0]
-                event.target.value = ''
-                void selectInstructions(file)
-              }}
-            />
-            <div className={formStyles.sectionActions}>
-              <Button
-                type="button"
-                onClick={() => instructionsInput.current?.click()}
-              >
-                {pendingInstructionsName
-                  ? 'Upload replacement instructions'
-                  : 'Add instructions'}
-              </Button>
-              <ButtonLink to={instructionsEditorPath(project.id)}>
-                Edit instructions in browser
-              </ButtonLink>
-            </div>
-            {pendingInstructionsName && (
-              <div className={formStyles.fileSelection}>
-                <strong>{pendingInstructionsName}</strong>
+            <div className={formStyles.sectionBody}>
+              <input
+                ref={instructionsInput}
+                hidden
+                type="file"
+                accept=".md,text/markdown"
+                onChange={(event) => {
+                  const file = event.target.files?.[0]
+                  event.target.value = ''
+                  void selectInstructions(file)
+                }}
+              />
+              <div className={formStyles.sectionActions}>
                 <Button
-                  variant="danger"
-                  className={formStyles.fileSelectionRemove}
                   type="button"
-                  onClick={() => setInstructionsChange({ kind: 'remove' })}
+                  onClick={() => instructionsInput.current?.click()}
                 >
-                  Remove
+                  {pendingInstructionsName
+                    ? 'Upload replacement instructions'
+                    : 'Add instructions'}
                 </Button>
+                <ButtonLink to={instructionsEditorPath(project.id)}>
+                  Edit instructions in browser
+                </ButtonLink>
               </div>
-            )}
-            {!pendingInstructionsName &&
-              instructionsChange.kind === 'remove' && (
-                <p className={formStyles.mutedCopy}>
-                  Instructions will be removed on save.
-                </p>
+              {pendingInstructionsName && (
+                <div className={formStyles.fileSelection}>
+                  <strong>{pendingInstructionsName}</strong>
+                  <Button
+                    variant="danger"
+                    className={formStyles.fileSelectionRemove}
+                    type="button"
+                    onClick={() => setInstructionsChange({ kind: 'remove' })}
+                  >
+                    Remove
+                  </Button>
+                </div>
               )}
-            {instructionsError && (
-              <p className={formStyles.fieldError}>{instructionsError}</p>
-            )}
+              {!pendingInstructionsName &&
+                instructionsChange.kind === 'remove' && (
+                  <p className={formStyles.mutedCopy}>
+                    Instructions will be removed on save.
+                  </p>
+                )}
+              {instructionsError && (
+                <p className={formStyles.fieldError}>{instructionsError}</p>
+              )}
+            </div>
           </section>
 
           <div className={formStyles.actions}>

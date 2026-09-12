@@ -12,7 +12,7 @@ interface ProjectLayoutProps {
 export function ProjectLayout({
   children,
   actions,
-  theme,
+  theme = 'light',
 }: ProjectLayoutProps) {
   return (
     <div
@@ -21,7 +21,11 @@ export function ProjectLayout({
     >
       <ApplicationHeader skipTarget="main-content">{actions}</ApplicationHeader>
       <div id="main-content" tabIndex={-1}>
-        {children}
+        {children ?? (
+          <main className={styles.page}>
+            <p role="status">Loading project…</p>
+          </main>
+        )}
       </div>
     </div>
   )

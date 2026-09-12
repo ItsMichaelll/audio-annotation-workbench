@@ -54,7 +54,9 @@ function LoadedTaxonomyEditor({
       taxonomy: { schemaVersion: 1, labels: [], scales: {} },
     }
   }
-  const [mode, setMode] = useState<TaxonomyEditorMode>('yaml')
+  const [mode, setMode] = useState<TaxonomyEditorMode>(
+    initialError ? 'yaml' : 'structured',
+  )
   const [source, setSource] = useState(initialSource)
   const [structured, setStructured] = useState(initial.taxonomy)
   const [error, setError] = useState<string | null>(initialError)

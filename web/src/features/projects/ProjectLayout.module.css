@@ -53,6 +53,7 @@
 
 .breadcrumbs {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   margin-bottom: 22px;
@@ -61,7 +62,8 @@
 }
 
 .breadcrumbs a {
-  flex-shrink: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
   color: var(--color-blue-500);
   text-decoration: none;
 }
@@ -136,6 +138,10 @@
 
 .shell[data-project-theme='light'] .pageNarrow {
   max-width: 680px;
+}
+
+.shell[data-project-theme='light'] .pageForm {
+  max-width: 1120px;
 }
 
 .shell[data-project-theme='light'] .notice {

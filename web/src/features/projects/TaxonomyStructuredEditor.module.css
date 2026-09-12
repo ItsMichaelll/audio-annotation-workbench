@@ -7,8 +7,8 @@
   padding: var(--segment-pad);
   isolation: isolate;
   border: 1px solid var(--border-default);
-  border-radius: var(--radius-pill);
-  background: #ffffff05;
+  border-radius: var(--radius-md);
+  background: var(--surface-canvas);
 }
 
 .modeSwitch::before {
@@ -16,14 +16,14 @@
   z-index: 0;
   inset: var(--segment-pad);
   width: calc(50% - var(--segment-pad));
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-md);
   background: var(--color-blue-500);
   content: '';
   pointer-events: none;
   transition: transform var(--duration-normal) var(--easing-standard);
 }
 
-.modeSwitch:has(.modeButton:last-child[aria-pressed='true'])::before {
+.modeSwitch:has(:where(.modeButton:last-child[aria-pressed='true']))::before {
   transform: translateX(100%);
 }
 
@@ -43,10 +43,19 @@
   color: var(--text-inverse);
 }
 
+.modeButton:hover:not(:disabled) {
+  background: transparent;
+  color: var(--accent-ink);
+}
+
+.modeButton:where([aria-pressed='true']):hover:not(:disabled) {
+  color: var(--text-inverse);
+}
+
 .modeButton:focus-visible {
   border-color: transparent;
   box-shadow:
-    0 0 0 2px #121618,
+    0 0 0 2px var(--surface-panel),
     0 0 0 3px var(--color-blue-500);
 }
 
@@ -63,11 +72,37 @@
   background: var(--surface-waveform);
 }
 
+.sectionNavigation {
+  display: flex;
+  gap: 16px;
+  padding: 8px 24px 0;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.sectionNavigation button {
+  min-height: 44px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.sectionNavigation button[aria-pressed='true'] {
+  border-bottom-color: var(--accent-primary);
+  color: var(--accent-ink);
+}
+
+.sectionNavigation span {
+  margin-left: 8px;
+  font-size: 11px;
+}
+
 .validation {
   padding: 12px 18px;
   border-bottom: 1px solid rgb(255 70 70 / 35%);
   background: rgb(255 70 70 / 6%);
-  color: #ffb3b3;
+  color: var(--text-danger);
   font-size: 11px;
 }
 
@@ -85,7 +120,7 @@
 
 .validationHint {
   margin-top: 3px;
-  color: #b98686;
+  color: var(--text-danger);
   font-size: 10px;
 }
 
@@ -96,7 +131,7 @@
 }
 
 .scalesSection {
-  border-top: 1px solid var(--border-strong);
+  border-top: 0;
 }
 
 .heading {
@@ -127,7 +162,7 @@
 
 .list {
   display: grid;
-  gap: 8px;
+  gap: 12px;
 }
 
 .emptyState {
@@ -166,6 +201,10 @@
 }
 
 @media (max-width: 900px) {
+  .section {
+    padding: 16px;
+  }
+
   .heading {
     align-items: stretch;
     flex-direction: column;
