@@ -69,7 +69,7 @@ until the restored projects have been checked.
       changelog against the current application.
 - [x] From a clean checkout, run `pnpm install --frozen-lockfile` and
       `pnpm validate`.
-- [ ] Confirm GitHub Actions passes on the release pull request.
+- [x] Confirm GitHub Actions passes on the release pull request.
 - [x] Start `pnpm dev`; verify `http://127.0.0.1:5173` and strict failure when the
       port is occupied.
 - [x] In the supported Chrome environment, smoke-test project creation, taxonomy
