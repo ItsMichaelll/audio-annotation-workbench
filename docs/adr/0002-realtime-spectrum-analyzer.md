@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-08-29
-- Implementation: Complete; automated validation is in place, with manual browser acceptance required before the next analysis milestone
+- Implementation: Complete
 
 ## Context
 

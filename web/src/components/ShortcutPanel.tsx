@@ -31,9 +31,7 @@ export function ShortcutPanel({ labels }: ShortcutPanelProps) {
           <h3 className={styles.heading}>{group.title}</h3>
           {group.title === 'Markers' && (
             <p className={styles.scopeNote}>
-              Focus the waveform for these shortcuts; Ctrl+D also works outside
-              it. At either boundary, Tab navigation returns to normal focus
-              movement.
+              Focus the waveform for these shortcuts.
             </p>
           )}
           <dl className={styles.list}>

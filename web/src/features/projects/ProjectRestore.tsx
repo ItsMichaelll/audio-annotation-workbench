@@ -206,8 +206,10 @@ export function ProjectRestore() {
                 Maximum file size: {MAX_SIZE_LABEL}
               </p>
               <p className={styles.mutedCopy}>
-                We’ll check the file before restoring anything. Backups don’t
-                include source audio; keep your original recordings available.
+                We’ll check the file before restoring anything.
+                <br />
+                Backups don’t include source audio; keep your original
+                recordings available.
               </p>
             </div>
             {filename && (

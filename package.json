@@ -8,8 +8,8 @@
   },
   "scripts": {
     "dev": "pnpm --dir web dev",
-    "format": "pnpm --dir web format",
-    "format:check": "pnpm --dir web format:check",
+    "format": "pnpm --dir web exec prettier --config .prettierrc.json --write . \"../*.md\" \"../docs/**/*.md\"",
+    "format:check": "pnpm --dir web exec prettier --config .prettierrc.json --check . \"../*.md\" \"../docs/**/*.md\"",
     "lint": "pnpm --dir web lint",
     "lint:css": "pnpm --dir web lint:css",
     "typecheck": "pnpm --dir web typecheck",

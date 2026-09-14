@@ -136,7 +136,7 @@ export function ProjectCreate() {
               <div>
                 <h2 className={formStyles.sectionTitle}>Project details</h2>
                 <p className={formStyles.sectionDescription}>
-                  Give this collection a recognizable name and a little context.
+                  Give this project a recognizable name and some brief context.
                 </p>
               </div>
             </div>
@@ -169,8 +169,9 @@ export function ProjectCreate() {
               <div>
                 <h2 className={formStyles.sectionTitle}>Taxonomy *</h2>
                 <p className={formStyles.sectionDescription}>
-                  JSON or YAML, up to 1 MB. Annotation schema version one and at
-                  least one stable label are required.
+                  JSON or YAML, up to 1 MB.
+                  <br />A version one annotation schema and at least one stable
+                  label are required.
                 </p>
               </div>
             </div>
@@ -215,7 +216,9 @@ export function ProjectCreate() {
                   Annotation instructions
                 </h2>
                 <p className={formStyles.sectionDescription}>
-                  Optional Markdown, up to 512 KB. Raw HTML is not rendered.
+                  Optional Markdown, up to 512 KB.
+                  <br />
+                  Raw HTML is not rendered.
                 </p>
               </div>
             </div>
@@ -257,7 +260,9 @@ export function ProjectCreate() {
               <div>
                 <h2 className={formStyles.sectionTitle}>Initial tasks</h2>
                 <p className={formStyles.sectionDescription}>
-                  Optional. Review the preview before task records are written.
+                  Optional; you can always add/remove tasks later.
+                  <br />
+                  Review the preview before task records are written.
                 </p>
               </div>
             </div>

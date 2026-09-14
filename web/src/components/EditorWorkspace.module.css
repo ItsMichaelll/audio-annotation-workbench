@@ -138,7 +138,7 @@
   flex-wrap: wrap;
   gap: 8px 12px;
   padding: 12px 24px;
-  border-bottom: 1px solid var(--border-warning);
+  border: 1px solid var(--border-warning);
   background: var(--surface-warning);
   color: var(--text-warning);
   font-size: 12px;
@@ -151,6 +151,10 @@
 }
 
 .errorDismiss {
+  display: flex;
+  width: 30px;
+  align-items: center;
+  justify-content: center;
   margin-left: auto;
 }
 

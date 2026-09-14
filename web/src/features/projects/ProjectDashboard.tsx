@@ -89,13 +89,13 @@ export function ProjectDashboard() {
             <p className={layoutStyles.eyebrow}>Your workspace</p>
             <h1 className={layoutStyles.pageHeadingTitle}>Projects</h1>
             <p className={layoutStyles.pageHeadingDescription}>
-              A place for every recording. A clear path through the work.
+              Easily browse, organize, and track your projects.
             </p>
           </div>
           <div className={styles.headingActions}>
             <ButtonLink to="/projects/restore">
               <Icon name="upload" />
-              Restore backup
+              Restore Backup
             </ButtonLink>
             <ButtonLink variant="primary" to="/projects/new">
               <Icon name="plus" />
@@ -189,15 +189,15 @@ export function ProjectDashboard() {
                 {query
                   ? 'No matching projects'
                   : status === 'active'
-                    ? 'Give your recordings a home.'
-                    : 'Your archive is clear.'}
+                    ? 'No projects found.'
+                    : 'Your project archive is empty.'}
               </h2>
               <p>
                 {query
                   ? 'Try another project name or description.'
                   : status === 'active'
-                    ? 'Bring your audio, labels, and listening guide together. Start a project to build your first annotation set.'
-                    : 'Archived projects will appear here. You can restore them whenever you need them.'}
+                    ? 'Bring your audio, labels, and listening guide together. Create a project to get started.'
+                    : 'Archived projects will appear here. You can restore them at any time.'}
               </p>
               {query ? (
                 <Button onClick={() => setQuery('')}>Clear search</Button>
@@ -280,7 +280,7 @@ export function ProjectDashboard() {
               <span>
                 {durability === 'persistent'
                   ? 'Persistent storage enabled'
-                  : 'Your projects live in this browser'}
+                  : 'Your projects are stored in this browser'}
                 <small>
                   {durability === 'persistent'
                     ? 'Keep regular backups of your work.'

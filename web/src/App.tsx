@@ -489,7 +489,7 @@ export function StandaloneEditor() {
           <div className={styles.eyebrow}>
             Standalone editor <span> / </span> Local session
           </div>
-          <h1 className={styles.title}>{fileName ?? 'A closer listen.'}</h1>
+          <h1 className={styles.title}>{fileName ?? 'Explore your audio.'}</h1>
         </div>
         <div className={styles.headerActions}>
           <button
@@ -517,7 +517,7 @@ export function StandaloneEditor() {
       </div>
       {error && (
         <div className={styles.errorBanner} role="alert">
-          <strong className={styles.errorTitle}>Audio notice</strong>
+          <strong className={styles.errorTitle}>Audio error</strong>
           <span>{error}</span>
           <button
             className={styles.errorDismiss}
@@ -544,10 +544,10 @@ export function StandaloneEditor() {
                 ))}
               </div>
               <h2 className={styles.emptyTitle}>
-                Every detail deserves a listen.
+                Every detail deserves a listen
               </h2>
               <p className={styles.emptyDescription}>
-                Open an audio file to explore its waveform, mark precise
+                Upload an audio file to explore its waveform, mark precise
                 regions, and inspect the sound.
               </p>
               <button
@@ -556,7 +556,7 @@ export function StandaloneEditor() {
                 onClick={() => fileInputRef.current?.click()}
               >
                 <Icon name="plus" />
-                Open audio file
+                Upload audio file
               </button>
               <p className={styles.emptyFootnote}>
                 WAV, FLAC, MP3, AAC, OGG and other browser-supported audio.

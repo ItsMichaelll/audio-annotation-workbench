@@ -1,303 +1,40 @@
 # Audio Annotation Workbench
 
-Audio Annotation Workbench is a local-first, keyboard-first application for
-expert audio engineers and ML dataset reviewers. It combines project and
-taxonomy management with a DAW-style waveform editor for precise temporal
-review.
+Audio Annotation Workbench is a local-only desktop-browser application for
+reviewing audio and creating taxonomy-driven annotations. It combines project
+and task management with a waveform editor for regions, timestamp markers,
+clip-level labels, scales, notes, and audio analysis.
 
-The application is browser-only. It has no backend, account system, telemetry,
-or cloud dependency. Audio stays in its original location and is never copied
-into the project database.
+The application has no backend, accounts, telemetry, or cloud integration.
+Project data is stored in the browser's IndexedDB database. Audio remains in its
+original location and is opened through browser file or folder access.
 
-## Current implementation
+## Features
 
-The annotation-workspace milestone connects the project task queue to the
-existing audio workbench:
+- Persistent active and archived projects with task queues and progress
+- JSON or YAML taxonomies with immutable version history
+- Safe Markdown instructions with editing and preview
+- Audio file, directory, connected-folder, JSON, and JSONL task imports
+- Regions, timestamp markers, clip labels, severity and confidence scales,
+  notes, shortcuts, autosaved drafts, and submission workflows
+- Multi-region selection and bulk region labeling or deletion
+- Waveform, minimap, spectrogram, spectrum analyzer, and loudness metering
+- Project backup and restore plus versioned JSONL and flattened CSV exports
+- A session-only standalone editor at `/editor`
 
-- Persistent active and archived projects
-- Project creation, detail, editing, restoration, and deliberate deletion
-- Required JSON or YAML taxonomies with immutable local version history
-- In-browser YAML and structured taxonomy editing with local downloads
-- In-browser Markdown instructions editing, preview, and local downloads
-- Task ingestion, import preview, task management, and local-source relinking
-- Taxonomy-driven region and clip labels, configured scales, notes, and shortcuts
-- Debounced local drafts, unified annotation undo/redo, validation, and submission
-- Stable task ordering with skip, submit-next, read-only submission, and reopening
-- Versioned project backups with strict preview, atomic restore, and media relinking
-- Versioned JSONL and flattened CSV annotation exports
-- Browser storage durability reporting
-- A transitional standalone editor at `/editor`
+## Requirements
 
-The standalone editor retains its existing functionality:
+- Node.js `^20.19.0` or `>=22.12.0`; Node 22 is recommended
+- Corepack with pnpm `10.33.0`
+- A Chromium-based desktop browser
 
-- Local browser audio loading through object URLs
-- Waveform, timeline, synchronized minimap and scrollbar, and spectrogram
-- Pointer-centered zoom, horizontal navigation, and vertical waveform scaling
-- Region creation, movement, resizing, looping, nudging, deletion, undo, and redo
-- Keyboard transport
-- Real-time spectrum analysis
-- Standards-oriented loudness and true-peak metering
-- File and selected-region loudness analysis through a shared Web Audio graph
+The initial release was manually tested with Google Chrome 152.0.7977.83,
+Official Build, 64-bit, Stable, on Windows 11. Other browsers and operating
+systems have not been verified for this release.
 
-The standalone `/editor` route remains available for direct local-file waveform
-testing without creating a project.
+## Install and run
 
-## Application structure
-
-The completed local-first workflow is organized into five primary areas:
-
-1. **Projects dashboard** — active and archived projects, progress, timestamps,
-   and project navigation.
-2. **Project creation and editing** — project metadata, taxonomy versions,
-   Markdown instructions, archive state, and deletion.
-3. **Project detail and task manager** — project status, task import and
-   filtering, stable queue order, progress, and labeling entry actions.
-4. **Annotation workspace** — the existing waveform and analysis tools combined
-   with task navigation, taxonomy-driven labels, instructions, validation,
-   autosaved drafts, and submission controls.
-5. **Data portability** — deterministic project backups, validated atomic
-   restoration, and submitted-only or all-task annotation exports.
-
-## Routes
-
-| Route | Purpose |
-| --- | --- |
-| `/` and `/projects` | Projects dashboard |
-| `/projects/new` | Project creation |
-| `/projects/restore` | Backup validation, preview, and restoration |
-| `/projects/:projectId` | Project detail |
-| `/projects/:projectId/edit` | Project editing |
-| `/projects/:projectId/taxonomy` | YAML and structured taxonomy editor |
-| `/projects/:projectId/instructions` | Markdown instructions editor and preview |
-| `/projects/:projectId/tasks/:taskId/annotate` | Task annotation workspace |
-| `/editor` | Transitional standalone audio workbench |
-
-Unknown routes and unknown project IDs show explicit recovery states. React
-Router owns route state and browser history. Vite supplies development fallback;
-production static hosting must serve `index.html` for these application paths.
-
-## Persistence and data ownership
-
-IndexedDB database `audio-annotation-workbench` is currently schema version 6.
-It contains:
-
-| Store | Responsibility |
-| --- | --- |
-| `projects` | Project identity, metadata, status, and active record references |
-| `taxonomyVersions` | Immutable project-local taxonomy versions and source text |
-| `instructions` | Optional raw Markdown instructions |
-| `tasks` | Task source, stable import order, lifecycle status, and indexes |
-| `annotations` | Versioned drafts and submissions, uniquely indexed by task |
-| `sourceFolders` | Read-only directory handles keyed by project and stable source ID |
-
-The typed repository is independent of React and owns database initialization,
-migrations, queries, and writes. Project and task deletion remove associated
-annotations. Draft creation atomically moves an unstarted task to draft;
-submission atomically writes the submitted annotation and task status. Errors
-propagate to the UI instead of being treated as successful writes.
-
-Persisted models use stable UUIDs and ISO 8601 timestamps. Names are presentation
-values and never database keys. Project, taxonomy-record, instruction, and task
-schema versions are centralized in the domain model.
-
-Browser storage belongs to the current browser profile. A browser may evict
-best-effort storage, private browsing can shorten its lifetime, and clearing site
-data removes projects. The dashboard reports storage durability and can request
-persistent storage, but persistence is not a replacement for project backup.
-Download backups regularly and store them somewhere appropriate for the
-dataset.
-
-See [editor design and interaction decisions](docs/editor-design.md),
-[frontend architecture](docs/architecture.md), and
-[ADR 0004](docs/adr/0004-project-persistence-and-routing.md).
-
-## Backup, restore, and annotation export
-
-Project detail includes a deterministic JSON backup for one complete project.
-Backup format `audio-annotation-workbench-project` version 2 contains the project
-record, every immutable taxonomy version and raw source, optional Markdown
-instructions, every task, and all draft and submitted annotations. Project, taxonomy, instruction, and task records use entity schema version 1;
-annotations use version 2. These versions are independent of backup format
-version 2 and IndexedDB schema version 6. Version-1 backups remain readable.
-
-Backups never contain audio bytes, object URLs, absolute filesystem paths,
-waveform peaks, spectrogram or analysis data, browser file handles, or
-session-only permissions. Session media identities are converted to portable unresolved references.
-Folder references retain their stable source ID, folder name, and full relative
-path with unknown permission. Restore accepts JSON files up to 10 MB, validates every entity and
-relationship before writing, previews the export date and record counts, and
-uses one transaction across all stores. A project ID collision requires explicit
-replacement confirmation; replacement affects only that project and rolls back
-completely on failure. Reconnect each saved root folder after restoration to recover all matching
-tasks; temporary sources still need file relinking.
-
-Annotation export supports versioned JSONL and flattened CSV in submitted-only
-or all-task mode. JSONL writes one record per included task with its nullable
-annotation and pinned taxonomy interpretation. CSV writes one row per region or
-clip assignment; all-task mode writes an explicit task-only row when no
-assignments exist. Task and assignment order and metadata JSON are deterministic.
-
-## Taxonomy versions
-
-Project creation requires an annotation-capable `.json`, `.yaml`, or `.yml`
-taxonomy no larger than 1 MB. Version one requires `schemaVersion: 1` and at
-least one label with a unique stable ID and name. Omitted label scopes default
-to `region`; supported scopes are `region` and `clip`.
-
-```yaml
-schemaVersion: 1
-labels:
-  - id: background-noise
-    name: Background noise
-    description: Sustained unwanted environmental sound
-    scopes: [region, clip]
-    color: "#4f8cff"
-    shortcut: "1"
-scales:
-  severity:
-    required: false
-    options:
-      - value: minor
-        label: Minor
-      - value: moderate
-        label: Moderate
-      - value: severe
-        label: Severe
-  confidence:
-    required: false
-    options:
-      - value: low
-        label: Low
-      - value: medium
-        label: Medium
-      - value: high
-        label: High
-```
-
-Validation rejects duplicate label IDs, invalid scopes and colors, conflicting
-shortcuts, malformed scales, and duplicate scale option values. Existing
-projects with an older incompatible taxonomy remain intact and direct users to
-upload a replacement before starting a new annotation.
-
-Each record preserves:
-
-- Original filename, format, and source text
-- Parsed document and extracted metadata
-- Browser-native SHA-256 content hash
-- Project-local version number and creation timestamp
-
-Replacing a taxonomy creates a new immutable record and changes the project's
-active reference. Identical content is detected by hash and does not create a
-duplicate version. Earlier versions remain available in project history.
-The first saved draft pins its annotation to the then-active taxonomy version;
-later replacements do not reinterpret drafts or submissions.
-
-The project taxonomy editor has synchronized YAML and Structured modes. YAML
-mode preserves the current source while it is edited and reports parser or
-schema errors without changing the saved taxonomy. Structured mode supports
-labels, descriptions, region/clip scopes, colors, shortcuts, severity and
-confidence scales, required states, and ordered scale options. Because a
-structured edit must serialize canonical YAML, the editor asks for confirmation
-before comments, custom formatting, or currently unrecognized fields are
-discarded. Merely switching modes never rewrites the source.
-
-Confirmations for destructive actions, canonicalization, empty submissions, and
-unsaved in-app navigation use the workbench's shared accessible modal. The
-browser's native leave-page warning remains in place for refreshes and tab
-closure; the application does not layer a custom dialog over those browser
-prompts. Short route and IndexedDB loading transitions intentionally render no
-loading panel to avoid flicker.
-
-`Ctrl+S` saves valid changes. A save appends and activates a new immutable
-version; semantic hashing suppresses duplicates caused only by YAML formatting
-or mapping-key order. Existing drafts and submissions remain pinned, while a
-new annotation uses the newly active taxonomy. The working source can be
-downloaded as `taxonomy.yaml`; saving and downloading remain entirely local.
-
-Uploaded content is parsed as data. It is never executed or evaluated.
-
-## Markdown instructions
-
-Projects may include one `.md` instructions file no larger than 512 KB. The raw
-Markdown and source filename are preserved. The in-browser editor loads the raw
-source (or an empty document), displays a live preview through the same safe
-renderer used elsewhere, and supports `Ctrl+S`. Saving an empty document removes
-the record. The working source can be downloaded locally as Markdown.
-
-Rendering uses `react-markdown` without raw HTML support. An element allowlist
-omits scripts, iframes, images, and other executable or externally loaded
-content. Link URLs are restricted to HTTP, HTTPS, mail, and document fragments;
-external tabs receive `noopener noreferrer`.
-
-## Media and privacy boundaries
-
-Audio `File` objects and object URLs remain local to the browser and are revoked
-when replaced or unmounted. Audio is not written to IndexedDB or OPFS. Project
-creation does not request filesystem permissions.
-
-Task imports accept browser-selected audio files and JSON/JSONL manifests. A
-manifest is either `{ "tasks": [...] }`, an array, or JSONL; each task requires
-a safe relative `audio` path and may provide `id`, `name`, and simple metadata.
-Absolute and parent-traversal paths are rejected. Manifest-only tasks remain
-unresolved until relinked. Fallback file selections are session-only and can
-require relinking after browser restart; neither audio bytes nor absolute paths
-are persisted.
-
-Task types represent a primary media reference separately from project metadata.
-The media-source adapter contract covers browser capability detection, permission
-query and request behavior, missing or moved files, unresolved references, and
-future fallback adapters. Persistent folder and file-handle adapters implement this contract. A local
-companion service or desktop wrapper can be added later without rewriting
-project and annotation domain logic.
-
-Project detail includes **Source folders**. In browsers supporting persistent
-directory handles, select **Connect folder**, then **Scan folder / link matching
-tasks**. Review and confirm new imports. The scan also links existing unresolved
-or temporary tasks by full relative path (including legacy directory-root
-prefixes); duplicate basenames in different subdirectories remain distinct.
-Multiple roots can contain the same relative path without colliding.
-
-On reopening a project, saved folder permission is queried without prompting.
-If granted, tasks resolve automatically. Otherwise **Reconnect folder** restores
-access for the whole root. **Replace folder** points the same stable source ID
-at a new root; **Forget access** removes the saved handle but preserves tasks
-and portable folder identity for later reconnection. Missing or moved files are
-reported by relative path. No filesystem write operations are used. Unsupported
-browsers retain the temporary file and directory import workflow.
-
-The annotation workspace queries saved-handle permission without prompting.
-Permission requests and relinking occur only after a user action. Resolved files
-receive short-lived object URLs that are revoked on task changes and teardown.
-Audio bytes, object URLs, waveform peaks, spectrogram data, and analysis results
-are never written to IndexedDB.
-
-## Labeling workflow and local drafts
-
-`Start Labeling` opens the first actionable task in persisted import order.
-Task-row actions open new work, continue drafts or reopened submissions, and
-show submitted work read-only. `Skip & Next` and `Submit & Next` wrap through
-the remaining actionable queue; completion returns to current project progress.
-
-Meaningful annotation edits are debounced to IndexedDB. The workspace reports
-Unsaved, Saving, Saved, or Save failed and flushes pending work before controlled
-navigation. Failed required saves stop navigation. Revision checks prevent an
-older asynchronous save from overwriting newer state. Reopening a submitted task
-preserves its annotation and permits another draft/submission cycle.
-
-Submission rejects unlabeled regions, missing or wrong-scope labels, missing
-required scale values, invalid timing, duplicate assignments, and unresolved
-save failures. A reviewed task with no regions or clip labels requires explicit
-confirmation before submission.
-
-## Development
-
-### Prerequisites
-
-- Node.js `^20.19.0` or `>=22.12.0`
-- pnpm 10
-- A current desktop browser with IndexedDB and Web Audio
-
-Install and run from the repository root:
+From a clean checkout:
 
 ```powershell
 corepack enable
@@ -305,113 +42,94 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Run the complete validation sequence:
+Open <http://127.0.0.1:5173>. The development server listens only on the local
+loopback interface and exits if port 5173 is unavailable.
+
+For intentional testing from another device on a trusted LAN, override the host
+explicitly:
+
+```powershell
+pnpm dev -- --host 0.0.0.0
+```
+
+This exposes the development server to the local network and may prompt for a
+firewall rule.
+
+## Create the first project
+
+1. Open **Projects**, select **New Project**, and enter a name and optional
+   description.
+2. Add a valid `.json`, `.yaml`, or `.yml` taxonomy. A project cannot be created
+   without an annotation taxonomy.
+3. Optionally add Markdown instructions and initial audio files, a directory, or
+   a task manifest.
+4. Review the import preview and create the project.
+5. Open the project, connect or relink its source audio as needed, then select
+   **Start Labeling**.
+
+See the [user guide](docs/user-guide.md) for project management, imports,
+relinking, annotation controls, task navigation, backup, restore, and the
+standalone editor.
+
+## Privacy, persistence, and backups
+
+Project records, taxonomies, instructions, tasks, annotations, and supported
+directory handles stay in the browser profile. Audio bytes, object URLs,
+waveform peaks, spectrograms, and analysis results are not stored in the project
+database or included in exports.
+
+Browser data belongs to the exact browser profile and application origin,
+including the scheme, host, and port. Data created at `localhost:5173` is
+separate from data created at `127.0.0.1:5173`. Clearing site data, changing
+profiles, or changing the configured origin can make projects unavailable.
+
+> Export a project backup regularly and before upgrading, changing the origin,
+> or clearing browser data. A durable-storage grant reduces eviction risk but
+> does not replace a backup.
+
+## Validation
+
+Run the complete release gate from the repository root:
 
 ```powershell
 pnpm validate
 ```
 
-The individual commands are `pnpm format:check`, `pnpm lint`,
-`pnpm typecheck`, `pnpm test`, and `pnpm build`. Use `pnpm format` to apply
-formatting. See [CONTRIBUTING.md](CONTRIBUTING.md) for engineering boundaries and
-fixture rules.
+It checks Prettier, ESLint, Stylelint, TypeScript, Vitest, the production build,
+and maintained Markdown documentation.
 
-## Standalone editor controls
+## Supported environment and limitations
 
-### Keyboard
+- Chromium-based desktop browsers are the primary target. Persistent directory
+  access depends on browser support and permission policy. Unsupported browsers
+  use the existing temporary file or directory selection and per-task relinking
+  workflow.
+- Chrome may decline a durable-storage request. The browser controls that
+  decision, and regular backups remain necessary.
+- Browser and operating-system codec support varies. Files are validated before
+  direct import or relinking, but successful validation does not guarantee that
+  every browser can decode every codec variant.
+- Long recordings require more decoding, waveform, spectrogram, and analysis
+  work. Reduced navigation and analysis performance may become noticeable around
+  30 minutes or longer depending on hardware, codec, sample rate, and enabled
+  analysis views. There is no fixed duration limit.
+- Project backups exclude source audio and browser permissions. Restored tasks
+  must reconnect to their original recordings.
 
-| Key | Action |
-| --- | --- |
-| Space | Play or pause |
-| Left / Right | Move playhead 50 ms |
-| Shift + Left / Right | Move playhead 250 ms |
-| Ctrl + Left / Right | Select and reveal the previous / next region |
-| A / D | Move backward / forward 1 second |
-| Home / End | Move to file start / end |
-| F | Fit the complete waveform |
-| + / - | Zoom around the visible playhead or viewport center |
-| L | Toggle selected-region looping |
-| Delete / Backspace | Delete the selected region or focused selected marker |
-| Ctrl + D | Delete the selected region or marker |
-| T | Create a marker at the playhead while the waveform is focused |
-| Tab / Shift + Tab | Select and seek to the next / previous marker while the waveform is focused |
-| Escape | Clear region or marker selection |
-| Ctrl + Z | Undo region edit |
-| Ctrl + Y or Ctrl + Shift + Z | Redo region edit |
+## Documentation
 
-The project-task workspace retains these controls and adds taxonomy-configured
-single-key label toggles, `Ctrl + Enter` for Submit & Next, and
-`Ctrl + Shift + Enter` for Skip & Next. Labeling and workflow shortcuts are
-ignored while an input, textarea, select, button, or editable element has focus.
-
-### Pointer
-
-| Gesture | Action |
-| --- | --- |
-| Click or drag empty waveform | Seek or create a region |
-| Drag region body or edge | Move or resize a region |
-| Double-click region | Play that region |
-| Wheel over waveform or minimap | Zoom around pointer |
-| Alt + wheel | Scale waveform height |
-| Shift + wheel | Pan, or nudge the selected region |
-| Middle drag or Alt + left drag | Pan horizontally |
-| Drag minimap viewport or scrollbar | Pan synchronized views |
-
-Spectrogram, Spectrum Analyzer, and Meter are independent transport toggles. See
-[interaction model](docs/interaction-model.md) for precedence, lifecycle, and
-measurement details.
-
-## Roadmap
-
-### 1. Project foundation — implemented
-
-- URL routing and transitional editor route
-- IndexedDB schema, migrations, and repository layer
-- Dashboard, creation, detail, editing, archive/restore, and deletion
-- Taxonomy upload, hashing, immutable versions, and duplicate suppression
-- Optional safely rendered Markdown instructions
-- Task, progress, and media-source foundations
-
-### 2. Task ingestion and management — implemented
-
-- Direct audio-file and dataset-directory selection
-- JSON and JSONL manifest import (CSV deferred)
-- Stable task IDs and metadata
-- Duplicate, missing-file, and conflict detection with import preview
-- Task table, filters, sorting, status counts, and navigation
-
-### 3. Annotation-workspace integration — implemented
-
-- Project task loading in the existing editor
-- Back-to-project and task navigation
-- Taxonomy-driven region and clip labels
-- Severity, confidence, notes, and submission validation
-- Automatic drafts, skip/flag behavior, and submit-next workflow
-
-### 4. Project configuration authoring — implemented
-
-- Focused raw YAML taxonomy editing with parser and schema feedback
-- Structured taxonomy editing for every version-one annotation field
-- Immutable activation, annotation pinning, and semantic duplicate suppression
-- Markdown instructions editing with safe rendered preview and removal
-- Unsaved-change protection, `Ctrl+S`, and local YAML/Markdown downloads
-
-### 5. Export, backup, and recovery — implemented
-
-- Canonical lossless project JSON
-- JSONL annotation export and optional flattened CSV
-- Submitted-only and all-task export modes
-- Stable schema and entity versions
-- Project backup import, validation, and restoration
-- Atomic collision replacement and portable unresolved media recovery
-
-### Later capabilities
-
-Quality review, reviewer assignment, collaboration, authentication, cloud
-storage (see the [storage integration plan](docs/storage-integrations.md)), inter-annotator agreement, and ML-assisted labeling remain explicitly
-deferred. They require separate product and security decisions after the
-local-first single-reviewer workflow is complete.
+- [User guide](docs/user-guide.md)
+- [Data formats](docs/data-formats.md)
+- [Architecture](docs/architecture.md)
+- [Development and releases](docs/releasing.md)
+- [Contributing](CONTRIBUTING.md)
+- [Changelog](CHANGELOG.md)
+- [Architecture decision records](docs/adr/)
 
 ## License
 
-Copyright © 2026 Michael Camerato. All rights reserved. See [LICENSE](LICENSE).
+Audio Annotation Workbench is proprietary software and is not open source. The
+[license](LICENSE) permits downloading or cloning the repository, installing
+dependencies, and running the unmodified application for your own lawful use.
+It does not permit modification, redistribution, derivative works, resale, or
+operation as a hosted service without prior written permission.
