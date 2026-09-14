@@ -78,10 +78,10 @@ until the restored projects have been checked.
       reopening, backup/restore, both export formats, and the standalone editor.
 - [x] Review known limitations and ensure no private dataset content, source audio,
       build output, browser handles, or absolute local paths are tracked.
-- [ ] Merge the approved release changes into `main` according to repository policy.
-- [ ] Create the annotated `v0.1.0` tag from the reviewed merge commit and push the
+- [x] Merge the approved release changes into `main` according to repository policy.
+- [x] Create the annotated `v0.1.0` tag from the reviewed merge commit and push the
       tag.
-- [ ] Draft the GitHub release from the 0.1.0 changelog entry, review it, and
+- [x] Draft the GitHub release from the 0.1.0 changelog entry, review it, and
       publish only after approval.
 
 The tag and release should be created only after the commit hash, validation,
