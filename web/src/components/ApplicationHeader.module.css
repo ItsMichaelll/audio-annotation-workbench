@@ -64,6 +64,10 @@
   color: var(--text-primary);
 }
 
+.destination[aria-current='page']:hover {
+  color: var(--accent-ink);
+}
+
 .context {
   overflow: hidden;
   padding-left: 20px;

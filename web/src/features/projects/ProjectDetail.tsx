@@ -610,7 +610,7 @@ export function ProjectDetail() {
                             : task.primaryMedia.kind === 'external-reference'
                               ? 'Session-only'
                               : task.primaryMedia.kind === 'folder'
-                                ? 'Connected folder (see source status)'
+                                ? 'Connected folder'
                                 : 'Available'}
                         </span>
                         <span role="cell" data-label="Updated">
@@ -907,7 +907,6 @@ export function ProjectDetail() {
               Edit project
             </ButtonLink>{' '}
             <Button
-              className={detailStyles.heroAction}
               type="button"
               onClick={() => void toggleArchive()}
               disabled={acting}
@@ -954,8 +953,8 @@ export function ProjectDetail() {
           Permanently delete {project.name}?
         </ModalTitle>
         <ModalDescription id="delete-description">
-          This cannot be undone without a future project backup. Source audio
-          files remain untouched.
+          This cannot be undone without a project backup. Source audio files
+          remain untouched.
         </ModalDescription>
         <label className={detailStyles.confirmField}>
           <span>Type the project name to confirm</span>

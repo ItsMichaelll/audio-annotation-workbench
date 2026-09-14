@@ -314,10 +314,12 @@ function LoadedProjectEdit({ aggregate }: { aggregate: ProjectAggregate }) {
                 >
                   {pendingInstructionsName
                     ? 'Upload replacement instructions'
-                    : 'Add instructions'}
+                    : 'Upload Markdown instructions'}
                 </Button>
                 <ButtonLink to={instructionsEditorPath(project.id)}>
-                  Edit instructions in browser
+                  {pendingInstructionsName
+                    ? 'Edit instructions in browser'
+                    : 'Create instructions in browser'}
                 </ButtonLink>
               </div>
               {pendingInstructionsName && (

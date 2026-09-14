@@ -80,8 +80,8 @@ export function RouterApplication() {
               path="404"
               element={
                 <ProjectPageState
-                  title="Page not found"
-                  message="The requested page does not exist."
+                  title="404: Page not found"
+                  message="The requested page does not exist. Please check the URL and try again."
                 />
               }
             />

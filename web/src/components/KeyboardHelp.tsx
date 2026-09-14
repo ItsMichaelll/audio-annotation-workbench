@@ -25,7 +25,7 @@ export function KeyboardHelp({ labels }: ShortcutPanelProps) {
         className={styles.dialog}
       >
         <div className={styles.heading}>
-          <ModalTitle id={titleId}>Work at your own speed.</ModalTitle>
+          <ModalTitle id={titleId}>Keyboard and pointer controls</ModalTitle>
           <button
             type="button"
             aria-label="Close keyboard shortcuts"
@@ -34,10 +34,6 @@ export function KeyboardHelp({ labels }: ShortcutPanelProps) {
             <Icon name="close" />
           </button>
         </div>
-        <p className={styles.description}>
-          Keyboard and pointer controls. Shortcuts pause while a form control
-          has focus.
-        </p>
         <ShortcutPanel {...(labels ? { labels } : {})} />
       </Modal>
     </>

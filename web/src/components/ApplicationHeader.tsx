@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { NavLink } from 'react-router'
+import { BrandMark } from './BrandMark'
 import { Icon } from './Icon'
 import styles from './ApplicationHeader.module.css'
 
@@ -33,10 +34,10 @@ export function ApplicationHeader({
         }
       >
         <span className={styles.mark}>
-          <Icon name="waveform" size={22} />
+          <BrandMark size={24} />
         </span>
         <span>
-          Audio<span className={styles.brandLight}> Workbench</span>
+          <span className={styles.brandLight}>Audio Annotation Workbench</span>
         </span>
       </NavLink>
       <nav className={styles.navigation} aria-label="Application">
@@ -61,7 +62,8 @@ export function ApplicationHeader({
           </span>
         ) : (
           <NavLink to="/editor" className={styles.destination ?? ''}>
-            Editor
+            <Icon name="waveform" />
+            Standalone Editor
           </NavLink>
         )}
       </nav>
