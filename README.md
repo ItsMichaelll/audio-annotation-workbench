@@ -60,17 +60,17 @@ The completed local-first workflow is organized into five primary areas:
 
 ## Routes
 
-| Route | Purpose |
-| --- | --- |
-| `/` and `/projects` | Projects dashboard |
-| `/projects/new` | Project creation |
-| `/projects/restore` | Backup validation, preview, and restoration |
-| `/projects/:projectId` | Project detail |
-| `/projects/:projectId/edit` | Project editing |
-| `/projects/:projectId/taxonomy` | YAML and structured taxonomy editor |
-| `/projects/:projectId/instructions` | Markdown instructions editor and preview |
-| `/projects/:projectId/tasks/:taskId/annotate` | Task annotation workspace |
-| `/editor` | Transitional standalone audio workbench |
+| Route                                         | Purpose                                     |
+| --------------------------------------------- | ------------------------------------------- |
+| `/` and `/projects`                           | Projects dashboard                          |
+| `/projects/new`                               | Project creation                            |
+| `/projects/restore`                           | Backup validation, preview, and restoration |
+| `/projects/:projectId`                        | Project detail                              |
+| `/projects/:projectId/edit`                   | Project editing                             |
+| `/projects/:projectId/taxonomy`               | YAML and structured taxonomy editor         |
+| `/projects/:projectId/instructions`           | Markdown instructions editor and preview    |
+| `/projects/:projectId/tasks/:taskId/annotate` | Task annotation workspace                   |
+| `/editor`                                     | Transitional standalone audio workbench     |
 
 Unknown routes and unknown project IDs show explicit recovery states. React
 Router owns route state and browser history. Vite supplies development fallback;
@@ -81,14 +81,14 @@ production static hosting must serve `index.html` for these application paths.
 IndexedDB database `audio-annotation-workbench` is currently schema version 6.
 It contains:
 
-| Store | Responsibility |
-| --- | --- |
-| `projects` | Project identity, metadata, status, and active record references |
-| `taxonomyVersions` | Immutable project-local taxonomy versions and source text |
-| `instructions` | Optional raw Markdown instructions |
-| `tasks` | Task source, stable import order, lifecycle status, and indexes |
-| `annotations` | Versioned drafts and submissions, uniquely indexed by task |
-| `sourceFolders` | Read-only directory handles keyed by project and stable source ID |
+| Store              | Responsibility                                                    |
+| ------------------ | ----------------------------------------------------------------- |
+| `projects`         | Project identity, metadata, status, and active record references  |
+| `taxonomyVersions` | Immutable project-local taxonomy versions and source text         |
+| `instructions`     | Optional raw Markdown instructions                                |
+| `tasks`            | Task source, stable import order, lifecycle status, and indexes   |
+| `annotations`      | Versioned drafts and submissions, uniquely indexed by task        |
+| `sourceFolders`    | Read-only directory handles keyed by project and stable source ID |
 
 The typed repository is independent of React and owns database initialization,
 migrations, queries, and writes. Project and task deletion remove associated
@@ -151,8 +151,8 @@ labels:
     name: Background noise
     description: Sustained unwanted environmental sound
     scopes: [region, clip]
-    color: "#4f8cff"
-    shortcut: "1"
+    color: '#4f8cff'
+    shortcut: '1'
 scales:
   severity:
     required: false
@@ -320,24 +320,24 @@ fixture rules.
 
 ### Keyboard
 
-| Key | Action |
-| --- | --- |
-| Space | Play or pause |
-| Left / Right | Move playhead 50 ms |
-| Shift + Left / Right | Move playhead 250 ms |
-| Ctrl + Left / Right | Select and reveal the previous / next region |
-| A / D | Move backward / forward 1 second |
-| Home / End | Move to file start / end |
-| F | Fit the complete waveform |
-| + / - | Zoom around the visible playhead or viewport center |
-| L | Toggle selected-region looping |
-| Delete / Backspace | Delete the selected region or focused selected marker |
-| Ctrl + D | Delete the selected region or marker |
-| T | Create a marker at the playhead while the waveform is focused |
-| Tab / Shift + Tab | Select and seek to the next / previous marker while the waveform is focused |
-| Escape | Clear region or marker selection |
-| Ctrl + Z | Undo region edit |
-| Ctrl + Y or Ctrl + Shift + Z | Redo region edit |
+| Key                          | Action                                                                      |
+| ---------------------------- | --------------------------------------------------------------------------- |
+| Space                        | Play or pause                                                               |
+| Left / Right                 | Move playhead 50 ms                                                         |
+| Shift + Left / Right         | Move playhead 250 ms                                                        |
+| Ctrl + Left / Right          | Select and reveal the previous / next region                                |
+| A / D                        | Move backward / forward 1 second                                            |
+| Home / End                   | Move to file start / end                                                    |
+| F                            | Fit the complete waveform                                                   |
+| + / -                        | Zoom around the visible playhead or viewport center                         |
+| L                            | Toggle selected-region looping                                              |
+| Delete / Backspace           | Delete the selected region or focused selected marker                       |
+| Ctrl + D                     | Delete the selected region or marker                                        |
+| T                            | Create a marker at the playhead while the waveform is focused               |
+| Tab / Shift + Tab            | Select and seek to the next / previous marker while the waveform is focused |
+| Escape                       | Clear region or marker selection                                            |
+| Ctrl + Z                     | Undo region edit                                                            |
+| Ctrl + Y or Ctrl + Shift + Z | Redo region edit                                                            |
 
 The project-task workspace retains these controls and adds taxonomy-configured
 single-key label toggles, `Ctrl + Enter` for Submit & Next, and
@@ -346,16 +346,16 @@ ignored while an input, textarea, select, button, or editable element has focus.
 
 ### Pointer
 
-| Gesture | Action |
-| --- | --- |
-| Click or drag empty waveform | Seek or create a region |
-| Drag region body or edge | Move or resize a region |
-| Double-click region | Play that region |
-| Wheel over waveform or minimap | Zoom around pointer |
-| Alt + wheel | Scale waveform height |
-| Shift + wheel | Pan, or nudge the selected region |
-| Middle drag or Alt + left drag | Pan horizontally |
-| Drag minimap viewport or scrollbar | Pan synchronized views |
+| Gesture                            | Action                            |
+| ---------------------------------- | --------------------------------- |
+| Click or drag empty waveform       | Seek or create a region           |
+| Drag region body or edge           | Move or resize a region           |
+| Double-click region                | Play that region                  |
+| Wheel over waveform or minimap     | Zoom around pointer               |
+| Alt + wheel                        | Scale waveform height             |
+| Shift + wheel                      | Pan, or nudge the selected region |
+| Middle drag or Alt + left drag     | Pan horizontally                  |
+| Drag minimap viewport or scrollbar | Pan synchronized views            |
 
 Spectrogram, Spectrum Analyzer, and Meter are independent transport toggles. See
 [interaction model](docs/interaction-model.md) for precedence, lifecycle, and

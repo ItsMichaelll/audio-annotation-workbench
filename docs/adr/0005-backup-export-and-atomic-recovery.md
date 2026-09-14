@@ -51,8 +51,7 @@ task order, region order, and assignment order make repeated exports comparable.
   collections self-contained.
 - Restore does not merge projects or remap IDs; collision behavior is explicit
   and predictable.
-- Existing stores and indexes are sufficient, so the IndexedDB version remains
-  4.
+- Existing stores and indexes are sufficient, so the IndexedDB version remains 4.
 - JSONL preserves nested annotation fidelity while CSV favors analysis-tool
   interoperability.
 - Future incompatible envelope or export changes require new format versions;
