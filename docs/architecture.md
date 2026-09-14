@@ -1,196 +1,213 @@
-# Frontend architecture
+# Architecture
 
-Audio Annotation Workbench is a browser-only React application with three
-product areas: durable project management, a persisted annotation workspace,
-and the standalone audio editor. No project or audio data is sent over a network.
+Audio Annotation Workbench is a browser-only React and TypeScript application.
+It has three runtime areas: project management, persisted project-task
+annotation, and a session-only standalone editor. The development server binds
+to `127.0.0.1:5173` by default.
 
-## Application boundaries
+## Routes
 
-- `domain/` contains versioned project, taxonomy, instructions, task, and media
-  reference types plus framework-independent calculations and validation.
-- `storage/` owns the IndexedDB schema, upgrades, repository, transactions, and
-  browser storage durability checks.
-- `features/projects/` owns project queries, actions, and routed screens.
-- `features/annotation/` owns task loading, autosave, validation, queue
-  navigation, and the taxonomy-driven inspector.
-- `features/waveform/` owns WaveSurfer lifecycle, official plugins, pointer
-  gestures, waveform/spectrogram viewport synchronization, and teardown.
-- `features/analysis/` owns the guarded shared Web Audio graph and its single
-  media-element source.
-- `components/Modal.tsx` owns portal rendering, focus containment, background
-  inertness, and dismissal; `ConfirmationDialog.tsx` serializes asynchronous
-  application confirmation requests above routed content.
-- `features/spectrum/` and `features/loudness/` own observational analysis.
-- `App.tsx` remains the standalone editor shell. `RouterApplication.tsx` owns
-  URL routing and mounts it only at `/editor`.
+`RouterApplication.tsx` owns the route tree and lazy-loads each screen.
 
-Persistent domain state, URL state, form state, and ephemeral waveform state do
-not share one global store. Focused hooks load repository data and guard against
-stale async updates. Forms prepare and validate files before repository writes.
+| Route                                         | Responsibility                                                          |
+| --------------------------------------------- | ----------------------------------------------------------------------- |
+| `/` and `/projects`                           | Active or archived project dashboard                                    |
+| `/projects/new`                               | Project creation                                                        |
+| `/projects/restore`                           | Backup validation, preview, and restoration                             |
+| `/projects/:projectId`                        | Project tasks, reference material, data, and settings                   |
+| `/projects/:projectId/edit`                   | Project metadata, taxonomy replacement, instructions, and archive state |
+| `/projects/:projectId/taxonomy`               | Raw YAML and structured taxonomy editor                                 |
+| `/projects/:projectId/instructions`           | Markdown instructions editor and preview                                |
+| `/projects/:projectId/tasks/:taskId/annotate` | Persisted task annotation workspace                                     |
+| `/editor`                                     | Session-only standalone editor                                          |
+| `/404`                                        | Missing-route state                                                     |
 
-## Routing
+Unknown paths redirect to `/404`. Missing project and task records render
+separate recovery states. Top-level route chunks use a null Suspense fallback;
+individual screens and the audio workspace own their data and media loading
+states. A static production host would need to return `index.html` for the
+application routes, although 0.1.0 is distributed for local use through a cloned
+repository and the Vite development server.
 
-React Router provides `/`, `/projects`, `/projects/new`, project detail and edit
-paths, dedicated taxonomy and instructions editor paths, `/projects/restore`,
-`/projects/:projectId/tasks/:taskId/annotate`, and `/editor`. Navigation uses links and route parameters rather than
-component-local page state. Unknown routes and missing IndexedDB projects render
-distinct states. Browser back and forward navigation follows URL history.
+## Source layout
 
-Development routing uses Vite's application fallback. A production static host
-must route application paths to `index.html`.
+- `web/src/domain/` contains framework-independent models, validation,
+  normalization, task planning, annotation history, backup parsing, and export
+  serialization.
+- `web/src/storage/` owns IndexedDB opening, migrations, indexes, queries, and
+  multi-store transactions.
+- `web/src/features/projects/` owns routed project screens, task management,
+  taxonomy and instructions editing, source-folder workflows, backup, and
+  export UI.
+- `web/src/features/annotation/` loads project-task state, resolves media,
+  controls annotation history and autosave, validates submissions, and navigates
+  the task queue.
+- `web/src/features/waveform/` owns the WaveSurfer instance, official plugins,
+  generated regions and markers, gesture precedence, synchronized views, and
+  teardown.
+- `web/src/features/analysis/` owns the guarded shared Web Audio graph.
+- `web/src/features/spectrum/` and `web/src/features/loudness/` own observational
+  analysis UI and processing.
+- `web/src/components/` contains shared application, modal, editor, transport,
+  annotation-list, selection, and form controls.
+- `web/src/styles/` contains global tokens, reset, base, and utility styles;
+  component and feature styles use colocated CSS Modules.
+- `web/src/App.tsx` is the standalone editor. `web/src/RouterApplication.tsx`
+  mounts all routed screens.
 
-## IndexedDB ownership
+Persistent records, URL state, form drafts, selected browser files, and
+WaveSurfer rendering objects remain separate. React components use the typed
+repository instead of opening IndexedDB transactions directly.
 
-Database `audio-annotation-workbench`, version 6, contains `projects`,
-`taxonomyVersions`, `instructions`, `tasks`, `annotations`, and `sourceFolders`. Database access is confined to
-`storage/`; React components do not open stores or transactions.
+## IndexedDB schema and migrations
 
-The database upgrade callback applies migrations in ascending version order.
-Version 1 creates:
+The database is named `audio-annotation-workbench` and is currently version 6.
 
-- projects by stable UUID, with status and update-time indexes
-- immutable taxonomy versions by UUID, project, and project-local version
-- one optional instruction record per project
-- task records by UUID, project, project/status, project/update time, and
-  project-relative source path (added by the forward version-2 migration)
-- annotation documents by UUID, project, and unique task (added by the forward
-  version-3 migration without rewriting version-2 records)
-- version 6 adds project-scoped directory handles without rewriting old tasks
-- version 5 reapplies annotation normalization for the corrected cardinality
-- version 4 normalizes legacy multi-label region annotations to the current
-  single-region-label cardinality without changing clip labels
+| Store              | Key and indexes                                                                          | Responsibility                                                             |
+| ------------------ | ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `projects`         | Project ID; status and update-time indexes                                               | Project metadata and active taxonomy/instructions/source-folder references |
+| `taxonomyVersions` | Taxonomy ID; project and project/version indexes                                         | Immutable raw and parsed taxonomy history                                  |
+| `instructions`     | Instructions ID; unique project index                                                    | Optional raw Markdown instructions                                         |
+| `tasks`            | Task ID; project, project/status, project/update-time, and project/relative-path indexes | Queue identity, status, source reference, and metadata                     |
+| `annotations`      | Annotation ID; project and unique task indexes                                           | One versioned draft or submission per task                                 |
+| `sourceFolders`    | Composite project/source ID; project index                                               | Structured-cloneable read-only directory handles                           |
 
-All record models carry centralized schema versions independently from the
-IndexedDB schema version. Database versions describe physical storage changes;
-record schema versions describe serialized domain shapes.
+Migrations run in the database upgrade transaction:
 
-Operations that must preserve cross-store integrity are transactional:
+1. Version 1 creates projects, taxonomy versions, instructions, and tasks.
+2. Version 2 adds the project-relative-path task index.
+3. Version 3 creates annotations with a unique task index.
+4. Version 4 normalizes legacy region-label cardinality to one region label.
+5. Version 5 reapplies the corrected normalization to existing annotations.
+6. Version 6 creates the source-folder handle store.
 
-- project + initial taxonomy + optional instructions creation
-- taxonomy version creation + active project reference update
-- instruction replacement/removal + project reference update
-- project + associated taxonomy, instructions, and task deletion
-- first draft + task transition to `draft`
-- submission revision + task transition to `submitted`
-- task deletion + associated annotation deletion
-- project backup replacement and restoration across every store
+Database version numbers describe stores and indexes. Entity schema versions
+describe serialized record shapes, while taxonomy, backup, and export versions
+describe their own contracts.
 
-Creation aborts without partial records. Deletion uses project-scoped indexes and
-never performs filesystem operations.
+Operations spanning related records use explicit transactions. These include
+project creation, taxonomy activation, instruction replacement or removal,
+project and task deletion, first-draft status changes, submission, source-folder
+metadata and handle changes, folder relinking, and backup replacement. Failed
+transactions do not report success or retain partial writes.
 
-## Portability and recovery
+## Domain and taxonomy ownership
 
-`domain/projectBackup.ts` owns backup format version 2 (also reading version 1) independently from the
-IndexedDB and entity schema versions. It strictly parses untrusted JSON,
-validates supported entity versions and the complete project relationship graph,
-and deterministically orders records. Temporary task media becomes unresolved; folder references retain source IDs
-and full relative paths with unknown permission. Portable folder names live in
-project metadata; native handles live only in the separate sourceFolders store.
-Browser file handles, permissions, absolute paths, audio, and
-derived analysis state are excluded.
+Projects, tasks, annotations, and taxonomy versions use stable UUIDs. Display
+names never act as database keys. A task has a stable import position and one
+primary media reference independent of its lifecycle status.
 
-`domain/annotationExport.ts` generates versioned JSONL task records and flattened
-CSV assignment rows without React or IndexedDB dependencies. JSONL carries the
-pinned taxonomy label interpretation. CSV represents region and clip assignments
-and uses a task-only row for all-task exports with no assignments.
+Taxonomy uploads preserve the filename, source format, raw text, parsed object,
+display metadata, semantic content hash, local version, and timestamp. Replacing
+a taxonomy creates or reactivates an immutable version and updates the project's
+active reference in the same transaction. The first annotation draft pins its
+taxonomy version permanently.
 
-The repository reads complete project snapshots and restores a validated backup
-in one transaction over all six stores. Existing project IDs are never
-overwritten by default. Explicit replacement deletes only the colliding
-project's scoped records and inserts the backup in the same transaction, so an
-error preserves the prior project and every unrelated project.
+The raw taxonomy editor owns source fidelity. Structured editing uses the same
+parser and annotation schema, then serializes supported fields as canonical
+YAML after explicit confirmation where source details could be lost.
 
-## Project and taxonomy model
+Annotation documents are independent from WaveSurfer region objects. They own
+regions, timestamp markers, clip assignments, notes, revision, submission state,
+and the taxonomy pin. Normalization and submission validation live in the domain
+layer. Multi-region selection is transient UI state over the document; bulk
+changes still create ordinary annotation revisions and autosave through the same
+path.
 
-A project UUID is independent from its mutable display name. Projects record
-active/archive state, active taxonomy version, optional instructions reference,
-and ISO 8601 created/updated timestamps.
+## Media lifecycle
 
-Taxonomy versions preserve the source filename, JSON/YAML format, original text,
-parsed object, extracted `name` and `schema_version` metadata, SHA-256 content
-hash, local version number, and created timestamp. Updating a taxonomy appends a
-record and changes the active reference; it never rewrites history. A matching
-project semantic-content hash suppresses duplicate versions even when YAML
-formatting or mapping-key order changes. Repository comparison remains
-compatible with versions created before semantic hashing.
+Project creation and manifest import do not request filesystem access or read
+audio bytes.
 
-Annotation taxonomy version one defines stable labels, region/clip scopes,
-optional presentation metadata and shortcuts, and optional severity/confidence
-scales. Each annotation pins the immutable taxonomy version used by its first
-draft, so active-taxonomy replacement does not reinterpret existing work.
+Temporary file and directory selection follows this lifecycle:
 
-Framework-independent taxonomy editing utilities parse raw YAML through the
-upload parser, validate through the annotation schema, and serialize structured
-schema data to canonical YAML. The raw editor owns source fidelity. Structured
-state synchronizes only from valid YAML; its first mutation requires explicit
-confirmation because canonical serialization removes comments, formatting, and
-unrecognized fields. Editor saves return to the same repository transaction used
-by taxonomy uploads.
+1. The browser returns `File` objects after a user gesture.
+2. Direct imports validate extension, size, and leading file signature.
+3. A session registry maps an opaque locator to each selected file; only the
+   locator and portable identity are stored with the task.
+4. The annotation route resolves the `File`, creates a short-lived object URL,
+   and revokes it when the task changes or the route unmounts.
+5. After a restart the session registry is empty, so the user relinks the task.
 
-## Markdown security
+Persistent folder access follows a separate path. A supported browser returns a
+read-only directory handle after **Connect folder**. The handle is stored in the
+`sourceFolders` store; the project record stores only its stable ID and display
+name. Folder tasks store that ID and a normalized relative path. Permission is
+queried without prompting during load and requested only after a user action.
+Folder scanning is recursive and extension-based. Resolution traverses the
+saved root to obtain the current file.
 
-Instruction uploads accept `.md` files up to 512 KB and preserve raw Markdown.
-`react-markdown` creates React elements without enabling raw HTML parsing. The
-renderer uses an explicit element allowlist, excludes images and executable
-embeds, filters link protocols, and adds `noopener noreferrer` to links opened in
-new tabs. A rendering error boundary shows an explicit failure without changing
-the stored source.
+Per-task relinking validates the selected file and its stored identity, then
+uses the session registry. Replacing or forgetting a folder never deletes audio
+or annotations. Project and task deletion also performs no filesystem writes.
 
-The instructions editor applies the same filename and UTF-8 byte-size validation
-as uploads, previews through this renderer, and uses repository replacement or
-removal transactions. Editor state and downloads stay in the browser.
+Audio bytes, decoded PCM, object URLs, waveform peaks, spectrograms, and analysis
+results are not written to IndexedDB or OPFS.
 
-## Task and media-source foundation
+## Waveform and audio analysis
 
-Task ingestion parses JSON/JSONL manifests and browser-selected audio file
-lists without reading audio bytes. Pure normalization and import planning detect
-unsafe paths, duplicates, conflicts, and unresolved sources before atomic task
-writes. Task media references preserve only a safe relative identity and, where
-available, browser file handles; fallback selections are session-only. Relinking
-requires a matching relative identity unless a replacement is explicitly allowed.
+The waveform feature creates one WaveSurfer instance with Timeline, Minimap,
+Regions, Zoom, Hover, and Spectrogram plugins. WaveSurfer regions and markers are
+a generated rendering layer synchronized from serializable state. Completed
+edits enter snapshot history; live drag frames do not create separate entries.
 
-Media references describe folder, file-handle, external, and unresolved states without
-storing audio bytes. The adapter contract separates capability detection,
-permission query/request, and file resolution. The folder adapter resolves full paths from saved read-only roots.
-Future companion-service or desktop adapters can implement this contract without
-changing tasks or projects.
+One guarded `MediaElementAudioSourceNode` supplies the audible route to the
+audio destination. Spectrum and loudness branches are zero-gain analysis taps.
+The live loudness worklet and deterministic offline File and Selection rendering
+observe the audio without changing playback.
 
-Project creation does not request filesystem access. Audio is never copied to
-IndexedDB or OPFS.
+Pointer precedence is implemented in the waveform layer: amplitude scaling,
+selected-region nudging or horizontal panning, drag panning, pointer-centered
+zoom, and region gestures are resolved before WaveSurfer receives the event.
+Keyboard commands are ignored for editable controls and dialogs. Marker
+navigation additionally requires waveform focus and returns boundary Tab events
+to normal browser focus movement.
 
-## Waveform and analysis ownership
+## Backup and export architecture
 
-The standalone editor and task workspace own selected `File` objects and
-revocable object URLs. WaveSurfer region instances remain a rendering layer;
-serializable annotation documents and snapshot history stay separate. Restored
-state synchronization is suppressed from history, while completed region edits
-and metadata changes share undo/redo and flow through normal draft autosave.
+`domain/projectBackup.ts` owns strict parsing, portable normalization, stable
+ordering, and serialization of backup version 2. The validator treats imported
+JSON as untrusted and checks every entity and relationship before storage sees
+it. The repository restores or replaces a project in one transaction across all
+six stores. Native handles and permissions are excluded.
 
-The waveform creates one WaveSurfer instance and uses official Timeline,
-Minimap, Regions, Zoom, Hover, and Spectrogram plugins. Pure synchronization
-modules coordinate scrolling and spectrogram geometry. The existing keyboard and
-pointer precedence is documented in `interaction-model.md`.
+`domain/annotationExport.ts` builds schema version 2 JSONL task records and CSV
+rows without React or IndexedDB dependencies. JSONL retains the complete
+annotation and its pinned taxonomy interpretation. CSV flattens region
+assignments, markers, clip assignments, and empty all-task records into explicit
+row scopes. See [Data formats](data-formats.md) for the complete contract.
 
-One guarded `MediaElementAudioSourceNode` supplies a direct audible route and
-zero-gain spectrum/loudness taps. Loudness worklet processing and deterministic
-offline file/selection rendering remain observational and never modify playback.
+Downloads are generated in memory and handed to a temporary browser object URL.
+The application has no upload endpoint.
 
-## Browser limitations
+## Browser security and privacy
 
-- IndexedDB is browser-profile storage and can be unavailable, blocked, cleared,
-  or evicted.
-- Durable storage requests are browser decisions, not backup guarantees.
-- File System Access API capability and persistent handle permissions vary by
-  browser.
-- Codec, Web Audio, worker, and offline rendering support remain browser and
-  operating-system dependent.
-- Large decoded audio and offline analysis can consume substantial memory even
-  though source audio is not persisted.
+- There is no backend, login, telemetry, cloud provider, or application runtime
+  upload.
+- IndexedDB and directory handles belong to the exact browser profile and
+  origin. Browser storage can be blocked, cleared, or evicted.
+- Durable storage is a browser decision and remains independent from project
+  backup.
+- Files and folders are opened only after user gestures. Folder access is
+  read-only.
+- Markdown raw HTML, images, scripts, iframes, and embedded content are excluded.
+  Allowed links can contact an external site only when the user follows them.
+- Codec decoding, Web Audio, offline rendering, and File System Access behavior
+  remain browser and operating-system boundaries.
 
-## Validation
+## Validation and development conventions
 
-`pnpm validate` runs Prettier checking, ESLint, strict TypeScript, Vitest, and the
-Vite production build. Tests cover the IndexedDB schema and transactions, project
-lifecycle, taxonomy parsing/hashing/versioning, instruction security and
-lifecycle, progress derivation, routes, backup validation and atomic recovery,
-JSONL/CSV exports, and the existing editor domain and analysis behavior.
+The root `pnpm validate` command runs, in order:
+
+1. Prettier over `web/`, root Markdown, and `docs/**/*.md`
+2. ESLint
+3. Stylelint over `web/src/**/*.css`
+4. TypeScript project checking
+5. Vitest
+6. A TypeScript and Vite production build
+
+GitHub Actions runs the same gate after `pnpm install --frozen-lockfile` with
+Node 22 and pnpm `10.33.0` on pull requests and relevant pushes. Domain and
+storage behavior should remain testable without browser UI. Storage tests use
+`fake-indexeddb`; audio tests use small synthetic fixtures rather than project
+recordings.

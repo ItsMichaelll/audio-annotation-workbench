@@ -17,4 +17,9 @@ Label Studio is a broad data-labeling platform whose application structure, term
 
 ## Consequences
 
-The workbench can shape its interaction model directly and remain a small standalone public project. Project persistence and routing were added in [ADR 0004](0004-project-persistence-and-routing.md). Import/export and collaboration boundaries remain separate later decisions.
+The workbench can shape its interaction model directly and remain a small
+standalone application. Project persistence and routing were later added in
+[ADR 0004](0004-project-persistence-and-routing.md), and portable backup and
+annotation export were added in
+[ADR 0005](0005-backup-export-and-atomic-recovery.md). Collaboration remains
+outside the application boundary.

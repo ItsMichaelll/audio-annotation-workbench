@@ -56,3 +56,14 @@ task order, region order, and assignment order make repeated exports comparable.
   interoperability.
 - Future incompatible envelope or export changes require new format versions;
   entity evolution remains independently versioned.
+
+## Amendment
+
+Backup format version 1 and annotation export schema version 1 were current
+when this decision was written. Backup format version 2 now preserves portable
+source-folder identities while continuing to exclude native handles and
+permissions; version 1 backups remain readable. Annotation export schema version
+2 adds timestamp markers to the annotation document and emits explicit `marker`
+rows in CSV. IndexedDB version 6 contains six stores, including the separate
+`sourceFolders` handle store. The validation, deterministic serialization, and
+atomic replacement decisions remain unchanged.

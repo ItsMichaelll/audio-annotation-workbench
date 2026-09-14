@@ -68,6 +68,8 @@ targets, and protect links opened in a new tab.
 ## Amendment
 
 Database version 3 was current when this decision was written. Version 4 later
-normalized legacy region-label cardinality without adding stores or indexes.
-ADR 0005 adds portable export and atomic restoration while preserving this
-document's original persistence context.
+normalized legacy region-label cardinality, and version 5 reapplied the
+corrected normalization. Version 6 added the `sourceFolders` store for
+project-scoped directory handles. [ADR 0005](0005-backup-export-and-atomic-recovery.md)
+adds portable export and atomic restoration while preserving this document's
+original persistence context.
