@@ -15,7 +15,7 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-The default URL is <http://127.0.0.1:5173>. The server binds to loopback and
+The default URL is [http://127.0.0.1:5173](http://127.0.0.1:5173). The server binds to loopback and
 fails when port 5173 is already occupied. Intentional LAN testing can use
 `pnpm dev -- --host 0.0.0.0`; do this only on a trusted network.
 
@@ -55,34 +55,34 @@ started deliberately with:
 pnpm dev -- --host localhost
 ```
 
-Open <http://localhost:5173>, export every required backup, then return to the
+Open [http://localhost:5173](http://localhost:5173), export every required backup, then return to the
 default origin and restore those files. Do not clear the older origin's site data
 until the restored projects have been checked.
 
 ## Release checklist
 
-1. Confirm the release branch and review `git status`; preserve any independent
-   user changes.
-2. Confirm root and web package versions, `private: true`, the declared pnpm
-   version, and the lockfile.
-3. Review the README, user guide, data formats, architecture, license, and
-   changelog against the current application.
-4. From a clean checkout, run `pnpm install --frozen-lockfile` and
-   `pnpm validate`.
-5. Confirm GitHub Actions passes on the release pull request.
-6. Start `pnpm dev`; verify `http://127.0.0.1:5173` and strict failure when the
-   port is occupied.
-7. In the supported Chrome environment, smoke-test project creation, taxonomy
-   and instructions editing, every import path, source-folder reconnection,
-   relinking, multi-region and marker behavior, autosave, submission, task
-   reopening, backup/restore, both export formats, and the standalone editor.
-8. Review known limitations and ensure no private dataset content, source audio,
-   build output, browser handles, or absolute local paths are tracked.
-9. Merge the approved release changes into `main` according to repository policy.
-10. Create the annotated `v0.1.0` tag from the reviewed merge commit and push the
-    tag.
-11. Draft the GitHub release from the 0.1.0 changelog entry, review it, and
-    publish only after approval.
+- [x] Confirm the release branch and review `git status`; preserve any independent
+      user changes.
+- [x] Confirm root and web package versions, `private: true`, the declared pnpm
+      version, and the lockfile.
+- [x] Review the README, user guide, data formats, architecture, license, and
+      changelog against the current application.
+- [x] From a clean checkout, run `pnpm install --frozen-lockfile` and
+      `pnpm validate`.
+- [ ] Confirm GitHub Actions passes on the release pull request.
+- [x] Start `pnpm dev`; verify `http://127.0.0.1:5173` and strict failure when the
+      port is occupied.
+- [x] In the supported Chrome environment, smoke-test project creation, taxonomy
+      and instructions editing, every import path, source-folder reconnection,
+      relinking, multi-region and marker behavior, autosave, submission, task
+      reopening, backup/restore, both export formats, and the standalone editor.
+- [x] Review known limitations and ensure no private dataset content, source audio,
+      build output, browser handles, or absolute local paths are tracked.
+- [ ] Merge the approved release changes into `main` according to repository policy.
+- [ ] Create the annotated `v0.1.0` tag from the reviewed merge commit and push the
+      tag.
+- [ ] Draft the GitHub release from the 0.1.0 changelog entry, review it, and
+      publish only after approval.
 
 The tag and release should be created only after the commit hash, validation,
 and manual test result are recorded. There is no npm publication step.
