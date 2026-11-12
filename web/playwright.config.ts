@@ -12,7 +12,7 @@ export default defineConfig({
     viewport: { width: 1440, height: 900 },
     launchOptions: {
       channel: 'chrome',
-      args: ['--mute-audio', '--disable-gpu'],
+      args: ['--mute-audio', '--disable-gpu', '--disable-dev-shm-usage'],
     },
   },
   webServer: {

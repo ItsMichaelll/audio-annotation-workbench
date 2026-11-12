@@ -104,9 +104,10 @@ labels should connect its annotation adapter to the existing project workflow.
 ## Current boundaries
 
 Speech-reference normalization controls and reference/clipping overlays are
-available in standalone and project-task editors. The paired playback adapter
-exposes per-track gain, but its normalization UI and overlays remain pending.
-The complete requested workbench milestone is therefore still in progress.
+available in standalone, project-task, and paired editors. In paired review,
+the active analysis track selects the listening-reference controls. Each track
+retains its own fixed gain and source-bound reference. Reference and clipping
+ranges map into the shared mix timeline, while analysis taps precede the gain.
 
 The paired adapter currently decodes both complete sources and constructs
 temporary aligned waveform representations. Very long pairs require meaningful

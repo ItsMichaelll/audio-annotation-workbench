@@ -4,6 +4,11 @@ File, active Range, Selection, and speech-reference loudness analysis render the
 requested decoded source samples in a separate OfflineAudioContext. A 120 ms
 silent tail flushes the true-peak FIR interpolation state.
 
+A looped 128-frame zero buffer keeps the offline worklet's source-channel layout
+active through that flush. Browsers may otherwise remove the ended source's input
+channels, which prevents the FIR and final snapshot timestamp from advancing.
+The zero buffer adds no signal energy and is disconnected with the offline job.
+
 Integrated loudness, LRA, Momentary maximum, and Short-term maximum come from the
 last complete processing quantum wholly within the requested source scope. The
 silent tail contributes exclusively to the true-peak maximum. Every scope starts

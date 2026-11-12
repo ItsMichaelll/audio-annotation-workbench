@@ -44,6 +44,18 @@ export async function analyzeAudioBuffer(
   const loudness = new LoudnessNode(context, {
     interval: 1 / buffer.sampleRate,
   })
+  // An ended source can produce an empty worklet input rather than zero samples.
+  // Keep the channel layout active so the FIR processes its silent flush tail.
+  const silentInput = new AudioBufferSourceNode(context, {
+    buffer: new AudioBuffer({
+      numberOfChannels: buffer.numberOfChannels,
+      length: LOUDNESS_RENDER_QUANTUM_FRAMES,
+      sampleRate: buffer.sampleRate,
+    }),
+    loop: true,
+  })
+  silentInput.connect(loudness)
+  silentInput.start(0)
   let scoped: LoudnessSnapshot | null = null
   let maximumTruePeak = Number.NEGATIVE_INFINITY
   let finalMessage: (() => void) | undefined
@@ -114,6 +126,7 @@ export async function analyzeAudioBuffer(
     clearTimeout(messageTimeout)
     loudness.port.close()
     source.disconnect()
+    silentInput.disconnect()
     loudness.disconnect()
   }
   if (!scoped)

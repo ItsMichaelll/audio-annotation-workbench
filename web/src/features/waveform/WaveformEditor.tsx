@@ -204,6 +204,8 @@ export interface WaveformEditorHandle {
 }
 
 interface WaveformEditorProps {
+  externalReferenceRanges?: readonly ListeningRange[]
+  externalPlaybackClippingRanges?: readonly ListeningRange[]
   listeningContainer?: HTMLElement | null
   audioUrl: string
   audioIdentity?: string | undefined
@@ -313,6 +315,8 @@ export const WaveformEditor = forwardRef<
 >(function WaveformEditor(
   {
     audioUrl,
+    externalReferenceRanges,
+    externalPlaybackClippingRanges,
     listeningContainer,
     audioIdentity,
     externalDecodedAudio,
@@ -2359,8 +2363,8 @@ export const WaveformEditor = forwardRef<
           <TimelineOverlay
             wavesurfer={wavesurferRef.current}
             reviewRange={activeRange ?? null}
-            references={referenceRanges}
-            clipping={playbackClippingRanges}
+            references={externalReferenceRanges ?? referenceRanges}
+            clipping={externalPlaybackClippingRanges ?? playbackClippingRanges}
           />
           {inspectionRange && (
             <TimelineOverlay
@@ -2460,8 +2464,10 @@ export const WaveformEditor = forwardRef<
                 wavesurfer={wavesurferRef.current}
                 reviewRange={activeRange ?? null}
                 selection={selectedRegion}
-                references={referenceRanges}
-                clipping={playbackClippingRanges}
+                references={externalReferenceRanges ?? referenceRanges}
+                clipping={
+                  externalPlaybackClippingRanges ?? playbackClippingRanges
+                }
               />
               <div
                 className={styles.spectrogramViewport}

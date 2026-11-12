@@ -36,6 +36,8 @@ import {
   type DialogueAudioSource,
 } from './usePairedPlayback'
 import styles from './DialogueReviewWorkbench.module.css'
+import { PlaybackListeningControls } from '../playback/PlaybackListeningControls'
+import type { ListeningRange } from '../../domain/listeningNormalization'
 import { DIALOGUE_REVIEW_SHORTCUTS } from './dialogueShortcuts'
 
 const ignore = () => {}
@@ -135,6 +137,35 @@ function DialogueReviewSession({
   >({})
   const handles = useRef<Record<string, WaveformEditorHandle | null>>({})
   const playback = usePairedPlayback(input, sources, meterEnabled)
+  const [referenceRanges, setReferenceRanges] = useState<
+    Record<string, ListeningRange[]>
+  >({})
+  const [clippingRanges, setClippingRanges] = useState<
+    Record<string, ListeningRange[]>
+  >({})
+  const listeningCallbacks = useMemo(
+    () =>
+      new Map(
+        input.tracks.map((track) => [
+          track.id,
+          {
+            gain: (decibels: number) =>
+              playback.setTrackGain(track.id, decibels),
+            references: (ranges: ListeningRange[]) =>
+              setReferenceRanges((previous) => ({
+                ...previous,
+                [track.id]: ranges,
+              })),
+            clipping: (ranges: ListeningRange[]) =>
+              setClippingRanges((previous) => ({
+                ...previous,
+                [track.id]: ranges,
+              })),
+          },
+        ]),
+      ),
+    [input.tracks, playback.setTrackGain],
+  )
   const { buffers: sourceBuffers, setTracks } = playback
   const proposals = useMemo(
     () => orderedTimingProposals(input.proposals),
@@ -560,6 +591,28 @@ function DialogueReviewSession({
                       }}
                       audioUrl={waveforms[track.id] ?? ''}
                       audioIdentity={track.sourceId}
+                      externalReferenceRanges={(
+                        referenceRanges[track.id] ?? []
+                      ).map((range) => ({
+                        ...range,
+                        start:
+                          range.start +
+                          (offsets[input.tracks.indexOf(track)] ?? 0),
+                        end:
+                          range.end +
+                          (offsets[input.tracks.indexOf(track)] ?? 0),
+                      }))}
+                      externalPlaybackClippingRanges={(
+                        clippingRanges[track.id] ?? []
+                      ).map((range) => ({
+                        ...range,
+                        start:
+                          range.start +
+                          (offsets[input.tracks.indexOf(track)] ?? 0),
+                        end:
+                          range.end +
+                          (offsets[input.tracks.indexOf(track)] ?? 0),
+                      }))}
                       regions={regions[track.id] ?? []}
                       markers={
                         proposal
@@ -872,6 +925,30 @@ function DialogueReviewSession({
             Proposed
           </button>
         </div>
+        {input.tracks.map((track, index) => {
+          const callbacks = listeningCallbacks.get(track.id)
+          const buffer = sourceBuffers?.[index]
+          if (!callbacks || !buffer) return null
+          const offset = offsets[index] ?? 0
+          return (
+            <div key={track.sourceId} hidden={activeTrackId !== track.id}>
+              <PlaybackListeningControls
+                audioBuffer={buffer}
+                mediaElement={null}
+                sourceId={track.sourceId}
+                audioIdentity={track.sourceId}
+                hideSpeed
+                currentSourceTime={Math.max(0, playback.state.time - offset)}
+                setPlaybackGain={callbacks.gain}
+                onReferenceRangesChange={callbacks.references}
+                onPlaybackClippingChange={callbacks.clipping}
+                onAudition={(start, end) =>
+                  playRegion(start + offset, end + offset)
+                }
+              />
+            </div>
+          )
+        })}
       </nav>
     </div>
   )

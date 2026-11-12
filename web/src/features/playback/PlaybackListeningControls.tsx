@@ -14,6 +14,8 @@ import {
 import styles from './PlaybackListeningControls.module.css'
 
 interface Props {
+  currentSourceTime?: number
+  hideSpeed?: boolean
   container?: HTMLElement | null
   audioBuffer: AudioBuffer | null
   mediaElement: HTMLMediaElement | null
@@ -244,9 +246,9 @@ function ListeningControls(props: Props) {
 
   function addSelection() {
     const range = selectedRegion ?? {
-      start: mediaElement?.currentTime ?? 0,
+      start: props.currentSourceTime ?? mediaElement?.currentTime ?? 0,
       end: Math.min(
-        (mediaElement?.currentTime ?? 0) + 1,
+        (props.currentSourceTime ?? mediaElement?.currentTime ?? 0) + 1,
         audioBuffer?.duration ?? 0,
       ),
     }
@@ -269,24 +271,26 @@ function ListeningControls(props: Props) {
       }}
     >
       <div className={styles.toolbar}>
-        <label>
-          Speed{' '}
-          <select
-            aria-label="Playback speed"
-            value={speed}
-            onChange={(event) => {
-              const value = Number(event.target.value)
-              setMediaPlaybackRate(mediaElement, value)
-              setSpeed(value)
-            }}
-          >
-            {[0.5, 0.75, 1, 1.25, 1.5, 1.75, 2].map((value) => (
-              <option key={value} value={value}>
-                {value}×
-              </option>
-            ))}
-          </select>
-        </label>
+        {!props.hideSpeed && (
+          <label>
+            Speed{' '}
+            <select
+              aria-label="Playback speed"
+              value={speed}
+              onChange={(event) => {
+                const value = Number(event.target.value)
+                setMediaPlaybackRate(mediaElement, value)
+                setSpeed(value)
+              }}
+            >
+              {[0.5, 0.75, 1, 1.25, 1.5, 1.75, 2].map((value) => (
+                <option key={value} value={value}>
+                  {value}×
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <button
           type="button"
           disabled={!audioBuffer || busy}
