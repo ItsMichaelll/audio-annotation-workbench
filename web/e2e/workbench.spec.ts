@@ -83,3 +83,51 @@ for (const width of [1440, 1048, 640]) {
     expect(errors).toEqual([])
   })
 }
+
+test('project inspector keeps its tab across selection and focus changes', async ({
+  page,
+}) => {
+  await page.goto('/projects/new')
+  await page.getByLabel('Project name').fill('Synthetic review')
+  await page.locator('input[type="file"][accept*=".yaml"]').setInputFiles({
+    name: 'synthetic-taxonomy.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(
+      JSON.stringify({
+        schemaVersion: 1,
+        labels: [{ id: 'sample', name: 'Sample', shortcut: '1' }],
+      }),
+    ),
+  })
+  await page
+    .getByLabel('Audio files to import')
+    .setInputFiles({
+      name: 'synthetic.wav',
+      mimeType: 'audio/wav',
+      buffer: sineWav(),
+    })
+  await page.getByRole('button', { name: 'Confirm import' }).click()
+  await page
+    .getByRole('button', { name: 'Create project', exact: true })
+    .click()
+  await page.getByRole('link', { name: 'Start Labeling' }).click()
+  await expect(
+    page.getByRole('button', { name: 'Play', exact: true }),
+  ).toBeEnabled()
+  await page.getByRole('tab', { name: 'Clip & info' }).click()
+  await page.getByRole('button', { name: 'Create region at playhead' }).click()
+  await expect(page.getByRole('tab', { name: 'Clip & info' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  )
+  await page
+    .getByRole('button', {
+      name: 'Normal editor. Switch to Waveform and annotations',
+    })
+    .click()
+  await expect(page.getByRole('tab', { name: 'Clip & info' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  )
+  await page.screenshot({ path: 'test-results/project-focused-inspector.png' })
+})
