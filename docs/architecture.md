@@ -146,6 +146,19 @@ results are not written to IndexedDB or OPFS.
 
 ## Waveform and audio analysis
 
+The sticky waveform toolbar owns display zoom, fit, amplitude reset, analysis
+visibility, and focus controls in both editor routes. The bottom transport owns
+playback, file boundaries, timecode, and selection looping. Shared focus state
+lives in `components/useEditorFocus.ts`, with the mode sequence in
+`domain/editorFocus.ts`. CSS changes the visible layout while keeping WaveSurfer,
+analysis, annotation history, and the inspector mounted. The project taxonomy
+retains precedence when it assigns M to a label.
+
+Headless acceptance tests under `web/e2e/` run against the production Vite preview
+with generated in-memory WAV audio. Run `pnpm --dir web test:e2e` after building.
+Tests launch a separate muted headless Chrome process and never connect to a
+desktop browser session. Screenshots and test results are ignored by Git.
+
 The waveform feature creates one WaveSurfer instance with Timeline, Minimap,
 Regions, Zoom, Hover, and Spectrogram plugins. WaveSurfer regions and markers are
 a generated rendering layer synchronized from serializable state. Completed

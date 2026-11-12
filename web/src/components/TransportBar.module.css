@@ -4,7 +4,7 @@
   top: 0;
   display: flex;
   flex-wrap: wrap;
-  min-height: 44px;
+  min-height: 56px;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
@@ -37,8 +37,34 @@
 
 .views {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 4px;
+}
+
+.viewMenu {
+  position: relative;
+}
+
+.viewMenu summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.viewMenu label {
+  position: absolute;
+  z-index: 20;
+  top: 100%;
+  right: 0;
+  display: flex;
+  width: 180px;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border-default);
+  border-radius: 4px;
+  background: var(--surface-panel);
+  font-size: 12px;
 }
 
 .viewLabel {
@@ -79,11 +105,11 @@
 .root {
   display: flex;
   flex-wrap: wrap;
-  min-height: 72px;
+  min-height: 56px;
   flex-shrink: 0;
   align-items: center;
   gap: 20px;
-  padding: 12px 24px;
+  padding: 8px 24px;
   border-top: 1px solid var(--border-subtle);
   background: var(--surface-panel);
 }

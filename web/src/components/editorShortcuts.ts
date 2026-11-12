@@ -17,6 +17,8 @@ export const EDITOR_SHORTCUT_GROUPS: readonly EditorShortcutGroup[] = [
   {
     title: 'View',
     items: [
+      ['M', 'Cycle focus (unless assigned by taxonomy)'],
+      ['H / ?', 'Keyboard help (H yields to taxonomy)'],
       ['Wheel', 'Zoom at pointer'],
       ['Alt + wheel', 'Scale waveform height'],
       ['Shift + wheel', 'Pan or nudge selected region'],

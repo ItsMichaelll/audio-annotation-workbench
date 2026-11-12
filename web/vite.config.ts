@@ -9,6 +9,7 @@ export default defineConfig({
     strictPort: true,
   },
   test: {
+    include: ['src/**/*.test.{ts,tsx}'],
     environment: 'node',
     coverage: {
       reporter: ['text', 'html'],

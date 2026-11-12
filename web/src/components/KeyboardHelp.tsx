@@ -1,4 +1,5 @@
-import { useId, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
+import { isDialogTarget, isEditableTarget } from '../domain/keyboard'
 import { Icon } from './Icon'
 import { Modal, ModalTitle } from './Modal'
 import { ShortcutPanel, type ShortcutPanelProps } from './ShortcutPanel'
@@ -7,6 +8,30 @@ import styles from './KeyboardHelp.module.css'
 export function KeyboardHelp({ labels }: ShortcutPanelProps) {
   const [open, setOpen] = useState(false)
   const titleId = useId()
+  const hReserved =
+    labels?.some((label) => label.shortcut?.toLowerCase() === 'h') ?? false
+  useEffect(() => {
+    const keydown = (event: KeyboardEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.altKey ||
+        isEditableTarget(event.target) ||
+        isDialogTarget(event.target)
+      )
+        return
+      if (
+        event.key === '?' ||
+        (!hReserved && event.key.toLowerCase() === 'h')
+      ) {
+        event.preventDefault()
+        setOpen(true)
+      }
+    }
+    window.addEventListener('keydown', keydown)
+    return () => window.removeEventListener('keydown', keydown)
+  }, [hReserved])
   return (
     <>
       <button

@@ -1,6 +1,12 @@
 import { Icon } from './Icon'
+import type { ReactNode } from 'react'
+import { WaveformZoomControls } from './WaveformZoomControls'
 import { formatTime } from '../domain/transport'
 import styles from './TransportBar.module.css'
+import {
+  EditorFocusControls,
+  type EditorFocusControlsProps,
+} from './EditorFocusControls'
 
 export interface TransportBarProps {
   isLoaded: boolean
@@ -30,24 +36,27 @@ export function WaveformToolbar(
   props: Pick<
     TransportBarProps,
     | 'isLoaded'
+    | 'verticalScale'
+    | 'onFit'
+    | 'onZoomIn'
+    | 'onZoomOut'
+    | 'onResetVerticalScale'
     | 'spectrogramEnabled'
     | 'spectrumEnabled'
     | 'meterEnabled'
     | 'onToggleSpectrogram'
     | 'onToggleSpectrum'
     | 'onToggleMeter'
-  > & { readOnly?: boolean },
+  > & {
+    readOnly?: boolean
+    focus?: EditorFocusControlsProps
+    inspectorControl?: ReactNode
+  },
 ) {
   return (
     <div className={styles.toolbar}>
       <div className={styles.surfaceTitle}>
-        <Icon name="waveform" />
-        <h2>Waveform</h2>
-        <span className={styles.gesture}>
-          {props.readOnly
-            ? 'Click to seek · Tab through markers'
-            : 'Drag for a region · T for a marker'}
-        </span>
+        <WaveformZoomControls {...props} />
       </div>
       <div
         className={styles.views}
@@ -85,6 +94,8 @@ export function WaveformToolbar(
           <Icon name="meter" />
           Meter
         </button>
+        {props.focus && <EditorFocusControls {...props.focus} />}
+        {props.inspectorControl}
       </div>
     </div>
   )
@@ -95,14 +106,9 @@ export function TransportBar({
   isPlaying,
   loopEnabled,
   hasSelection,
-  verticalScale,
   currentTime,
   duration,
   onPlayPause,
-  onFit,
-  onZoomIn,
-  onZoomOut,
-  onResetVerticalScale,
   onToggleLoop,
   onJumpToStart,
   onJumpToEnd,
@@ -156,47 +162,6 @@ export function TransportBar({
         >
           <Icon name="loop" />
           <span>Loop</span>
-        </button>
-      </div>
-      <div className={styles.zoom} role="group" aria-label="Waveform zoom">
-        <button
-          type="button"
-          className={styles.control}
-          onClick={onResetVerticalScale}
-          disabled={!isLoaded || Math.abs(verticalScale - 1) < 0.001}
-          title="Reset waveform amplitude to 1×"
-        >
-          <span className={styles.scale}>↕ {verticalScale.toFixed(2)}×</span>
-        </button>
-        <button
-          type="button"
-          className={styles.iconButton}
-          onClick={onZoomOut}
-          disabled={!isLoaded}
-          aria-label="Zoom out"
-          title="Zoom out (-)"
-        >
-          <Icon name="minus" />
-        </button>
-        <button
-          type="button"
-          className={styles.iconButton}
-          onClick={onZoomIn}
-          disabled={!isLoaded}
-          aria-label="Zoom in"
-          title="Zoom in (+)"
-        >
-          <Icon name="plus" />
-        </button>
-        <button
-          type="button"
-          className={styles.control}
-          onClick={onFit}
-          disabled={!isLoaded}
-          title="Fit complete file (F)"
-        >
-          <Icon name="fit" />
-          Fit
         </button>
       </div>
     </nav>
