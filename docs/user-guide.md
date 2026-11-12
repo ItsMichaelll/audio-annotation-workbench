@@ -1,5 +1,19 @@
 # User guide
 
+## Workspace focus
+
+Both editor routes offer a Focus button in the sticky waveform toolbar. It
+cycles through the normal editor, waveform with annotations, and waveform only.
+Press M for the same cycle unless the project taxonomy assigns that key. Focus
+changes preserve the mounted audio, selection, analysis tools, and unsaved edits.
+The View menu controls inspector visibility during focus. Return to Normal
+editor with the Focus control to restore the context header. Inspector tabs
+remain selected when a region selection changes.
+
+Zoom out, zoom in, Fit, and waveform amplitude reset live on the left side of
+that toolbar. Playback, boundary jumps, timecode, and Loop stay in the bottom
+transport in every focus mode.
+
 This guide covers the local project workflow and the standalone editor included
 in Audio Annotation Workbench 0.1.0.
 

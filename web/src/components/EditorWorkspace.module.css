@@ -10,12 +10,12 @@
 
 .documentBar {
   display: flex;
-  min-height: 76px;
+  min-height: 64px;
   flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 14px 24px;
+  padding: 10px 24px;
   border-bottom: 1px solid var(--border-default);
   background: var(--surface-panel);
 }
@@ -98,6 +98,37 @@
 
 .withInspector {
   grid-template-columns: minmax(0, 1fr) var(--annotation-inspector-width, 310px);
+}
+
+.shell[data-focus-mode='annotations'],
+.shell[data-focus-mode='waveform'] {
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+}
+
+.shell[data-focus-mode='annotations'] > header,
+.shell[data-focus-mode='waveform'] > header,
+.shell[data-focus-mode='annotations'] > .documentBar,
+.shell[data-focus-mode='waveform'] > .documentBar {
+  display: none;
+}
+
+:where(.shell[data-focus-mode='waveform'])
+  .editor
+  > :not(.editorSurface, :first-child) {
+  display: none;
+}
+
+:where(.shell[data-inspector-in-focus='false']:not([data-focus-mode='normal']))
+  .withInspector {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+:where(.shell[data-inspector-in-focus='false']:not([data-focus-mode='normal']))
+  .workspace
+  > aside {
+  display: none;
 }
 
 .editor {

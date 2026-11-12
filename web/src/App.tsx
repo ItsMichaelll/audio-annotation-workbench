@@ -44,6 +44,7 @@ import {
   type WaveformEditorHandle,
 } from './features/waveform/WaveformEditor'
 import styles from './components/EditorWorkspace.module.css'
+import { useEditorFocus } from './components/useEditorFocus'
 
 type LoadStatus = 'idle' | 'loading' | 'ready' | 'error'
 
@@ -54,6 +55,7 @@ const EMPTY_STATE_WAVE_HEIGHTS = [
 ]
 
 export function StandaloneEditor() {
+  const focus = useEditorFocus()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const waveformRef = useRef<WaveformEditorHandle>(null)
   const activeObjectUrlRef = useRef<string | null>(null)
@@ -469,6 +471,8 @@ export function StandaloneEditor() {
   return (
     <div
       className={styles.shell}
+      data-focus-mode={focus.mode}
+      data-inspector-in-focus={focus.inspectorInFocus}
       data-editor-theme="light"
       onKeyDownCapture={(event) => {
         onSelectionKeyDown(event)
@@ -531,7 +535,15 @@ export function StandaloneEditor() {
       )}
       <main className={styles.workspace} id="editor-workspace" tabIndex={-1}>
         <section className={styles.editor} aria-label="Audio editor">
-          <WaveformToolbar {...controls} />
+          <WaveformToolbar
+            {...controls}
+            focus={{
+              mode: focus.mode,
+              onCycle: focus.cycle,
+              inspectorInFocus: focus.inspectorInFocus,
+              onInspectorInFocusChange: focus.setInspectorInFocus,
+            }}
+          />
           {!audioUrl ? (
             <div className={styles.emptyState}>
               <div className={styles.emptyWave} aria-hidden="true">

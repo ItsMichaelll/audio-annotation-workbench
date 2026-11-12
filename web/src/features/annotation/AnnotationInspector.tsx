@@ -201,13 +201,6 @@ function LabelControls({
 export function AnnotationInspector(props: AnnotationInspectorProps) {
   const [tab, setTab] = useState<InspectorTab>('labels')
   const [query, setQuery] = useState('')
-  const [previousSelection, setPreviousSelection] = useState(
-    props.selectedRegionId,
-  )
-  if (previousSelection !== props.selectedRegionId) {
-    setPreviousSelection(props.selectedRegionId)
-    if (props.selectedRegionId) setTab('labels')
-  }
   const tabId = useId()
   const inspectorRef = useRef<HTMLElement>(null)
   const resizeRef = useRef<

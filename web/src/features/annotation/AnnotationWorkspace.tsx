@@ -93,6 +93,7 @@ import layoutStyles from '../projects/ProjectLayout.module.css'
 import { useProject } from '../projects/projectHooks'
 import { AnnotationInspector } from './AnnotationInspector'
 import styles from '../../components/EditorWorkspace.module.css'
+import { useEditorFocus } from '../../components/useEditorFocus'
 
 type SaveState = 'Unsaved' | 'Saving' | 'Saved' | 'Save failed'
 type AudioState =
@@ -233,6 +234,11 @@ function ActiveAnnotationWorkspace({
   taxonomy: AnnotationTaxonomy
 }) {
   const selectionTaskActive = useRef(true)
+  const focus = useEditorFocus(
+    taxonomy.labels.flatMap((label) =>
+      label.shortcut ? [label.shortcut] : [],
+    ),
+  )
   useEffect(() => {
     selectionTaskActive.current = true
     return () => {
@@ -1052,6 +1058,8 @@ function ActiveAnnotationWorkspace({
   return (
     <div
       className={styles.shell}
+      data-focus-mode={focus.mode}
+      data-inspector-in-focus={focus.inspectorInFocus}
       data-editor-theme="light"
       onKeyDownCapture={(event) => {
         onSelectionKeyDown(event)
@@ -1116,21 +1124,6 @@ function ActiveAnnotationWorkspace({
             <Icon name="back" />
             Project
           </button>
-          <button
-            ref={inspectorToggleRef}
-            className={styles.button}
-            type="button"
-            aria-label={
-              inspectorOpen
-                ? 'Hide annotation inspector'
-                : 'Show annotation inspector'
-            }
-            aria-expanded={inspectorOpen}
-            aria-controls="annotation-inspector"
-            onClick={() => setInspectorOpen((value) => !value)}
-          >
-            <Icon name="panel" />
-          </button>
           {!readOnly && (
             <button
               className={styles.button}
@@ -1194,7 +1187,34 @@ function ActiveAnnotationWorkspace({
         tabIndex={-1}
       >
         <section className={styles.editor} aria-label="Task audio editor">
-          <WaveformToolbar {...controls} readOnly={readOnly} />
+          <WaveformToolbar
+            {...controls}
+            inspectorControl={
+              <button
+                ref={inspectorToggleRef}
+                className={styles.button}
+                type="button"
+                aria-label={
+                  inspectorOpen
+                    ? 'Hide annotation inspector'
+                    : 'Show annotation inspector'
+                }
+                aria-expanded={inspectorOpen}
+                aria-controls="annotation-inspector"
+                onClick={() => setInspectorOpen((value) => !value)}
+              >
+                <Icon name="panel" />
+                Inspector
+              </button>
+            }
+            readOnly={readOnly}
+            focus={{
+              mode: focus.mode,
+              onCycle: focus.cycle,
+              inspectorInFocus: focus.inspectorInFocus,
+              onInspectorInFocusChange: focus.setInspectorInFocus,
+            }}
+          />
           {audioState.kind !== 'ready' ? (
             <div className={styles.sourceRecovery} role="status">
               <Icon
