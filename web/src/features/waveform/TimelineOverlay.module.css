@@ -1,0 +1,42 @@
+.root {
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.selection,
+.reference,
+.clipping {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-inline: 1px solid var(--accent-primary);
+  background: rgb(65 102 232 / 10%);
+}
+
+.reference {
+  border: 1px dashed var(--text-success);
+  background: rgb(40 140 95 / 8%);
+}
+
+.clipping {
+  border: 1px solid var(--text-danger);
+  background: rgb(220 60 60 / 12%);
+}
+
+.root span {
+  padding: 2px 4px;
+  background: var(--surface-panel);
+  font-size: 9px;
+}
+
+.playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  background: var(--accent-marker);
+}

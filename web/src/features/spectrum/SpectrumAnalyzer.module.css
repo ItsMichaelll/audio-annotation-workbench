@@ -5,6 +5,10 @@
   background: var(--surface-panel);
 }
 
+.root[hidden] {
+  display: none;
+}
+
 .header {
   display: flex;
   min-height: 38px;

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import LoudnessNode, { type LoudnessSnapshot } from 'loudness-worklet'
 import { AudioSourceGuard } from '../spectrum/audioSourceGuard'
+import { MAX_LISTENING_GAIN_DB } from '../../domain/listeningNormalization'
 import {
   DEFAULT_SPECTRUM_RESPONSE,
   SPECTRUM_FFT_SIZE,
@@ -21,6 +22,7 @@ interface AnalysisGraph {
   context: AudioContext
   source: MediaElementAudioSourceNode
   analyser: AnalyserNode
+  playbackGain: GainNode
   silentBus: GainNode
   loudness: LoudnessNode | null
   loudnessConnected: boolean
@@ -65,6 +67,7 @@ function disposeGraph(graph: AnalysisGraph): void {
   graph.disposed = true
   graph.source.disconnect()
   graph.analyser.disconnect()
+  graph.playbackGain.disconnect()
   graph.loudness?.disconnect()
   graph.silentBus.disconnect()
   graph.loudness?.port.close()
@@ -84,6 +87,7 @@ export interface AnalysisAudioController {
   activateSpectrum(): Promise<void>
   activateMeter(): Promise<void>
   setSpectrumResponse(response: SpectrumResponse): void
+  setPlaybackGain(decibels: number): Promise<boolean>
 }
 
 export function useAnalysisAudio({
@@ -155,9 +159,12 @@ export function useAnalysisAudio({
         configureAnalyser(analyser, responseRef.current)
         const silentBus = context.createGain()
         silentBus.gain.value = 0
+        const playbackGain = context.createGain()
+        playbackGain.gain.value = 1
 
         // Exactly one audible route. Analysis taps terminate at the zero-gain bus.
-        source.connect(context.destination)
+        source.connect(playbackGain)
+        playbackGain.connect(context.destination)
         source.connect(analyser)
         analyser.connect(silentBus)
         silentBus.connect(context.destination)
@@ -167,6 +174,7 @@ export function useAnalysisAudio({
           context,
           source,
           analyser,
+          playbackGain,
           silentBus,
           loudness: null,
           loudnessConnected: false,
@@ -266,8 +274,24 @@ export function useAnalysisAudio({
   const setSpectrumResponse = useCallback((response: SpectrumResponse) => {
     responseRef.current = response
     const graph = graphRef.current
-    if (graph && !graph.disposed) configureAnalyser(graph.analyser, response)
+    if (graph && !graph.disposed) {
+      graph.analyser.smoothingTimeConstant =
+        SPECTRUM_RESPONSES[response].smoothingTimeConstant
+    }
   }, [])
+
+  const setPlaybackGain = useCallback(
+    async (decibels: number) => {
+      if (!Number.isFinite(decibels) || Math.abs(decibels) > MAX_LISTENING_GAIN_DB) return false
+      const graph = await ensureGraph()
+      if (!graph || graph.disposed) return false
+      const now = graph.context.currentTime
+      graph.playbackGain.gain.cancelScheduledValues(now)
+      graph.playbackGain.gain.setTargetAtTime(10 ** (decibels / 20), now, 0.01)
+      return true
+    },
+    [ensureGraph],
+  )
 
   useEffect(() => {
     responseRef.current = DEFAULT_SPECTRUM_RESPONSE
@@ -290,5 +314,6 @@ export function useAnalysisAudio({
     activateSpectrum,
     activateMeter,
     setSpectrumResponse,
+    setPlaybackGain,
   }
 }

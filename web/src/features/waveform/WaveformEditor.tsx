@@ -5,8 +5,10 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
 } from 'react'
 import WaveSurfer from 'wavesurfer.js'
+import type { LoudnessSnapshot } from 'loudness-worklet'
 import HoverPlugin from 'wavesurfer.js/dist/plugins/hover.esm.js'
 import MinimapPlugin from 'wavesurfer.js/dist/plugins/minimap.esm.js'
 import RegionsPlugin, {
@@ -35,11 +37,10 @@ import { clampedWheelScroll, shiftWheelMode } from '../../domain/wheel'
 import { useAnalysisAudio } from '../analysis/useAnalysisAudio'
 import { LoudnessMeter } from '../loudness/LoudnessMeter'
 import { SpectrumAnalyzer } from '../spectrum/SpectrumAnalyzer'
+import { PlaybackListeningControls } from '../playback/PlaybackListeningControls'
+import type { ListeningRange } from '../../domain/listeningNormalization'
 import { scrollWidthsMatch } from './scrollSync'
-import {
-  logarithmicFrequencyY,
-  spectrogramViewportGeometry,
-} from './spectrogramSync'
+import { spectrogramViewportGeometry } from './spectrogramSync'
 import {
   cursorCenteredScroll,
   fitZoom,
@@ -49,6 +50,21 @@ import {
   steppedZoom,
 } from '../../domain/zoom'
 import styles from './WaveformEditor.module.css'
+import { TimelineOverlay } from './TimelineOverlay'
+import { GapRuler } from './GapRuler'
+import { WaveformViewControls } from './WaveformViewControls'
+import {
+  renderDisplayWaveform,
+  plainWheelPans,
+  type AmplitudeScale,
+  type FollowMode,
+  type NavigationPreset,
+} from './waveformDisplay'
+import { SpectrogramControls } from './SpectrogramControls'
+import {
+  spectrogramFrequencyPosition,
+  type SpectrogramScale,
+} from './analysisSettings'
 import {
   markerRegionOptions,
   markerShapePresentation,
@@ -166,6 +182,7 @@ function applyMarkerPresentation(
 }
 
 export interface WaveformEditorHandle {
+  playInspectionRange(start: number, end: number): void
   activateMeter(): void
   activateSpectrum(): void
   fit(): void
@@ -182,6 +199,29 @@ export interface WaveformEditorHandle {
 
 interface WaveformEditorProps {
   audioUrl: string
+  audioIdentity?: string | undefined
+  externalDecodedAudio?: AudioBuffer
+  externalAnalyser?: AnalyserNode
+  externalLoudnessSnapshot?: LoudnessSnapshot | null
+  externalAnalysisOffset?: number
+  inspectionRange?: { start: number; end: number } | null
+  activeRange?: { start: number; end: number } | null
+  /** Optional shared-clock host. WaveSurfer stays a muted visual lane. */
+  playbackController?: {
+    playPause(): void
+    seekTo(time: number): void
+    playRegion(start: number, end: number): void
+    isPlaying: boolean
+  }
+  externalTime?: number
+  mutePlayback?: boolean
+  viewport?: { zoom: number; scrollLeft: number }
+  onViewportChange?(viewport: { zoom: number; scrollLeft: number }): void
+  onAudioProperties?(properties: {
+    sampleRate: number
+    channels: number
+    duration: number
+  }): void
   regions: readonly RegionMetadata[]
   markers: readonly MarkerAnnotation[]
   selectedRegionId: string | null
@@ -265,6 +305,19 @@ export const WaveformEditor = forwardRef<
 >(function WaveformEditor(
   {
     audioUrl,
+    audioIdentity,
+    externalDecodedAudio,
+    externalAnalyser,
+    externalLoudnessSnapshot,
+    externalAnalysisOffset = 0,
+    inspectionRange,
+    activeRange,
+    playbackController,
+    externalTime,
+    mutePlayback = false,
+    viewport,
+    onViewportChange,
+    onAudioProperties,
     regions,
     markers,
     selectedRegionId,
@@ -305,6 +358,14 @@ export const WaveformEditor = forwardRef<
   const scrollbarElementRef = useRef<HTMLDivElement>(null)
   const scrollbarTrackElementRef = useRef<HTMLDivElement>(null)
   const wavesurferRef = useRef<WaveSurfer | null>(null)
+  const hostPlaybackRef = useRef(playbackController)
+  const externalSyncRef = useRef(false)
+  const lastExternalTimeRef = useRef<number | null>(null)
+  const hostViewportRef = useRef(onViewportChange)
+  const audioPropertiesRef = useRef(onAudioProperties)
+  audioPropertiesRef.current = onAudioProperties
+  hostPlaybackRef.current = playbackController
+  hostViewportRef.current = onViewportChange
   const regionsPluginRef = useRef<RegionsPlugin | null>(null)
   const entityKindsRef = useRef(new Map<string, WaveformEntityKind>())
   const synchronizationRef = useRef(false)
@@ -318,6 +379,7 @@ export const WaveformEditor = forwardRef<
   const meterEnabledRef = useRef(meterEnabled)
   const verticalScaleRef = useRef(1)
   const pendingPlaybackRegionIdRef = useRef<string | null>(null)
+  const inspectionLoopRef = useRef<{ start: number; end: number } | null>(null)
   const restorePlaybackAfterEmptyClickRef = useRef(false)
   const callbacksRef = useRef<CallbackBundle>({
     onLoading,
@@ -338,10 +400,32 @@ export const WaveformEditor = forwardRef<
   })
   const [instanceVersion, setInstanceVersion] = useState(0)
   const [spectrogramMaxFrequency, setSpectrogramMaxFrequency] = useState(24_000)
+  const [spectrogramScale, setSpectrogramScale] =
+    useState<SpectrogramScale>('logarithmic')
+  const [spectrogramFft, setSpectrogramFft] = useState(1024)
+  const [spectrogramRange, setSpectrogramRange] = useState(90)
   const [mediaElement, setMediaElement] = useState<HTMLMediaElement | null>(
     null,
   )
   const [decodedAudio, setDecodedAudio] = useState<AudioBuffer | null>(null)
+  const [pausedSpectrumTime, setPausedSpectrumTime] = useState(0)
+  const [referenceRanges, setReferenceRanges] = useState<ListeningRange[]>([])
+  const [playbackClippingRanges, setPlaybackClippingRanges] = useState<
+    ListeningRange[]
+  >([])
+  const [amplitudeScale, setAmplitudeScale] = useState<AmplitudeScale>('linear')
+  const [followMode, setFollowMode] = useState<FollowMode>('off')
+  const [splitChannels, setSplitChannels] = useState(false)
+  const [gapRulerEnabled, setGapRulerEnabled] = useState(false)
+  const [boundaryGuides, setBoundaryGuides] = useState(false)
+  const [displayHeight, setDisplayHeight] = useState(240)
+  const [navigationPreset, setNavigationPreset] =
+    useState<NavigationPreset>('aaw')
+  const [nudgeRegions, setNudgeRegions] = useState(true)
+  const navigationSettingsRef = useRef({ navigationPreset, nudgeRegions })
+  navigationSettingsRef.current = { navigationPreset, nudgeRegions }
+  const displaySettingsRef = useRef({ amplitudeScale, splitChannels })
+  displaySettingsRef.current = { amplitudeScale, splitChannels }
 
   const audioAnalyzer = useAnalysisAudio({
     mediaElement,
@@ -361,7 +445,11 @@ export const WaveformEditor = forwardRef<
     ].filter((frequency) => {
       const position = Math.min(
         Math.max(
-          logarithmicFrequencyY(frequency, spectrogramMaxFrequency),
+          spectrogramFrequencyPosition(
+            frequency,
+            spectrogramMaxFrequency,
+            spectrogramScale,
+          ),
           0.067,
         ),
         0.933,
@@ -370,7 +458,7 @@ export const WaveformEditor = forwardRef<
       previousPosition = position
       return true
     })
-  }, [spectrogramMaxFrequency])
+  }, [spectrogramMaxFrequency, spectrogramScale])
 
   callbacksRef.current = {
     onLoading,
@@ -402,10 +490,28 @@ export const WaveformEditor = forwardRef<
   useImperativeHandle(
     forwardedRef,
     () => ({
+      playInspectionRange(start, end) {
+        const wavesurfer = wavesurferRef.current
+        if (!wavesurfer) return
+        const range = normalizeRegion(start, end, wavesurfer.getDuration())
+        if (!range) return
+        inspectionLoopRef.current = range
+        restorePlaybackAfterEmptyClickRef.current = false
+        pendingPlaybackRegionIdRef.current = null
+        if (hostPlaybackRef.current) {
+          hostPlaybackRef.current.playRegion(range.start, range.end)
+          return
+        }
+        if (spectrumEnabledRef.current) void activateAudioAnalyzer()
+        if (meterEnabledRef.current) void activateLoudnessMeter()
+        void wavesurfer.play(range.start, range.end).catch(reportPlaybackError)
+      },
       activateMeter() {
+        if (hostPlaybackRef.current) return
         void activateLoudnessMeter()
       },
       activateSpectrum() {
+        if (hostPlaybackRef.current) return
         void activateAudioAnalyzer()
       },
       fit() {
@@ -424,6 +530,11 @@ export const WaveformEditor = forwardRef<
         return wavesurferRef.current?.getCurrentTime() ?? 0
       },
       playPause() {
+        inspectionLoopRef.current = null
+        if (hostPlaybackRef.current) {
+          hostPlaybackRef.current.playPause()
+          return
+        }
         const wavesurfer = wavesurferRef.current
         if (!wavesurfer) return
         restorePlaybackAfterEmptyClickRef.current = false
@@ -448,6 +559,7 @@ export const WaveformEditor = forwardRef<
         callbacksRef.current.onVerticalScaleChange(1)
       },
       seekBy(seconds: number) {
+        inspectionLoopRef.current = null
         const wavesurfer = wavesurferRef.current
         if (!wavesurfer) return
         wavesurfer.setTime(
@@ -458,11 +570,13 @@ export const WaveformEditor = forwardRef<
         )
       },
       seekTo(seconds: number) {
+        inspectionLoopRef.current = null
         const wavesurfer = wavesurferRef.current
         if (!wavesurfer) return
         wavesurfer.setTime(clampTime(seconds, wavesurfer.getDuration()))
       },
       jumpToBoundary(boundary: 'start' | 'end') {
+        inspectionLoopRef.current = null
         const wavesurfer = wavesurferRef.current
         if (!wavesurfer) return
         loopEnabledRef.current = false
@@ -472,6 +586,7 @@ export const WaveformEditor = forwardRef<
         wavesurfer.setScrollTime(time)
       },
       revealRegion(start: number, end: number) {
+        inspectionLoopRef.current = null
         const wavesurfer = wavesurferRef.current
         if (!wavesurfer) return
         const duration = wavesurfer.getDuration()
@@ -505,6 +620,7 @@ export const WaveformEditor = forwardRef<
         )
       },
       seekToMarker(time: number) {
+        inspectionLoopRef.current = null
         const wavesurfer = wavesurferRef.current
         if (!wavesurfer) return
         const duration = wavesurfer.getDuration()
@@ -669,6 +785,7 @@ export const WaveformEditor = forwardRef<
       )
     }
     const selectRegion = (regionId: string) => {
+      inspectionLoopRef.current = null
       if (selectedMarkerIdRef.current !== null) {
         selectedMarkerIdRef.current = null
         callbacksRef.current.onClearMarkerSelection()
@@ -724,6 +841,13 @@ export const WaveformEditor = forwardRef<
       callbacksRef.current.onReady(duration)
       callbacksRef.current.onTimeChange(0)
       setDecodedAudio(wavesurfer.getDecodedData())
+      const decoded = wavesurfer.getDecodedData()
+      if (decoded)
+        audioPropertiesRef.current?.({
+          sampleRate: decoded.sampleRate,
+          channels: decoded.numberOfChannels,
+          duration,
+        })
       callbacksRef.current.onZoomChange(fittedZoom)
       const sampleRate = wavesurfer.getDecodedData()?.sampleRate
       if (sampleRate && sampleRate > 0) {
@@ -733,7 +857,19 @@ export const WaveformEditor = forwardRef<
     })
     const unsubscribeError = wavesurfer.on('error', reportLoadError)
     const unsubscribeTime = wavesurfer.on('timeupdate', (time) => {
+      if (!wavesurfer.isPlaying()) setPausedSpectrumTime(time)
+      if (externalSyncRef.current) return
+      // A media element can deliver a delayed timeupdate after setTime returns.
+      // Do not feed a host-driven cursor update back into its authoritative clock.
+      if (
+        hostPlaybackRef.current &&
+        lastExternalTimeRef.current !== null &&
+        Math.abs(time - lastExternalTimeRef.current) < 0.001
+      )
+        return
+      if (hostPlaybackRef.current) hostPlaybackRef.current.seekTo(time)
       callbacksRef.current.onTimeChange(time)
+      if (inspectionLoopRef.current) return
       const selectedId = selectedRegionIdRef.current
       if (!loopEnabledRef.current || !selectedId || !wavesurfer.isPlaying()) {
         return
@@ -751,12 +887,28 @@ export const WaveformEditor = forwardRef<
       }
     })
     const unsubscribePlay = wavesurfer.on('play', () => {
+      if (hostPlaybackRef.current) {
+        wavesurfer.pause()
+        return
+      }
       restorePlaybackAfterEmptyClickRef.current = false
       if (spectrumEnabledRef.current) void activateAudioAnalyzer()
       if (meterEnabledRef.current) void activateLoudnessMeter()
       callbacksRef.current.onPlaybackChange(true)
     })
     const unsubscribePause = wavesurfer.on('pause', () => {
+      if (hostPlaybackRef.current) return
+      const inspection = inspectionLoopRef.current
+      if (
+        inspection &&
+        wavesurfer.getCurrentTime() >= inspection.end - 0.05 &&
+        wavesurfer.getCurrentTime() <= inspection.end + 0.2
+      ) {
+        void wavesurfer
+          .play(inspection.start, inspection.end)
+          .catch(reportPlaybackError)
+        return
+      }
       if (restorePlaybackAfterEmptyClickRef.current) {
         void wavesurfer.play().catch(reportPlaybackError)
         return
@@ -789,12 +941,15 @@ export const WaveformEditor = forwardRef<
       }
     })
     const unsubscribeFinish = wavesurfer.on('finish', () => {
+      if (hostPlaybackRef.current || inspectionLoopRef.current) return
       callbacksRef.current.onPlaybackChange(false)
     })
     const unsubscribeInteraction = wavesurfer.on('interaction', (time) => {
+      inspectionLoopRef.current = null
       callbacksRef.current.onTimeChange(time)
     })
     const seekAfterClearingSelection = (relativeX: number) => {
+      inspectionLoopRef.current = null
       const shouldContinue =
         restorePlaybackAfterEmptyClickRef.current || wavesurfer.isPlaying()
       clearSelection()
@@ -1050,6 +1205,10 @@ export const WaveformEditor = forwardRef<
         }
         selectRegion(region.id)
         pendingPlaybackRegionIdRef.current = null
+        if (hostPlaybackRef.current) {
+          hostPlaybackRef.current.playRegion(region.start, region.end)
+          return
+        }
         if (spectrumEnabledRef.current) void activateAudioAnalyzer()
         if (meterEnabledRef.current) void activateLoudnessMeter()
         void wavesurfer
@@ -1304,6 +1463,35 @@ export const WaveformEditor = forwardRef<
       }
       if (!event.shiftKey) {
         if (
+          scrollContainer &&
+          plainWheelPans(
+            navigationSettingsRef.current.navigationPreset,
+            event.ctrlKey || event.metaKey,
+          )
+        ) {
+          event.preventDefault()
+          event.stopImmediatePropagation()
+          const delta =
+            Math.abs(event.deltaX) > Math.abs(event.deltaY)
+              ? event.deltaX
+              : event.deltaY
+          const pixels =
+            delta *
+            (event.deltaMode === WheelEvent.DOM_DELTA_LINE
+              ? 16
+              : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+                ? scrollContainer.clientWidth
+                : 1)
+          wavesurfer.setScroll(
+            clampedWheelScroll(
+              scrollContainer.scrollLeft,
+              pixels,
+              audioMaximumScroll(),
+            ),
+          )
+          return
+        }
+        if (
           !scrollContainer ||
           Math.abs(event.deltaX) >= Math.abs(event.deltaY)
         ) {
@@ -1351,7 +1539,10 @@ export const WaveformEditor = forwardRef<
             : rawDelta
       const renderedRegions = regionsPlugin.getRegions()
       const selectedId = selectedRegionIdRef.current
-      if (shiftWheelMode(selectedId) === 'pan') {
+      if (
+        !navigationSettingsRef.current.nudgeRegions ||
+        shiftWheelMode(selectedId) === 'pan'
+      ) {
         scrollContainer.scrollLeft = clampedWheelScroll(
           scrollContainer.scrollLeft,
           pixelDelta,
@@ -1580,6 +1771,7 @@ export const WaveformEditor = forwardRef<
 
     return () => {
       disposed = true
+      inspectionLoopRef.current = null
       heightObserver.disconnect()
       disableRegionCreation()
       unsubscribeReady()
@@ -1669,6 +1861,93 @@ export const WaveformEditor = forwardRef<
       entityKinds.clear()
     }
   }, [activateAudioAnalyzer, activateLoudnessMeter, audioUrl, readOnly])
+
+  useEffect(() => {
+    const media = wavesurferRef.current?.getMediaElement()
+    if (media) media.muted = mutePlayback || Boolean(playbackController)
+  }, [instanceVersion, mutePlayback, playbackController])
+
+  useEffect(() => {
+    const wavesurfer = wavesurferRef.current
+    if (!wavesurfer) return
+    wavesurfer.setOptions({
+      autoScroll: followMode !== 'off',
+      autoCenter: followMode === 'center',
+      renderFunction: (peaks, context) => {
+        if (displaySettingsRef.current.splitChannels && peaks.length > 1) {
+          peaks.forEach((channel, index) => {
+            context.save()
+            context.translate(0, (index * context.canvas.height) / peaks.length)
+            context.scale(1, 1 / peaks.length)
+            renderDisplayWaveform(
+              [channel],
+              context,
+              displaySettingsRef.current.amplitudeScale,
+              verticalScaleRef.current,
+            )
+            context.restore()
+          })
+        } else {
+          renderDisplayWaveform(
+            peaks,
+            context,
+            displaySettingsRef.current.amplitudeScale,
+            verticalScaleRef.current,
+          )
+        }
+      },
+    })
+  }, [amplitudeScale, followMode, instanceVersion, splitChannels])
+
+  useEffect(() => {
+    const wavesurfer = wavesurferRef.current
+    if (
+      !wavesurfer ||
+      externalTime === undefined ||
+      !Number.isFinite(externalTime)
+    )
+      return
+    externalSyncRef.current = true
+    try {
+      const time = clampTime(externalTime, wavesurfer.getDuration())
+      lastExternalTimeRef.current = time
+      wavesurfer.setTime(time)
+    } finally {
+      externalSyncRef.current = false
+    }
+  }, [externalTime, instanceVersion])
+
+  useEffect(() => {
+    const wavesurfer = wavesurferRef.current
+    if (!wavesurfer || !viewport || !(viewport.zoom > 0)) return
+    externalSyncRef.current = true
+    try {
+      if (Math.abs(wavesurfer.options.minPxPerSec - viewport.zoom) > 0.01)
+        wavesurfer.zoom(viewport.zoom)
+      if (Math.abs(wavesurfer.getScroll() - viewport.scrollLeft) > 0.5)
+        wavesurfer.setScroll(viewport.scrollLeft)
+    } finally {
+      externalSyncRef.current = false
+    }
+  }, [instanceVersion, viewport])
+
+  useEffect(() => {
+    const wavesurfer = wavesurferRef.current
+    if (!wavesurfer) return
+    const publish = () => {
+      if (!externalSyncRef.current)
+        hostViewportRef.current?.({
+          zoom: wavesurfer.options.minPxPerSec,
+          scrollLeft: wavesurfer.getScroll(),
+        })
+    }
+    const offScroll = wavesurfer.on('scroll', publish)
+    const offZoom = wavesurfer.on('zoom', publish)
+    return () => {
+      offScroll()
+      offZoom()
+    }
+  }, [instanceVersion])
 
   useEffect(() => {
     const wavesurfer = wavesurferRef.current
@@ -1841,8 +2120,9 @@ export const WaveformEditor = forwardRef<
         container,
         height: 150,
         labels: false,
-        fftSamples: 1024,
-        scale: 'logarithmic',
+        fftSamples: spectrogramFft,
+        scale: spectrogramScale,
+        rangeDB: spectrogramRange,
         // Use the perceptual color map for a standard energy/intensity view.
         colorMap: 'roseus',
         windowSize: 24,
@@ -1876,10 +2156,37 @@ export const WaveformEditor = forwardRef<
         wavesurfer.unregisterPlugin(plugin)
       }
     }
-  }, [instanceVersion, spectrogramEnabled])
+  }, [
+    instanceVersion,
+    spectrogramEnabled,
+    spectrogramFft,
+    spectrogramRange,
+    spectrogramScale,
+  ])
 
   const selectedRegion =
     regions.find((region) => region.id === selectedRegionId) ?? null
+  const analysisAudio = externalDecodedAudio ?? decodedAudio
+  const analysisBounds =
+    selectedRegion && analysisAudio
+      ? normalizeRegion(
+          selectedRegion.start - externalAnalysisOffset,
+          selectedRegion.end - externalAnalysisOffset,
+          analysisAudio.duration,
+        )
+      : null
+  const analysisRegion =
+    selectedRegion && analysisBounds
+      ? { ...selectedRegion, ...analysisBounds }
+      : null
+  const analysisRange =
+    activeRange && analysisAudio
+      ? normalizeRegion(
+          activeRange.start - externalAnalysisOffset,
+          activeRange.end - externalAnalysisOffset,
+          analysisAudio.duration,
+        )
+      : null
 
   return (
     <div
@@ -1887,23 +2194,109 @@ export const WaveformEditor = forwardRef<
       className={`${styles.root}${meterEnabled ? ` ${styles.withMeter}` : ''}`}
     >
       <div className={styles.stack}>
-        <div
-          className={styles.surface}
-          ref={waveformElementRef}
-          role="region"
-          tabIndex={-1}
-          aria-label={
-            readOnly
-              ? 'Audio waveform. Read-only annotation. Use Space to play, arrow keys to seek, and Tab or Shift+Tab to navigate markers.'
-              : 'Audio waveform. Drag empty space to create a region. Use Space to play, arrow keys to seek, T to create a marker, and Tab or Shift+Tab to navigate markers.'
-          }
-          onPointerDown={(event) => event.currentTarget.focus()}
-          onFocus={() => onEditorFocusChange(true)}
-          onBlur={(event) => {
-            if (!event.currentTarget.contains(event.relatedTarget))
-              onEditorFocusChange(false)
+        <WaveformViewControls
+          amplitude={amplitudeScale}
+          follow={followMode}
+          split={splitChannels}
+          gap={gapRulerEnabled}
+          guides={boundaryGuides}
+          navigationPreset={navigationPreset}
+          nudgeRegions={nudgeRegions}
+          onAmplitude={setAmplitudeScale}
+          onFollow={setFollowMode}
+          onSplit={setSplitChannels}
+          onGap={setGapRulerEnabled}
+          onGuides={setBoundaryGuides}
+          onNavigationPreset={(preset) => {
+            setNavigationPreset(preset)
+            setNudgeRegions(preset === 'aaw')
           }}
+          onNudgeRegions={setNudgeRegions}
         />
+        {!playbackController && (
+          <PlaybackListeningControls
+            audioBuffer={decodedAudio}
+            mediaElement={mediaElement}
+            sourceId={audioUrl}
+            {...(audioIdentity ? { audioIdentity } : {})}
+            selectedRegion={selectedRegion}
+            setPlaybackGain={audioAnalyzer.setPlaybackGain}
+            onAudition={(start, end) => {
+              void wavesurferRef.current
+                ?.play(start, end)
+                .catch(reportPlaybackError)
+            }}
+            onReferenceRangesChange={setReferenceRanges}
+            onPlaybackClippingChange={setPlaybackClippingRanges}
+          />
+        )}
+        <div className={styles.waveformDisplay}>
+          <div
+            className={styles.surface}
+            style={{ '--waveform-height': displayHeight } as CSSProperties}
+            ref={waveformElementRef}
+            role="region"
+            tabIndex={-1}
+            aria-label={
+              readOnly
+                ? 'Audio waveform. Read-only annotation. Use Space to play, arrow keys to seek, and Tab or Shift+Tab to navigate markers.'
+                : 'Audio waveform. Drag empty space to create a region. Use Space to play, arrow keys to seek, T to create a marker, and Tab or Shift+Tab to navigate markers.'
+            }
+            onPointerDown={(event) => event.currentTarget.focus()}
+            onFocus={() => onEditorFocusChange(true)}
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget))
+                onEditorFocusChange(false)
+            }}
+          />
+          <TimelineOverlay
+            wavesurfer={wavesurferRef.current}
+            references={referenceRanges}
+            clipping={playbackClippingRanges}
+          />
+          {inspectionRange && (
+            <TimelineOverlay
+              wavesurfer={wavesurferRef.current}
+              selection={inspectionRange}
+            />
+          )}
+          {boundaryGuides && selectedRegion && (
+            <TimelineOverlay
+              wavesurfer={wavesurferRef.current}
+              referenceLabel="Boundary guide ±100 ms"
+              references={[
+                {
+                  id: 'guide-start',
+                  start: Math.max(0, selectedRegion.start - 0.1),
+                  end: selectedRegion.start + 0.1,
+                },
+                {
+                  id: 'guide-end',
+                  start: Math.max(0, selectedRegion.end - 0.1),
+                  end: selectedRegion.end + 0.1,
+                },
+              ]}
+            />
+          )}
+        </div>
+        <label className={styles.heightControl}>
+          Waveform height
+          <input
+            type="range"
+            min="96"
+            max="480"
+            step="8"
+            value={displayHeight}
+            onChange={(event) => {
+              const height = event.target.valueAsNumber
+              setDisplayHeight(height)
+              wavesurferRef.current?.setOptions({ height })
+            }}
+          />
+        </label>
+        {gapRulerEnabled && (
+          <GapRuler key={audioUrl} wavesurfer={wavesurferRef.current} />
+        )}
         <div className={styles.overviewHeader}>
           <span>FULL RECORDING</span>
           <span>Drag to navigate</span>
@@ -1927,6 +2320,14 @@ export const WaveformEditor = forwardRef<
           <section className={styles.spectrogram} aria-label="Spectrogram">
             <header className={styles.spectrogramHeader}>
               <h2 className={styles.spectrogramTitle}>Spectrogram</h2>
+              <SpectrogramControls
+                scale={spectrogramScale}
+                fftSize={spectrogramFft}
+                rangeDB={spectrogramRange}
+                onScale={setSpectrogramScale}
+                onFft={setSpectrogramFft}
+                onRange={setSpectrogramRange}
+              />
               <button
                 className={styles.spectrogramClose}
                 type="button"
@@ -1938,6 +2339,18 @@ export const WaveformEditor = forwardRef<
               </button>
             </header>
             <div className={styles.spectrogramDisplay}>
+              {inspectionRange && (
+                <TimelineOverlay
+                  wavesurfer={wavesurferRef.current}
+                  selection={inspectionRange}
+                />
+              )}
+              <TimelineOverlay
+                wavesurfer={wavesurferRef.current}
+                selection={selectedRegion}
+                references={referenceRanges}
+                clipping={playbackClippingRanges}
+              />
               <div
                 className={styles.spectrogramViewport}
                 ref={spectrogramViewportElementRef}
@@ -1949,9 +2362,10 @@ export const WaveformEditor = forwardRef<
               </div>
               <div className={styles.spectrogramAxis} aria-hidden="true">
                 {spectrogramAxisLabels.map((frequency) => {
-                  const position = logarithmicFrequencyY(
+                  const position = spectrogramFrequencyPosition(
                     frequency,
                     spectrogramMaxFrequency,
+                    spectrogramScale,
                   )
                   const top = Math.min(Math.max(position * 100, 6.7), 93.3)
                   return (
@@ -1971,27 +2385,47 @@ export const WaveformEditor = forwardRef<
             </div>
           </section>
         )}
-        {spectrumEnabled && (
+        {
           <SpectrumAnalyzer
-            analyserNode={audioAnalyzer.analyserNode}
+            key={audioUrl}
+            visible={spectrumEnabled}
+            analyserNode={externalAnalyser ?? audioAnalyzer.analyserNode}
             analyzerError={audioAnalyzer.error}
             fftSize={audioAnalyzer.fftSize}
+            audioBuffer={analysisAudio}
+            pausedTime={Math.max(
+              0,
+              pausedSpectrumTime - externalAnalysisOffset,
+            )}
             isPlaying={isPlaying}
-            sampleRate={audioAnalyzer.sampleRate}
+            sampleRate={
+              externalAnalyser?.context.sampleRate ?? audioAnalyzer.sampleRate
+            }
             onResponseChange={audioAnalyzer.setSpectrumResponse}
             onClose={onHideSpectrum}
           />
-        )}
+        }
       </div>
-      {meterEnabled && (
+      {
         <LoudnessMeter
-          audioBuffer={decodedAudio}
-          live={audioAnalyzer.loudnessSnapshot}
-          selectedRegion={selectedRegion}
-          error={audioAnalyzer.error}
+          key={audioUrl}
+          visible={meterEnabled}
+          audioBuffer={analysisAudio}
+          live={
+            playbackController
+              ? (externalLoudnessSnapshot ?? null)
+              : audioAnalyzer.loudnessSnapshot
+          }
+          selectedRegion={analysisRegion}
+          activeRange={analysisRange}
+          error={
+            playbackController && externalLoudnessSnapshot === undefined
+              ? 'Shared-clock playback: deterministic source statistics are available. Live loudness is unavailable for this host.'
+              : audioAnalyzer.error
+          }
           onClose={onHideMeter}
         />
-      )}
+      }
     </div>
   )
 })

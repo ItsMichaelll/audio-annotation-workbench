@@ -21,11 +21,15 @@ import {
   yToDb,
 } from './spectrumMath'
 import styles from './SpectrumAnalyzer.module.css'
+import { pcmSpectrum } from './pcmSpectrum'
 
 interface SpectrumAnalyzerProps {
+  visible?: boolean
   analyserNode: AnalyserNode | null
   analyzerError: string | null
   fftSize: number
+  audioBuffer?: AudioBuffer | null
+  pausedTime?: number
   isPlaying: boolean
   sampleRate: number
   onResponseChange(response: SpectrumResponse): void
@@ -93,6 +97,18 @@ function formatFrequency(frequency: number): string {
     return `${kilohertz >= 10 ? kilohertz.toFixed(0) : kilohertz.toFixed(1)} kHz`
   }
   return `${Math.round(frequency)} Hz`
+}
+
+/** Web Audio nodes are imperative browser resources, separate from React state. */
+function configureAnalysis(
+  node: AnalyserNode | null,
+  size: number,
+  response: SpectrumResponse,
+): void {
+  if (!node) return
+  node.fftSize = size
+  node.smoothingTimeConstant =
+    SPECTRUM_RESPONSES[response].smoothingTimeConstant
 }
 
 function drawGrid(
@@ -270,14 +286,20 @@ function drawHover(
 }
 
 export function SpectrumAnalyzer({
+  visible = true,
   analyserNode,
   analyzerError,
-  fftSize,
+  fftSize: initialFftSize,
+  audioBuffer,
+  pausedTime = 0,
   isPlaying,
-  sampleRate,
+  sampleRate: playbackSampleRate,
   onResponseChange,
   onClose,
 }: SpectrumAnalyzerProps) {
+  const [fftSize, setFftSize] = useState(initialFftSize)
+  const sampleRate =
+    !isPlaying && audioBuffer ? audioBuffer.sampleRate : playbackSampleRate
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const frameRef = useRef<SpectrumFrame>({ ...EMPTY_FRAME })
   const hoverRef = useRef<HoverPosition | null>(null)
@@ -327,6 +349,10 @@ export function SpectrumAnalyzer({
   useEffect(() => {
     onResponseChange(response)
   }, [onResponseChange, response])
+
+  useEffect(() => {
+    configureAnalysis(analyserNode, fftSize, response)
+  }, [analyserNode, fftSize, response])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -418,10 +444,36 @@ export function SpectrumAnalyzer({
     frame.lastFrameTime = 0
     resetPeakHold(frame.peakValues, frame.peakHoldUntil)
     draw()
-  }, [analyserNode, draw])
+  }, [analyserNode, draw, fftSize])
 
   useEffect(() => {
-    if (!analyserNode || !isPlaying || frozen) {
+    if (!visible || isPlaying || frozen || !audioBuffer) return
+    const frame = frameRef.current
+    const channels = Array.from(
+      { length: audioBuffer.numberOfChannels },
+      (_, index) => audioBuffer.getChannelData(index),
+    )
+    frame.frequencyData = pcmSpectrum(
+      channels,
+      audioBuffer.sampleRate,
+      pausedTime,
+      fftSize,
+    )
+    frame.hasFrame = aggregateLogFrequencyBins(
+      frame.frequencyData,
+      frame.liveValues,
+      audioBuffer.sampleRate,
+      fftSize,
+      SPECTRUM_MIN_FREQUENCY,
+      displayMaxFrequency(audioBuffer.sampleRate),
+    )
+    resetPeakHold(frame.peakValues, frame.peakHoldUntil)
+    frame.peakValues.set(frame.liveValues)
+    draw()
+  }, [audioBuffer, draw, fftSize, frozen, isPlaying, pausedTime, visible])
+
+  useEffect(() => {
+    if (!visible || !analyserNode || !isPlaying || frozen) {
       frameRef.current.lastFrameTime = 0
       draw()
       return
@@ -469,7 +521,7 @@ export function SpectrumAnalyzer({
       cancelled = true
       cancelAnimationFrame(animationFrame)
     }
-  }, [analyserNode, draw, fftSize, frozen, isPlaying, sampleRate])
+  }, [analyserNode, draw, fftSize, frozen, isPlaying, sampleRate, visible])
 
   const resetAnalyzer = () => {
     const frame = frameRef.current
@@ -502,7 +554,11 @@ export function SpectrumAnalyzer({
   }
 
   return (
-    <section className={styles.root} aria-label="Real-time spectrum analyzer">
+    <section
+      className={styles.root}
+      hidden={!visible}
+      aria-label="Real-time spectrum analyzer"
+    >
       <header className={styles.header}>
         <h2 className={styles.title}>Spectrum Analyzer</h2>
         <div className={styles.controls}>
@@ -535,11 +591,24 @@ export function SpectrumAnalyzer({
               }
             }}
           />
+          <CustomSelectField
+            label="FFT"
+            variant="spectrum"
+            value={String(fftSize)}
+            options={[2048, 4096, 8192, 16384].map((value) => ({
+              value: String(value),
+              label: value.toLocaleString(),
+            }))}
+            onChange={(value) => {
+              const size = Number(value)
+              if ([2048, 4096, 8192, 16384].includes(size)) setFftSize(size)
+            }}
+          />
           <output
             className={styles.fftSize}
-            title="Fast Fourier transform size"
+            title="Live uses Web Audio analysis. Paused inspection uses a Hann-windowed source FFT."
           >
-            FFT {fftSize.toLocaleString()}
+            {isPlaying ? 'Live · dBFS' : 'Source · dBFS'}
           </output>
           <button
             className={styles.control}

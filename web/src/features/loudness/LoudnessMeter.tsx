@@ -27,17 +27,21 @@ function meterPosition(value: number): number {
 }
 
 interface LoudnessMeterProps {
+  visible?: boolean
   audioBuffer: AudioBuffer | null
   live: LoudnessSnapshot | null
   selectedRegion: RegionMetadata | null
+  activeRange?: { start: number; end: number } | null
   error: string | null
   onClose(): void
 }
 
 export function LoudnessMeter({
+  visible = true,
   audioBuffer,
   live,
   selectedRegion,
+  activeRange,
   error,
   onClose,
 }: LoudnessMeterProps) {
@@ -46,9 +50,17 @@ export function LoudnessMeter({
   const [target, setTarget] = useState<TargetRange>({
     enabled: false,
     target: -23,
-    tolerance: 1,
+    tolerance: 2,
   })
-  const offline = useOfflineLoudness(true, audioBuffer, scope, selectedRegion)
+  const rangeRegion = activeRange
+    ? { id: 'active-review-range', ...activeRange, data: {} }
+    : null
+  const offline = useOfflineLoudness(
+    visible,
+    audioBuffer,
+    scope,
+    scope === 'range' ? rangeRegion : selectedRegion,
+  )
   const targetError = validateTargetRange(target)
   const momentary = live?.momentaryLoudness ?? Number.NEGATIVE_INFINITY
   const shortTerm = live?.shortTermLoudness ?? Number.NEGATIVE_INFINITY
@@ -63,11 +75,17 @@ export function LoudnessMeter({
   }, [target, targetError])
 
   return (
-    <aside className={styles.root} aria-label="Loudness and true-peak meter">
+    <aside
+      className={styles.root}
+      hidden={!visible}
+      aria-label="Loudness and true-peak meter"
+    >
       <header className={styles.header}>
         <div>
           <h2 className={styles.headerTitle}>Loudness Meter</h2>
-          <span className={styles.headerSubtitle}>BS.1770 / EBU mode</span>
+          <span className={styles.headerSubtitle}>
+            Source · BS.1770 / EBU mode
+          </span>
         </div>
         <button
           className={styles.close}
@@ -89,6 +107,16 @@ export function LoudnessMeter({
         >
           File
         </button>
+        {activeRange && (
+          <button
+            className={styles.scopeButton}
+            type="button"
+            aria-pressed={scope === 'range'}
+            onClick={() => setScope('range')}
+          >
+            Range
+          </button>
+        )}
         <button
           className={styles.scopeButton}
           type="button"
