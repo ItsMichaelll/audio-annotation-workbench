@@ -99,13 +99,11 @@ test('project inspector keeps its tab across selection and focus changes', async
       }),
     ),
   })
-  await page
-    .getByLabel('Audio files to import')
-    .setInputFiles({
-      name: 'synthetic.wav',
-      mimeType: 'audio/wav',
-      buffer: sineWav(),
-    })
+  await page.getByLabel('Audio files to import').setInputFiles({
+    name: 'synthetic.wav',
+    mimeType: 'audio/wav',
+    buffer: sineWav(),
+  })
   await page.getByRole('button', { name: 'Confirm import' }).click()
   await page
     .getByRole('button', { name: 'Create project', exact: true })
