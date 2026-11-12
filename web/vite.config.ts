@@ -9,6 +9,7 @@ export default defineConfig({
     strictPort: true,
   },
   test: {
+    maxWorkers: 2,
     include: ['src/**/*.test.{ts,tsx}'],
     environment: 'node',
     coverage: {
