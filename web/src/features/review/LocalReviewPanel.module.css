@@ -1,0 +1,159 @@
+.root {
+  border-top: 1px solid var(--border-default);
+  background: var(--surface-panel);
+  font-size: 11px;
+}
+
+.header {
+  display: flex;
+  min-height: 54px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px 24px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.header span {
+  color: var(--text-secondary);
+}
+
+.header span[role='status'] {
+  margin-left: auto;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 24px;
+}
+
+.root button,
+.root select,
+.root input,
+.root textarea {
+  min-height: 28px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--surface-panel);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.root button {
+  padding: 4px 8px;
+}
+
+.root button[aria-pressed='true'] {
+  color: var(--accent-ink);
+  background: var(--accent-muted);
+}
+
+.root input {
+  width: 90px;
+  padding: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.root label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.root select {
+  padding: 4px;
+}
+
+.list {
+  max-height: 400px;
+  overflow: auto;
+}
+
+.list table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.list th {
+  height: 28px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.list td,
+.list th {
+  padding: 5px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.list td {
+  height: 42px;
+}
+
+.list tr:hover {
+  background: var(--surface-panel-raised);
+}
+
+.list .selected {
+  background: var(--accent-muted);
+  box-shadow: inset 2px 0 var(--accent-primary);
+}
+
+.feedback {
+  border-top: 1px solid var(--border-default);
+  padding-block: 10px;
+}
+
+.feedback h3 {
+  margin: 0 24px 8px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.root .notes {
+  flex-direction: column;
+  align-items: stretch;
+  padding: 8px 24px;
+}
+
+.notes textarea {
+  width: 100%;
+  min-height: 60px;
+  padding: 8px;
+  resize: vertical;
+}
+
+.error {
+  padding: 8px 24px;
+  color: var(--text-danger);
+}
+
+.evidence {
+  margin: 8px 24px;
+  padding: 0;
+  list-style: none;
+}
+
+.evidence li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.evidence span {
+  flex: 1;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

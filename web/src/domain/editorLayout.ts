@@ -1,4 +1,4 @@
-export const DEFAULT_INSPECTOR_WIDTH = 310
+export const DEFAULT_INSPECTOR_WIDTH = 370
 
 export function maximumInspectorWidth(viewportWidth: number): number {
   return Math.max(

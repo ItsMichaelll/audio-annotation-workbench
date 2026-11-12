@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { RegionMetadata } from '../../domain/region'
 import { analyzeAudioBuffer } from './offlineLoudness'
 import type { LoudnessScope, OfflineAnalysisState } from './loudnessTypes'
-import { sameOfflineScope } from './offlineScope'
+import { sameOfflineScope } from './offlineAnalysisIdentity'
 
 export function useOfflineLoudness(
   enabled: boolean,

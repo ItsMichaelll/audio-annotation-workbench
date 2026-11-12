@@ -6,6 +6,12 @@ import {
   resolveScopeBounds,
 } from './loudnessMath'
 import type { LoudnessStatistics } from './loudnessTypes'
+import {
+  LOUDNESS_RENDER_QUANTUM_FRAMES,
+  mergeOfflineScopeSnapshot,
+  snapshotFitsScope,
+  snapshotIsInitialized,
+} from './offlineScope'
 
 const TAIL_SECONDS = 0.12
 
@@ -34,10 +40,32 @@ export async function analyzeAudioBuffer(
   )
   await context.audioWorklet.addModule(LOUDNESS_WORKLET_URL)
   const source = new AudioBufferSourceNode(context, { buffer })
-  const loudness = new LoudnessNode(context, { interval: 0.05 })
-  let latest: LoudnessSnapshot | null = null
+  // Observe each quantum so the scope's final 100 ms gate update cannot be missed.
+  const loudness = new LoudnessNode(context, {
+    interval: 1 / buffer.sampleRate,
+  })
+  let scoped: LoudnessSnapshot | null = null
+  let maximumTruePeak = Number.NEGATIVE_INFINITY
+  let finalMessage: (() => void) | undefined
+  const finalMessageReceived = new Promise<void>((resolve) => {
+    finalMessage = resolve
+  })
+  const finalQuantumFrame =
+    (Math.ceil(context.length / LOUDNESS_RENDER_QUANTUM_FRAMES) - 1) *
+    LOUDNESS_RENDER_QUANTUM_FRAMES
+  const readSnapshot = (snapshot: LoudnessSnapshot) => {
+    if (!snapshotIsInitialized(snapshot)) return
+    if (
+      snapshotFitsScope(snapshot, scopeFrames) &&
+      (!scoped || snapshot.currentFrame >= scoped.currentFrame)
+    )
+      scoped = snapshot
+    maximumTruePeak = Math.max(maximumTruePeak, snapshot.maximumTruePeakLevel)
+    if (snapshot.currentFrame >= finalQuantumFrame) finalMessage?.()
+  }
   loudness.port.onmessage = (event: MessageEvent<unknown>) => {
-    latest = snapshotFromMessage(event.data) ?? latest
+    const snapshot = snapshotFromMessage(event.data)
+    if (snapshot) readSnapshot(snapshot)
   }
   source.connect(loudness).connect(context.destination)
   source.start(
@@ -45,16 +73,62 @@ export async function analyzeAudioBuffer(
     bounds.startFrame / buffer.sampleRate,
     scopeFrames / buffer.sampleRate,
   )
-  await context.startRendering()
-  loudness.port.close()
-  source.disconnect()
-  loudness.disconnect()
-  if (!latest)
-    throw new Error('The offline loudness processor returned no measurements.')
-  const snapshot: LoudnessSnapshot = latest
+  const values = new Float32Array(loudness.metricCount)
+  const completedScopeFrames =
+    Math.floor(scopeFrames / LOUDNESS_RENDER_QUANTUM_FRAMES) *
+    LOUDNESS_RENDER_QUANTUM_FRAMES
+  // A suspended context gives shared-memory hosts a sample-boundary snapshot too.
+  const scopeSuspension =
+    completedScopeFrames > 0
+      ? context
+          // Web Audio quantizes suspend times upward to the render boundary.
+          .suspend((completedScopeFrames - 0.5) / buffer.sampleRate)
+          .then(async () => {
+            loudness.getFloatLoudnessData(values)
+            readSnapshot(LoudnessNode.from(values))
+            await context.resume()
+          })
+      : Promise.resolve()
+  let messageTimeout: ReturnType<typeof setTimeout> | undefined
+  try {
+    await Promise.all([context.startRendering(), scopeSuspension])
+    if (!globalThis.crossOriginIsolated) {
+      await Promise.race([
+        finalMessageReceived,
+        new Promise<never>((_resolve, reject) => {
+          messageTimeout = setTimeout(
+            () =>
+              reject(
+                new Error(
+                  'The offline loudness processor did not deliver its final measurement.',
+                ),
+              ),
+            5000,
+          )
+        }),
+      ])
+    }
+    loudness.getFloatLoudnessData(values)
+    readSnapshot(LoudnessNode.from(values))
+  } finally {
+    clearTimeout(messageTimeout)
+    loudness.port.close()
+    source.disconnect()
+    loudness.disconnect()
+  }
+  if (!scoped)
+    throw new Error(
+      'The scope is too short for a complete loudness processing quantum.',
+    )
+  const snapshot: LoudnessSnapshot = mergeOfflineScopeSnapshot(
+    scoped,
+    maximumTruePeak,
+  )
   const shortTermAvailable = scopeFrames >= 3 * buffer.sampleRate
   const lraAvailable =
-    shortTermAvailable && Number.isFinite(snapshot.loudnessRange)
+    shortTermAvailable &&
+    Number.isFinite(snapshot.integratedLoudness) &&
+    Number.isFinite(snapshot.loudnessRange)
   return {
     integratedLoudness: snapshot.integratedLoudness,
     loudnessRange: snapshot.loudnessRange,

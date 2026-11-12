@@ -20,6 +20,7 @@ to `127.0.0.1:5173` by default.
 | `/projects/:projectId/instructions`           | Markdown instructions editor and preview                                |
 | `/projects/:projectId/tasks/:taskId/annotate` | Persisted task annotation workspace                                     |
 | `/editor`                                     | Session-only standalone editor                                          |
+| `/editor/dialogue-review`                     | Generated paired-track timing-review fixture and reusable host adapter  |
 | `/404`                                        | Missing-route state                                                     |
 
 Unknown paths redirect to `/404`. Missing project and task records render
@@ -164,10 +165,30 @@ Regions, Zoom, Hover, and Spectrogram plugins. WaveSurfer regions and markers ar
 a generated rendering layer synchronized from serializable state. Completed
 edits enter snapshot history; live drag frames do not create separate entries.
 
-One guarded `MediaElementAudioSourceNode` supplies the audible route to the
-audio destination. Spectrum and loudness branches are zero-gain analysis taps.
-The live loudness worklet and deterministic offline File and Selection rendering
-observe the audio without changing playback.
+One guarded `MediaElementAudioSourceNode` supplies the audible route through a
+unity-default playback gain to the audio destination. Spectrum and loudness
+branches are pre-gain, zero-output analysis taps. The live loudness worklet and
+deterministic offline File, active Range, and Selection rendering measure source
+audio. Listening normalization changes only the audible gain after a confirmed
+speech reference and explicit enablement. Playback clipping evidence remains
+separate from source true peak. See [listening architecture](playback-listening.md).
+
+Hosted paired review uses one `AudioContext` clock and scheduled
+`AudioBufferSourceNode` tracks, with source-time adapters and muted WaveSurfer
+visual lanes. Both lanes share viewport geometry. Source spectrum and loudness
+taps follow the active analysis track. The adapter exposes local source loading
+and review repository interfaces for a Windows host. See the
+[host integration guide](windows-dialogue-review-integration.md).
+
+Optional transcripts and supplied measurements enter through a validated local
+sidecar. Their selection and timing evidence stay separate from annotation
+selection. Local proposal review has its own history, proposal provenance,
+decisions, feedback ranges, persistent note drafts, and JSON export. Source
+identity bounds both listening and review state. These auxiliary repositories
+use separate origin-local storage so the existing project database and portable
+annotation/backup formats retain their compatibility contracts. Review and
+listening preferences are not included in a project backup. See
+[local evidence](local-inspection-evidence.md) and [review data](local-review.md).
 
 Pointer precedence is implemented in the waveform layer: amplitude scaling,
 selected-region nudging or horizontal panning, drag panning, pointer-centered

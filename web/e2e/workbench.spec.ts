@@ -113,6 +113,9 @@ test('project inspector keeps its tab across selection and focus changes', async
     page.getByRole('button', { name: 'Play', exact: true }),
   ).toBeEnabled()
   await page.getByRole('tab', { name: 'Clip & info' }).click()
+  await expect(
+    page.getByText('48000 Hz · decoded', { exact: true }),
+  ).toBeVisible()
   await page.getByRole('button', { name: 'Create region at playhead' }).click()
   await expect(page.getByRole('tab', { name: 'Clip & info' })).toHaveAttribute(
     'aria-selected',
@@ -128,4 +131,61 @@ test('project inspector keeps its tab across selection and focus changes', async
     'true',
   )
   await page.screenshot({ path: 'test-results/project-focused-inspector.png' })
+  await page.getByRole('tab', { name: 'Evidence', exact: true }).click()
+  await page.getByLabel('Open local transcript or score JSON').setInputFiles({
+    name: 'synthetic-evidence.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(
+      JSON.stringify({
+        transcript: [
+          {
+            id: 'row-1',
+            speaker: 'speaker',
+            start: 1,
+            end: 2,
+            text: 'Synthetic transcript phrase',
+          },
+        ],
+        scores: [
+          {
+            id: 'score-1',
+            name: 'Supplied quality',
+            value: 4,
+            unit: 'MOS',
+            source: 'synthetic evaluator',
+            start: 1,
+            end: 2,
+          },
+        ],
+      }),
+    ),
+  })
+  await expect(
+    page.getByText('Synthetic transcript phrase', { exact: true }),
+  ).toBeVisible()
+  await page.getByRole('button', { name: 'Spectrogram', exact: true }).click()
+  await page.getByRole('button', { name: 'Spectrum', exact: true }).click()
+  await page.getByRole('button', { name: 'Meter', exact: true }).click()
+  await expect(
+    page.getByRole('region', { name: 'Spectrogram', exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('region', { name: 'Real-time spectrum analyzer' }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('complementary', { name: 'Loudness and true-peak meter' }),
+  ).toBeVisible()
+  await page.screenshot({ path: 'test-results/project-analysis-inspector.png' })
+  await page
+    .getByRole('button', { name: /speaker.*Synthetic transcript phrase/ })
+    .click()
+  await expect(
+    page.getByText('Source · synthetic evaluator', { exact: true }),
+  ).toBeVisible()
+  await page.getByRole('button', { name: 'Close annotation inspector' }).click()
+  await page.getByRole('button', { name: 'Show annotation inspector' }).click()
+  await page.getByRole('tab', { name: 'Evidence', exact: true }).click()
+  await expect(
+    page.getByText('Synthetic transcript phrase', { exact: true }),
+  ).toBeVisible()
 })

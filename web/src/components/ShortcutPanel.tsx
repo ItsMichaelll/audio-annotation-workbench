@@ -6,10 +6,14 @@ import {
 
 export interface ShortcutPanelProps {
   labels?: readonly { name: string; shortcut?: string }[]
+  groups?: readonly EditorShortcutGroup[]
 }
 
-export function ShortcutPanel({ labels }: ShortcutPanelProps) {
-  const shortcutGroups: EditorShortcutGroup[] = [...EDITOR_SHORTCUT_GROUPS]
+export function ShortcutPanel({
+  labels,
+  groups = EDITOR_SHORTCUT_GROUPS,
+}: ShortcutPanelProps) {
+  const shortcutGroups: EditorShortcutGroup[] = [...groups]
   if (labels) {
     shortcutGroups.push({
       title: 'Task workflow',

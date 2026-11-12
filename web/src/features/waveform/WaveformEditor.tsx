@@ -52,6 +52,11 @@ import {
 import styles from './WaveformEditor.module.css'
 import { TimelineOverlay } from './TimelineOverlay'
 import { GapRuler } from './GapRuler'
+import {
+  clampNavigationTime,
+  fitNavigationRange,
+  navigationBounds,
+} from './navigationRange'
 import { WaveformViewControls } from './WaveformViewControls'
 import {
   renderDisplayWaveform,
@@ -62,6 +67,7 @@ import {
 } from './waveformDisplay'
 import { SpectrogramControls } from './SpectrogramControls'
 import {
+  ANALYSIS_DECODE_SAMPLE_RATE,
   spectrogramFrequencyPosition,
   type SpectrogramScale,
 } from './analysisSettings'
@@ -198,6 +204,7 @@ export interface WaveformEditorHandle {
 }
 
 interface WaveformEditorProps {
+  listeningContainer?: HTMLElement | null
   audioUrl: string
   audioIdentity?: string | undefined
   externalDecodedAudio?: AudioBuffer
@@ -306,6 +313,7 @@ export const WaveformEditor = forwardRef<
 >(function WaveformEditor(
   {
     audioUrl,
+    listeningContainer,
     audioIdentity,
     externalDecodedAudio,
     externalAnalyser,
@@ -361,6 +369,8 @@ export const WaveformEditor = forwardRef<
   const scrollbarTrackElementRef = useRef<HTMLDivElement>(null)
   const wavesurferRef = useRef<WaveSurfer | null>(null)
   const hostPlaybackRef = useRef(playbackController)
+  const activeRangeRef = useRef(activeRange)
+  activeRangeRef.current = activeRange
   const externalSyncRef = useRef(false)
   const lastExternalTimeRef = useRef<number | null>(null)
   const hostViewportRef = useRef(onViewportChange)
@@ -382,6 +392,7 @@ export const WaveformEditor = forwardRef<
   const verticalScaleRef = useRef(1)
   const pendingPlaybackRegionIdRef = useRef<string | null>(null)
   const inspectionLoopRef = useRef<{ start: number; end: number } | null>(null)
+  const referenceAuditionRef = useRef(false)
   const restorePlaybackAfterEmptyClickRef = useRef(false)
   const callbacksRef = useRef<CallbackBundle>({
     onLoading,
@@ -493,9 +504,22 @@ export const WaveformEditor = forwardRef<
     forwardedRef,
     () => ({
       playInspectionRange(start, end) {
+        referenceAuditionRef.current = false
         const wavesurfer = wavesurferRef.current
         if (!wavesurfer) return
-        const range = normalizeRegion(start, end, wavesurfer.getDuration())
+        const range = normalizeRegion(
+          clampNavigationTime(
+            start,
+            wavesurfer.getDuration(),
+            activeRangeRef.current,
+          ),
+          clampNavigationTime(
+            end,
+            wavesurfer.getDuration(),
+            activeRangeRef.current,
+          ),
+          wavesurfer.getDuration(),
+        )
         if (!range) return
         inspectionLoopRef.current = range
         restorePlaybackAfterEmptyClickRef.current = false
@@ -523,15 +547,20 @@ export const WaveformEditor = forwardRef<
         const scrollContainer = wavesurfer.getWrapper().parentElement
         if (!scrollContainer) return
 
-        const fittedZoom = fitZoom(duration, scrollContainer.clientWidth)
-        if (fittedZoom <= 0) return
-        wavesurfer.zoom(fittedZoom)
-        wavesurfer.setScroll(0)
+        const range = fitNavigationRange(
+          duration,
+          scrollContainer.clientWidth,
+          activeRangeRef.current,
+        )
+        if (range.zoom <= 0) return
+        wavesurfer.zoom(range.zoom)
+        wavesurfer.setScrollTime(range.start)
       },
       getCurrentTime() {
         return wavesurferRef.current?.getCurrentTime() ?? 0
       },
       playPause() {
+        referenceAuditionRef.current = false
         inspectionLoopRef.current = null
         if (hostPlaybackRef.current) {
           hostPlaybackRef.current.playPause()
@@ -548,7 +577,14 @@ export const WaveformEditor = forwardRef<
           const pendingRegion = regionsPluginRef.current
             ?.getRegions()
             .find((region) => region.id === pendingPlaybackRegionIdRef.current)
-          if (pendingRegion) wavesurfer.setTime(pendingRegion.start)
+          if (pendingRegion)
+            wavesurfer.setTime(
+              clampNavigationTime(
+                pendingRegion.start,
+                wavesurfer.getDuration(),
+                activeRangeRef.current,
+              ),
+            )
           pendingPlaybackRegionIdRef.current = null
         }
         void wavesurfer.playPause().catch(reportPlaybackError)
@@ -561,33 +597,48 @@ export const WaveformEditor = forwardRef<
         callbacksRef.current.onVerticalScaleChange(1)
       },
       seekBy(seconds: number) {
+        referenceAuditionRef.current = false
         inspectionLoopRef.current = null
         const wavesurfer = wavesurferRef.current
         if (!wavesurfer) return
         wavesurfer.setTime(
-          clampTime(
+          clampNavigationTime(
             wavesurfer.getCurrentTime() + seconds,
             wavesurfer.getDuration(),
+            activeRangeRef.current,
           ),
         )
       },
       seekTo(seconds: number) {
+        referenceAuditionRef.current = false
         inspectionLoopRef.current = null
         const wavesurfer = wavesurferRef.current
         if (!wavesurfer) return
-        wavesurfer.setTime(clampTime(seconds, wavesurfer.getDuration()))
+        wavesurfer.setTime(
+          clampNavigationTime(
+            seconds,
+            wavesurfer.getDuration(),
+            activeRangeRef.current,
+          ),
+        )
       },
       jumpToBoundary(boundary: 'start' | 'end') {
+        referenceAuditionRef.current = false
         inspectionLoopRef.current = null
         const wavesurfer = wavesurferRef.current
         if (!wavesurfer) return
         loopEnabledRef.current = false
         pendingPlaybackRegionIdRef.current = null
-        const time = boundary === 'start' ? 0 : wavesurfer.getDuration()
+        const range = navigationBounds(
+          wavesurfer.getDuration(),
+          activeRangeRef.current,
+        )
+        const time = boundary === 'start' ? range.start : range.end
         wavesurfer.setTime(time)
         wavesurfer.setScrollTime(time)
       },
       revealRegion(start: number, end: number) {
+        referenceAuditionRef.current = false
         inspectionLoopRef.current = null
         const wavesurfer = wavesurferRef.current
         if (!wavesurfer) return
@@ -597,7 +648,9 @@ export const WaveformEditor = forwardRef<
         const bounded = normalizeRegion(start, end, duration)
         if (!bounded) return
         if (wavesurfer.isPlaying()) wavesurfer.pause()
-        wavesurfer.setTime(bounded.start)
+        wavesurfer.setTime(
+          clampNavigationTime(bounded.start, duration, activeRangeRef.current),
+        )
         const pixelsPerSecond = Math.max(
           wavesurfer.options.minPxPerSec,
           scrollContainer.clientWidth / duration,
@@ -622,6 +675,7 @@ export const WaveformEditor = forwardRef<
         )
       },
       seekToMarker(time: number) {
+        referenceAuditionRef.current = false
         inspectionLoopRef.current = null
         const wavesurfer = wavesurferRef.current
         if (!wavesurfer) return
@@ -631,7 +685,10 @@ export const WaveformEditor = forwardRef<
         const bounded = seekToMarkerWithoutPlaybackChange(
           time,
           duration,
-          (markerTime) => wavesurfer.setTime(markerTime),
+          (markerTime) =>
+            wavesurfer.setTime(
+              clampNavigationTime(markerTime, duration, activeRangeRef.current),
+            ),
         )
         if (bounded === null) return
         const pixelsPerSecond = Math.max(
@@ -714,6 +771,7 @@ export const WaveformEditor = forwardRef<
     })
     const wavesurfer = WaveSurfer.create({
       container,
+      sampleRate: ANALYSIS_DECODE_SAMPLE_RATE,
       height:
         parseFloat(
           getComputedStyle(container).getPropertyValue('--waveform-height'),
@@ -787,6 +845,7 @@ export const WaveformEditor = forwardRef<
       )
     }
     const selectRegion = (regionId: string) => {
+      referenceAuditionRef.current = false
       inspectionLoopRef.current = null
       if (selectedMarkerIdRef.current !== null) {
         selectedMarkerIdRef.current = null
@@ -805,6 +864,8 @@ export const WaveformEditor = forwardRef<
       callbacksRef.current.onRegionSelect(regionId)
     }
     const selectMarker = (markerId: string) => {
+      inspectionLoopRef.current = null
+      referenceAuditionRef.current = false
       if (selectedRegionIdRef.current !== null) {
         selectedRegionIdRef.current = null
         loopEnabledRef.current = false
@@ -871,7 +932,7 @@ export const WaveformEditor = forwardRef<
         return
       if (hostPlaybackRef.current) hostPlaybackRef.current.seekTo(time)
       callbacksRef.current.onTimeChange(time)
-      if (inspectionLoopRef.current) return
+      if (inspectionLoopRef.current || referenceAuditionRef.current) return
       const selectedId = selectedRegionIdRef.current
       if (!loopEnabledRef.current || !selectedId || !wavesurfer.isPlaying()) {
         return
@@ -900,6 +961,11 @@ export const WaveformEditor = forwardRef<
     })
     const unsubscribePause = wavesurfer.on('pause', () => {
       if (hostPlaybackRef.current) return
+      if (referenceAuditionRef.current) {
+        referenceAuditionRef.current = false
+        callbacksRef.current.onPlaybackChange(false)
+        return
+      }
       const inspection = inspectionLoopRef.current
       if (
         inspection &&
@@ -947,17 +1013,31 @@ export const WaveformEditor = forwardRef<
       callbacksRef.current.onPlaybackChange(false)
     })
     const unsubscribeInteraction = wavesurfer.on('interaction', (time) => {
+      referenceAuditionRef.current = false
       inspectionLoopRef.current = null
-      callbacksRef.current.onTimeChange(time)
+      const bounded = clampNavigationTime(
+        time,
+        wavesurfer.getDuration(),
+        activeRangeRef.current,
+      )
+      if (Math.abs(bounded - time) > 0.001) wavesurfer.setTime(bounded)
+      callbacksRef.current.onTimeChange(bounded)
     })
     const seekAfterClearingSelection = (relativeX: number) => {
+      referenceAuditionRef.current = false
       inspectionLoopRef.current = null
       const shouldContinue =
         restorePlaybackAfterEmptyClickRef.current || wavesurfer.isPlaying()
       clearSelection()
       const duration = wavesurfer.getDuration()
       if (duration > 0) {
-        wavesurfer.setTime(clampTime(relativeX * duration, duration))
+        wavesurfer.setTime(
+          clampNavigationTime(
+            relativeX * duration,
+            duration,
+            activeRangeRef.current,
+          ),
+        )
       }
       restorePlaybackAfterEmptyClickRef.current = shouldContinue
       if (shouldContinue) {
@@ -1163,7 +1243,14 @@ export const WaveformEditor = forwardRef<
           seekToMarkerWithoutPlaybackChange(
             region.start,
             wavesurfer.getDuration(),
-            (time) => wavesurfer.setTime(time),
+            (time) =>
+              wavesurfer.setTime(
+                clampNavigationTime(
+                  time,
+                  wavesurfer.getDuration(),
+                  activeRangeRef.current,
+                ),
+              ),
           )
           return
         }
@@ -1185,7 +1272,11 @@ export const WaveformEditor = forwardRef<
             1,
           )
           wavesurfer.setTime(
-            region.start + clickRatio * (region.end - region.start),
+            clampNavigationTime(
+              region.start + clickRatio * (region.end - region.start),
+              wavesurfer.getDuration(),
+              activeRangeRef.current,
+            ),
           )
         }
       },
@@ -1201,7 +1292,14 @@ export const WaveformEditor = forwardRef<
           seekToMarkerWithoutPlaybackChange(
             region.start,
             wavesurfer.getDuration(),
-            (time) => wavesurfer.setTime(time),
+            (time) =>
+              wavesurfer.setTime(
+                clampNavigationTime(
+                  time,
+                  wavesurfer.getDuration(),
+                  activeRangeRef.current,
+                ),
+              ),
           )
           return
         }
@@ -1773,6 +1871,7 @@ export const WaveformEditor = forwardRef<
 
     return () => {
       disposed = true
+      referenceAuditionRef.current = false
       inspectionLoopRef.current = null
       heightObserver.disconnect()
       disableRegionCreation()
@@ -2217,6 +2316,7 @@ export const WaveformEditor = forwardRef<
         />
         {!playbackController && (
           <PlaybackListeningControls
+            container={listeningContainer ?? null}
             audioBuffer={decodedAudio}
             mediaElement={mediaElement}
             sourceId={audioUrl}
@@ -2224,6 +2324,11 @@ export const WaveformEditor = forwardRef<
             selectedRegion={selectedRegion}
             setPlaybackGain={audioAnalyzer.setPlaybackGain}
             onAudition={(start, end) => {
+              referenceAuditionRef.current = true
+              inspectionLoopRef.current = null
+              restorePlaybackAfterEmptyClickRef.current = false
+              if (spectrumEnabledRef.current) void activateAudioAnalyzer()
+              if (meterEnabledRef.current) void activateLoudnessMeter()
               void wavesurferRef.current
                 ?.play(start, end)
                 .catch(reportPlaybackError)
@@ -2253,6 +2358,7 @@ export const WaveformEditor = forwardRef<
           />
           <TimelineOverlay
             wavesurfer={wavesurferRef.current}
+            reviewRange={activeRange ?? null}
             references={referenceRanges}
             clipping={playbackClippingRanges}
           />
@@ -2297,7 +2403,10 @@ export const WaveformEditor = forwardRef<
           />
         </label>
         {gapRulerEnabled && (
-          <GapRuler key={audioUrl} wavesurfer={wavesurferRef.current} />
+          <GapRuler
+            key={audioIdentity ?? audioUrl}
+            wavesurfer={wavesurferRef.current}
+          />
         )}
         <div className={styles.overviewHeader}>
           <span>FULL RECORDING</span>
@@ -2349,6 +2458,7 @@ export const WaveformEditor = forwardRef<
               )}
               <TimelineOverlay
                 wavesurfer={wavesurferRef.current}
+                reviewRange={activeRange ?? null}
                 selection={selectedRegion}
                 references={referenceRanges}
                 clipping={playbackClippingRanges}
@@ -2389,7 +2499,7 @@ export const WaveformEditor = forwardRef<
         )}
         {
           <SpectrumAnalyzer
-            key={audioUrl}
+            key={audioIdentity ?? audioUrl}
             visible={spectrumEnabled}
             analyserNode={externalAnalyser ?? audioAnalyzer.analyserNode}
             analyzerError={audioAnalyzer.error}
@@ -2410,7 +2520,7 @@ export const WaveformEditor = forwardRef<
       </div>
       {
         <LoudnessMeter
-          key={audioUrl}
+          key={audioIdentity ?? audioUrl}
           visible={meterEnabled}
           audioBuffer={analysisAudio}
           live={

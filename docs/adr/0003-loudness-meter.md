@@ -1,5 +1,10 @@
 # ADR 0003: Worklet and offline contexts for loudness measurement
 
+The later [shared review-workbench decision](0006-review-workbench.md) extends
+playback with optional reference listening gain while retaining source-level
+observational analysis. See [offline scope accuracy](../loudness-scope-accuracy.md)
+for the current quantum-boundary and true-peak-flush semantics.
+
 - Status: Accepted
 - Date: 2026-08-29
 

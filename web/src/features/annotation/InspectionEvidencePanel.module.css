@@ -1,0 +1,46 @@
+.root {
+  display: grid;
+  gap: 16px;
+  font-size: 12px;
+}
+
+.root label,
+.score {
+  display: grid;
+  gap: 6px;
+}
+
+.root input {
+  width: 100%;
+}
+
+.root p,
+.row span,
+.score span {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.row {
+  display: grid;
+  width: 100%;
+  gap: 5px;
+  padding: 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  text-align: left;
+}
+
+.row strong {
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.row[aria-current='time'] {
+  border-left: 2px solid var(--accent-primary);
+  background: var(--accent-muted);
+}
+
+.score {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}

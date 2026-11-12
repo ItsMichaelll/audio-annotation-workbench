@@ -9,6 +9,7 @@ interface TimelineOverlayProps {
   references?: readonly ListeningRange[]
   clipping?: readonly ListeningRange[]
   referenceLabel?: string
+  reviewRange?: { start: number; end: number } | null
 }
 
 /** Uses the same full-content geometry as the waveform and spectrogram. */
@@ -18,6 +19,7 @@ export function TimelineOverlay({
   references = [],
   clipping = [],
   referenceLabel = 'Speech reference',
+  reviewRange,
 }: TimelineOverlayProps) {
   const rootRef = useRef<HTMLDivElement>(null)
   const playheadRef = useRef<HTMLDivElement>(null)
@@ -57,9 +59,18 @@ export function TimelineOverlay({
     ]
     update()
     return () => unsubscribers.forEach((unsubscribe) => unsubscribe())
-  }, [clipping, references, selection, wavesurfer])
+  }, [clipping, references, reviewRange, selection, wavesurfer])
   return (
     <div ref={rootRef} className={styles.root} aria-hidden="true">
+      {reviewRange && (
+        <div
+          className={styles.reviewRange}
+          data-start={reviewRange.start}
+          data-end={reviewRange.end}
+        >
+          <span>Review range</span>
+        </div>
+      )}
       {selection && (
         <div
           className={styles.selection}

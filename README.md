@@ -21,6 +21,19 @@ original location and is opened through browser file or folder access.
 - Waveform, minimap, spectrogram, spectrum analyzer, and loudness metering
 - Project backup and restore plus versioned JSONL and flattened CSV exports
 - A session-only standalone editor at `/editor`
+- Shared focus modes, trackpad navigation, gap ruler, waveform display modes,
+  and configurable source-aligned spectrogram and spectrum views
+- Optional speech-reference listening gain with source-level analysis
+- Local proposal review, independent decisions, feedback ranges, and evidence
+- A paired-track timing-review fixture at `/editor/dialogue-review`
+
+Standalone annotations remain session-only. Listening references and optional
+review decisions are stored separately in the browser. See the
+[analysis and navigation guide](docs/editor-analysis-navigation.md),
+[listening controls](docs/playback-listening.md),
+[local review workflow](docs/local-review.md),
+[transcript and measurement sidecars](docs/local-inspection-evidence.md), and
+[Windows dialogue-review integration](docs/windows-dialogue-review-integration.md).
 
 ## Requirements
 
@@ -75,8 +88,11 @@ standalone editor.
 
 Project records, taxonomies, instructions, tasks, annotations, and supported
 directory handles stay in the browser profile. Audio bytes, object URLs,
-waveform peaks, spectrograms, and analysis results are not stored in the project
-database or included in exports.
+waveform peaks, spectrograms, and raw analysis buffers are not stored in the
+project database or included in exports. Confirmed speech-reference ranges and
+their summary loudness measurement are stored as local listening preferences.
+Optional review proposals, decisions, feedback, and note drafts use separate
+local review storage and an explicit review JSON export.
 
 Browser data belongs to the exact browser profile and application origin,
 including the scheme, host, and port. Data created at `localhost:5173` is

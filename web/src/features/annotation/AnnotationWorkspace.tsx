@@ -94,6 +94,7 @@ import { useProject } from '../projects/projectHooks'
 import { AnnotationInspector } from './AnnotationInspector'
 import styles from '../../components/EditorWorkspace.module.css'
 import { useEditorFocus } from '../../components/useEditorFocus'
+import { LocalReviewPanel } from '../review/LocalReviewPanel'
 
 type SaveState = 'Unsaved' | 'Saving' | 'Saved' | 'Save failed'
 type AudioState =
@@ -102,7 +103,7 @@ type AudioState =
   | { kind: 'missing'; message: string }
   | { kind: 'mismatch'; message: string }
   | { kind: 'error'; message: string }
-  | { kind: 'ready'; url: string; name: string }
+  | { kind: 'ready'; url: string; name: string; identity: string }
 
 function messageFrom(error: unknown): string {
   return error instanceof Error ? error.message : 'The operation failed.'
@@ -234,11 +235,8 @@ function ActiveAnnotationWorkspace({
   taxonomy: AnnotationTaxonomy
 }) {
   const selectionTaskActive = useRef(true)
-  const focus = useEditorFocus(
-    taxonomy.labels.flatMap((label) =>
-      label.shortcut ? [label.shortcut] : [],
-    ),
-  )
+  const [listeningContainer, setListeningContainer] =
+    useState<HTMLDivElement | null>(null)
   useEffect(() => {
     selectionTaskActive.current = true
     return () => {
@@ -268,6 +266,18 @@ function ActiveAnnotationWorkspace({
   })
   const [audioRevision, setAudioRevision] = useState(0)
   const [duration, setDuration] = useState(0)
+  const [inspectionRange, setInspectionRange] = useState<{
+    start: number
+    end: number
+  } | null>(null)
+  const [localEvidence, setLocalEvidence] = useState<Record<
+    string,
+    unknown
+  > | null>(null)
+  const [audioProperties, setAudioProperties] = useState<{
+    sampleRate: number
+    channels: number
+  } | null>(null)
   const [currentTime, setCurrentTime] = useState(0)
   const [zoom, setZoom] = useState(0)
   const [verticalScale, setVerticalScale] = useState(1)
@@ -285,6 +295,12 @@ function ActiveAnnotationWorkspace({
     onSelectionClick,
   } = useRegionSelection(annotation.regions)
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null)
+  const focus = useEditorFocus(
+    taxonomy.labels.flatMap((label) =>
+      label.shortcut ? [label.shortcut] : [],
+    ),
+    selectedRegionIds.length > 0 || selectedMarkerId !== null,
+  )
   const [waveformFocused, setWaveformFocused] = useState(false)
   const [loopEnabled, setLoopEnabled] = useState(false)
   const [spectrumEnabled, setSpectrumEnabled] = useState(false)
@@ -400,10 +416,14 @@ function ActiveAnnotationWorkspace({
         const resolved = await adapter.resolve(reference)
         if (disposed) return
         objectUrl = URL.createObjectURL(resolved.file)
+        setLocalEvidence(null)
+        setInspectionRange(null)
+        setAudioProperties(null)
         setAudioState({
           kind: 'ready',
           url: objectUrl,
           name: resolved.file.name,
+          identity: `${task.id}:${resolved.file.name}:${resolved.file.size}:${resolved.file.lastModified}`,
         })
       } catch (error) {
         if (!disposed)
@@ -415,7 +435,7 @@ function ActiveAnnotationWorkspace({
       disposed = true
       if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
-  }, [audioRevision, task.primaryMedia])
+  }, [audioRevision, task.id, task.primaryMedia])
 
   const applyHistoryState = useCallback(
     (state: HistoryState<AnnotationDocument>) => {
@@ -971,6 +991,7 @@ function ActiveAnnotationWorkspace({
   }, [readOnly])
 
   const controls: TransportBarProps = {
+    listeningRef: setListeningContainer,
     isLoaded: loadStatus === 'ready',
     isPlaying,
     loopEnabled,
@@ -1295,6 +1316,9 @@ function ActiveAnnotationWorkspace({
               <WaveformEditor
                 ref={waveformRef}
                 audioUrl={audioState.url}
+                listeningContainer={listeningContainer}
+                audioIdentity={audioState.identity}
+                inspectionRange={inspectionRange}
                 regions={regions}
                 markers={markers}
                 selectedRegionId={selectedRegionId}
@@ -1307,6 +1331,7 @@ function ActiveAnnotationWorkspace({
                 isPlaying={isPlaying}
                 readOnly={readOnly}
                 onLoading={() => setLoadStatus('loading')}
+                onAudioProperties={setAudioProperties}
                 onReady={(value) => {
                   setDuration(value)
                   const normalized = normalizeAnnotation(
@@ -1417,6 +1442,21 @@ function ActiveAnnotationWorkspace({
             canUndo={!readOnly && historyAvailability.canUndo}
             canRedo={!readOnly && historyAvailability.canRedo}
           />
+          {audioState.kind === 'ready' && loadStatus === 'ready' && (
+            <LocalReviewPanel
+              sourceIdentity={audioState.identity}
+              duration={duration}
+              currentTime={currentTime}
+              selection={selectedRegion}
+              onReveal={(start, end) =>
+                waveformRef.current?.revealRegion(start, end)
+              }
+              onLoopRange={(start, end) =>
+                waveformRef.current?.playInspectionRange(start, end)
+              }
+              onEvidenceRangeChange={setInspectionRange}
+            />
+          )}
         </section>
         {inspectorOpen && (
           <AnnotationInspector
@@ -1425,6 +1465,18 @@ function ActiveAnnotationWorkspace({
             sourceName={task.primaryMedia.displayName}
             taxonomyVersion={taxonomyVersion.version}
             metadata={task.metadata}
+            sourceIdentity={
+              audioState.kind === 'ready' ? audioState.identity : undefined
+            }
+            localEvidence={localEvidence}
+            onEvidenceImport={setLocalEvidence}
+            audioProperties={audioProperties}
+            currentTime={currentTime}
+            onRevealEvidence={(start, end) => {
+              setLoopEnabled(false)
+              setInspectionRange({ start, end })
+              waveformRef.current?.revealRegion(start, end)
+            }}
             onClose={() => {
               setInspectorOpen(false)
               inspectorToggleRef.current?.focus()

@@ -5,7 +5,7 @@ import { Modal, ModalTitle } from './Modal'
 import { ShortcutPanel, type ShortcutPanelProps } from './ShortcutPanel'
 import styles from './KeyboardHelp.module.css'
 
-export function KeyboardHelp({ labels }: ShortcutPanelProps) {
+export function KeyboardHelp({ labels, groups }: ShortcutPanelProps) {
   const [open, setOpen] = useState(false)
   const titleId = useId()
   const hReserved =
@@ -59,7 +59,10 @@ export function KeyboardHelp({ labels }: ShortcutPanelProps) {
             <Icon name="close" />
           </button>
         </div>
-        <ShortcutPanel {...(labels ? { labels } : {})} />
+        <ShortcutPanel
+          {...(labels ? { labels } : {})}
+          {...(groups ? { groups } : {})}
+        />
       </Modal>
     </>
   )

@@ -45,6 +45,7 @@ import {
 } from './features/waveform/WaveformEditor'
 import styles from './components/EditorWorkspace.module.css'
 import { useEditorFocus } from './components/useEditorFocus'
+import { LocalReviewPanel } from './features/review/LocalReviewPanel'
 
 type LoadStatus = 'idle' | 'loading' | 'ready' | 'error'
 
@@ -55,7 +56,8 @@ const EMPTY_STATE_WAVE_HEIGHTS = [
 ]
 
 export function StandaloneEditor() {
-  const focus = useEditorFocus()
+  const [listeningContainer, setListeningContainer] =
+    useState<HTMLDivElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const waveformRef = useRef<WaveformEditorHandle>(null)
   const activeObjectUrlRef = useRef<string | null>(null)
@@ -67,6 +69,13 @@ export function StandaloneEditor() {
 
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [fileName, setFileName] = useState<string | null>(null)
+  const [inspectionRange, setInspectionRange] = useState<{
+    start: number
+    end: number
+  } | null>(null)
+  const [audioIdentity, setAudioIdentity] = useState<string | undefined>(
+    undefined,
+  )
   const [loadStatus, setLoadStatus] = useState<LoadStatus>('idle')
   const [error, setError] = useState<string | null>(null)
   const [duration, setDuration] = useState(0)
@@ -85,6 +94,10 @@ export function StandaloneEditor() {
     onSelectionClick,
   } = useRegionSelection(regions)
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null)
+  const focus = useEditorFocus(
+    [],
+    selectedRegionIds.length > 0 || selectedMarkerId !== null,
+  )
   const [waveformFocused, setWaveformFocused] = useState(false)
   const [loopEnabled, setLoopEnabled] = useState(false)
   const [spectrumEnabled, setSpectrumEnabled] = useState(false)
@@ -258,6 +271,7 @@ export function StandaloneEditor() {
   }, [applyHistoryState])
 
   const resetEditorState = useCallback(() => {
+    setInspectionRange(null)
     regionsRef.current = []
     markersRef.current = []
     setMarkers([])
@@ -294,6 +308,9 @@ export function StandaloneEditor() {
     activeObjectUrlRef.current = objectUrl
     resetEditorState()
     setFileName(file.name)
+    setAudioIdentity(
+      `standalone:${file.name}:${file.size}:${file.lastModified}`,
+    )
     setError(null)
     setLoadStatus('loading')
     setAudioUrl(objectUrl)
@@ -408,6 +425,7 @@ export function StandaloneEditor() {
   ])
 
   const controls: TransportBarProps = {
+    listeningRef: setListeningContainer,
     isLoaded,
     isPlaying,
     loopEnabled,
@@ -609,6 +627,9 @@ export function StandaloneEditor() {
               <WaveformEditor
                 ref={waveformRef}
                 audioUrl={audioUrl}
+                listeningContainer={listeningContainer}
+                audioIdentity={audioIdentity}
+                inspectionRange={inspectionRange}
                 regions={regions}
                 markers={markers}
                 selectedRegionId={selectedRegionId}
@@ -700,6 +721,21 @@ export function StandaloneEditor() {
               onUndo={undo}
               onRedo={redo}
               {...historyAvailability}
+            />
+          )}
+          {audioIdentity && isLoaded && (
+            <LocalReviewPanel
+              sourceIdentity={audioIdentity}
+              duration={duration}
+              currentTime={currentTime}
+              selection={selectedRegion}
+              onReveal={(start, end) =>
+                waveformRef.current?.revealRegion(start, end)
+              }
+              onLoopRange={(start, end) =>
+                waveformRef.current?.playInspectionRange(start, end)
+              }
+              onEvidenceRangeChange={setInspectionRange}
             />
           )}
           <div className={styles.sessionNote}>

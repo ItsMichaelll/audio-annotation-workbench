@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Icon } from '../../components/Icon'
 import { RegionTiming } from '../../components/RegionTiming'
 import { CustomSelectField } from '../../components/CustomSelect'
@@ -15,9 +15,11 @@ import type {
 import { formatTime } from '../../domain/transport'
 import { commonSelectedRegionAssignment } from '../../domain/regionSelection'
 import { MarkdownInstructions } from '../projects/MarkdownInstructions'
+import { parseInspectionEvidence } from '../../domain/inspectionEvidence'
+import { InspectionEvidencePanel } from './InspectionEvidencePanel'
 import styles from './AnnotationInspector.module.css'
 
-type InspectorTab = 'labels' | 'clip' | 'instructions'
+type InspectorTab = 'labels' | 'clip' | 'instructions' | 'evidence'
 
 interface AnnotationInspectorProps {
   annotation: AnnotationDocument
@@ -28,8 +30,14 @@ interface AnnotationInspectorProps {
   readOnly: boolean
   duration: number
   sourceName: string
+  sourceIdentity?: string | undefined
   taxonomyVersion: number
   metadata: Record<string, unknown>
+  localEvidence?: Record<string, unknown> | null
+  onEvidenceImport?(value: Record<string, unknown>): void
+  audioProperties?: { sampleRate: number; channels: number } | null
+  currentTime?: number
+  onRevealEvidence?(start: number, end: number): void
   onClose(): void
   onRegionBoundsChange(start: number, end: number): void
   onToggleLabel(target: 'region' | 'clip', labelId: string): void
@@ -237,10 +245,21 @@ export function AnnotationInspector(props: AnnotationInspectorProps) {
       .filter(Boolean)
       .some((value) => value!.toLowerCase().includes(query.toLowerCase())),
   )
+  const evidence = useMemo(
+    () =>
+      parseInspectionEvidence(
+        props.localEvidence ?? props.metadata,
+        props.duration,
+      ),
+    [props.localEvidence, props.metadata, props.duration],
+  )
   const tabs: { value: InspectorTab; label: string }[] = [
     { value: 'labels', label: 'Region' },
     { value: 'clip', label: 'Clip & info' },
     { value: 'instructions', label: 'Guide' },
+    ...(props.onRevealEvidence
+      ? [{ value: 'evidence' as const, label: 'Evidence' }]
+      : []),
   ]
   const regionIndex = [...props.annotation.regions]
     .sort((a, b) => a.start - b.start)
@@ -534,6 +553,22 @@ export function AnnotationInspector(props: AnnotationInspectorProps) {
                     <dt>Taxonomy</dt>
                     <dd>Version {props.taxonomyVersion} · pinned</dd>
                   </div>
+                  <div>
+                    <dt>Duration</dt>
+                    <dd>{formatTime(props.duration)}</dd>
+                  </div>
+                  {props.audioProperties && (
+                    <>
+                      <div>
+                        <dt>Sample rate</dt>
+                        <dd>{props.audioProperties.sampleRate} Hz · decoded</dd>
+                      </div>
+                      <div>
+                        <dt>Channels</dt>
+                        <dd>{props.audioProperties.channels} · decoded</dd>
+                      </div>
+                    </>
+                  )}
                   {Object.entries(props.metadata).map(([key, value]) => (
                     <div key={key}>
                       <dt>{key}</dt>
@@ -546,6 +581,24 @@ export function AnnotationInspector(props: AnnotationInspectorProps) {
                   ))}
                 </dl>
               </section>
+            </>
+          )}
+          {tab === 'evidence' && props.onRevealEvidence && (
+            <>
+              {evidence.warnings.length > 0 && (
+                <p role="status">
+                  {evidence.warnings.length} supplied records could not be
+                  displayed because their values or timing are invalid.
+                </p>
+              )}
+              <InspectionEvidencePanel
+                key={props.sourceIdentity ?? props.sourceName}
+                transcript={evidence.transcript}
+                scores={evidence.scores}
+                currentTime={props.currentTime ?? 0}
+                onSeek={props.onRevealEvidence}
+                onImport={props.onEvidenceImport}
+              />
             </>
           )}
           {tab === 'instructions' && (

@@ -2,6 +2,19 @@ import { describe, expect, it } from 'vitest'
 import { pcmSpectrum } from './pcmSpectrum'
 
 describe('paused source spectrum', () => {
+  it('retains a 10 kHz source peak above the former 8 kHz waveform-decode Nyquist', () => {
+    const rate = 48000
+    const size = 8192
+    const audio = Float32Array.from(
+      { length: rate },
+      (_, i) => 0.5 * Math.sin((2 * Math.PI * 10000 * i) / rate),
+    )
+    const values = pcmSpectrum([audio], rate, 0.5, size)
+    let peak = 0
+    for (let bin = 1; bin < values.length; bin++)
+      if ((values[bin] ?? -Infinity) > (values[peak] ?? -Infinity)) peak = bin
+    expect((peak * rate) / size).toBeCloseTo(10000, -1)
+  })
   it('locates a bin-centered sine at its calibrated amplitude', () => {
     const rate = 48000
     const size = 4096

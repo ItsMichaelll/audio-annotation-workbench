@@ -16,6 +16,14 @@
   background: rgb(65 102 232 / 10%);
 }
 
+.reviewRange {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border: 1px dashed var(--accent-primary);
+  background: transparent;
+}
+
 .reference {
   border: 1px dashed var(--text-success);
   background: rgb(40 140 95 / 8%);

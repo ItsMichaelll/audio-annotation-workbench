@@ -50,6 +50,11 @@ const AnnotationWorkspace = lazy(() =>
     default: module.AnnotationWorkspace,
   })),
 )
+const DialogueReviewFixture = lazy(() =>
+  import('./features/dialogueReview/DialogueReviewWorkbench').then(
+    (module) => ({ default: module.DialogueReviewFixture }),
+  ),
+)
 
 export function RouterApplication() {
   return (
@@ -76,6 +81,10 @@ export function RouterApplication() {
               element={<AnnotationWorkspace />}
             />
             <Route path="editor" element={<StandaloneEditor />} />
+            <Route
+              path="editor/dialogue-review"
+              element={<DialogueReviewFixture />}
+            />
             <Route
               path="404"
               element={

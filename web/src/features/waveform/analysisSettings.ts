@@ -1,5 +1,7 @@
 export const SPECTROGRAM_FFT_SIZES = [512, 1024, 2048, 4096] as const
 export const SPECTROGRAM_DB_RANGES = [70, 90, 110] as const
+/** WaveSurfer otherwise defaults waveform decode to 8 kHz, unsuitable for analysis. */
+export const ANALYSIS_DECODE_SAMPLE_RATE = 48_000
 export type SpectrogramScale = 'linear' | 'logarithmic'
 
 export function spectrogramFrequencyPosition(

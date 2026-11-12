@@ -26,6 +26,8 @@ interface AnalysisGraph {
   silentBus: GainNode
   loudness: LoudnessNode | null
   loudnessConnected: boolean
+  loudnessInitialization: Promise<void> | null
+  directPlaybackFallback: boolean
   disposed: boolean
 }
 
@@ -98,8 +100,10 @@ export function useAnalysisAudio({
 }: UseAnalysisAudioOptions): AnalysisAudioController {
   const graphRef = useRef<AnalysisGraph | null>(null)
   const mediaElementRef = useRef(mediaElement)
-  const initializationRef = useRef<Promise<AnalysisGraph | null> | null>(null)
-  const loudnessInitializationRef = useRef<Promise<void> | null>(null)
+  const initializationRef = useRef<{
+    mediaElement: HTMLMediaElement
+    promise: Promise<AnalysisGraph | null>
+  } | null>(null)
   const responseRef = useRef<SpectrumResponse>(DEFAULT_SPECTRUM_RESPONSE)
   const onErrorRef = useRef(onError)
   const [state, setState] = useState<AnalysisState>({
@@ -125,84 +129,128 @@ export function useAnalysisAudio({
     [],
   )
 
-  const ensureGraph = useCallback(async (): Promise<AnalysisGraph | null> => {
-    const target = mediaElementRef.current
-    if (!target) return null
-    const existing = graphRef.current
-    if (existing && existing.mediaElement === target && !existing.disposed) {
-      if (existing.context.state === 'suspended')
-        await existing.context.resume()
-      return existing
-    }
-    if (initializationRef.current) return initializationRef.current
-
-    const initialization = (async () => {
-      let context: AudioContext | null = null
-      try {
-        context = new AudioContext({ latencyHint: 'interactive' })
-        if (context.state === 'suspended') await context.resume()
-        if (mediaElementRef.current !== target) {
-          await context.close()
+  const ensureGraph = useCallback(
+    async function ensureCurrentGraph(): Promise<AnalysisGraph | null> {
+      const target = mediaElementRef.current
+      if (!target) return null
+      const existing = graphRef.current
+      if (existing && existing.mediaElement === target && !existing.disposed) {
+        try {
+          if (existing.context.state === 'suspended')
+            await existing.context.resume()
+        } catch (error) {
+          reportError(
+            `Audio analysis could not resume: ${describeError(error)}`,
+            target,
+          )
           return null
         }
-        if (!mediaElementSourceGuard.claim(target)) {
-          throw new Error('This audio element already has an analysis source.')
-        }
-        let source: MediaElementAudioSourceNode
-        try {
-          source = context.createMediaElementSource(target)
-        } catch (error) {
-          mediaElementSourceGuard.releaseFailedClaim(target)
-          throw error
-        }
-        const analyser = context.createAnalyser()
-        configureAnalyser(analyser, responseRef.current)
-        const silentBus = context.createGain()
-        silentBus.gain.value = 0
-        const playbackGain = context.createGain()
-        playbackGain.gain.value = 1
-
-        // Exactly one audible route. Analysis taps terminate at the zero-gain bus.
-        source.connect(playbackGain)
-        playbackGain.connect(context.destination)
-        source.connect(analyser)
-        analyser.connect(silentBus)
-        silentBus.connect(context.destination)
-
-        const graph: AnalysisGraph = {
-          mediaElement: target,
-          context,
-          source,
-          analyser,
-          playbackGain,
-          silentBus,
-          loudness: null,
-          loudnessConnected: false,
-          disposed: false,
-        }
-        graphRef.current = graph
-        setState({
-          mediaElement: target,
-          analyserNode: analyser,
-          loudnessSnapshot: null,
-          error: null,
-          sampleRate: context.sampleRate,
-        })
-        return graph
-      } catch (error) {
-        if (context && context.state !== 'closed') await context.close()
-        reportError(
-          `Audio analysis unavailable; normal playback is preserved: ${describeError(error)}`,
-          target,
-        )
-        return null
-      } finally {
-        initializationRef.current = null
+        return existing
       }
-    })()
-    initializationRef.current = initialization
-    return initialization
-  }, [reportError])
+      if (initializationRef.current) {
+        const pending = initializationRef.current
+        if (pending.mediaElement === target) return pending.promise
+        await pending.promise
+        return ensureCurrentGraph()
+      }
+
+      const initialization = (async () => {
+        let context: AudioContext | null = null
+        try {
+          context = new AudioContext({ latencyHint: 'interactive' })
+          if (context.state === 'suspended') await context.resume()
+          if (context.state !== 'running')
+            throw new Error(`AudioContext remained ${context.state}.`)
+          if (mediaElementRef.current !== target) {
+            await context.close()
+            return null
+          }
+          // Configure fallible analysis nodes before permanently wrapping the element.
+          const analyser = context.createAnalyser()
+          configureAnalyser(analyser, responseRef.current)
+          const silentBus = context.createGain()
+          silentBus.gain.value = 0
+          const playbackGain = context.createGain()
+          playbackGain.gain.value = 1
+          playbackGain.connect(context.destination)
+          analyser.connect(silentBus)
+          silentBus.connect(context.destination)
+          if (!mediaElementSourceGuard.claim(target)) {
+            throw new Error(
+              'This audio element already has an analysis source.',
+            )
+          }
+          let source: MediaElementAudioSourceNode
+          try {
+            source = context.createMediaElementSource(target)
+          } catch (error) {
+            mediaElementSourceGuard.releaseFailedClaim(target)
+            throw error
+          }
+          const graph: AnalysisGraph = {
+            mediaElement: target,
+            context,
+            source,
+            analyser,
+            playbackGain,
+            silentBus,
+            loudness: null,
+            loudnessConnected: false,
+            loudnessInitialization: null,
+            directPlaybackFallback: false,
+            disposed: false,
+          }
+          graphRef.current = graph
+          // Exactly one audible route. Analysis taps terminate at the zero-gain bus.
+          try {
+            source.connect(playbackGain)
+          } catch (error) {
+            source.disconnect()
+            playbackGain.disconnect()
+            source.connect(context.destination)
+            graph.directPlaybackFallback = true
+            onErrorRef.current(
+              `Listening gain is unavailable. Playback uses the direct audio route: ${describeError(error)}`,
+            )
+          }
+          let analysisError: string | null = null
+          try {
+            source.connect(analyser)
+          } catch (error) {
+            analysisError = `Spectrum analysis unavailable: ${describeError(error)}`
+            onErrorRef.current(analysisError)
+          }
+          setState({
+            mediaElement: target,
+            analyserNode: analysisError ? null : analyser,
+            loudnessSnapshot: null,
+            error: analysisError,
+            sampleRate: context.sampleRate,
+          })
+          return graph
+        } catch (error) {
+          const ownsSource = graphRef.current?.mediaElement === target
+          if (!ownsSource && context && context.state !== 'closed')
+            await context.close()
+          reportError(
+            ownsSource
+              ? `The browser could not connect audio. Reload this file to restore playback: ${describeError(error)}`
+              : `Audio analysis unavailable; normal playback is preserved: ${describeError(error)}`,
+            target,
+          )
+          return null
+        } finally {
+          initializationRef.current = null
+        }
+      })()
+      initializationRef.current = {
+        mediaElement: target,
+        promise: initialization,
+      }
+      return initialization
+    },
+    [reportError],
+  )
 
   const activateSpectrum = useCallback(async () => {
     await ensureGraph()
@@ -211,8 +259,8 @@ export function useAnalysisAudio({
   const activateMeter = useCallback(async () => {
     const graph = await ensureGraph()
     if (!graph || graph.disposed || graph.loudness) return
-    if (loudnessInitializationRef.current) {
-      await loudnessInitializationRef.current
+    if (graph.loudnessInitialization) {
+      await graph.loudnessInitialization
       return
     }
     const initialization = (async () => {
@@ -233,10 +281,10 @@ export function useAnalysisAudio({
           graph.mediaElement,
         )
       } finally {
-        loudnessInitializationRef.current = null
+        graph.loudnessInitialization = null
       }
     })()
-    loudnessInitializationRef.current = initialization
+    graph.loudnessInitialization = initialization
     await initialization
   }, [ensureGraph, reportError])
 
@@ -288,7 +336,7 @@ export function useAnalysisAudio({
       )
         return false
       const graph = await ensureGraph()
-      if (!graph || graph.disposed) return false
+      if (!graph || graph.disposed || graph.directPlaybackFallback) return false
       const now = graph.context.currentTime
       graph.playbackGain.gain.cancelScheduledValues(now)
       graph.playbackGain.gain.setTargetAtTime(10 ** (decibels / 20), now, 0.01)

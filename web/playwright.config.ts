@@ -10,7 +10,10 @@ export default defineConfig({
     baseURL: `http://127.0.0.1:${port}`,
     headless: true,
     viewport: { width: 1440, height: 900 },
-    launchOptions: { channel: 'chrome', args: ['--mute-audio'] },
+    launchOptions: {
+      channel: 'chrome',
+      args: ['--mute-audio', '--disable-gpu'],
+    },
   },
   webServer: {
     command: `pnpm exec vite preview --host 127.0.0.1 --port ${port} --strictPort`,

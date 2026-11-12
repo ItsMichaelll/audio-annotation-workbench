@@ -5,6 +5,25 @@
   font-size: 11px;
 }
 
+.root[data-docked='true'] {
+  padding: 0;
+  border: 0;
+}
+
+.root[data-docked='true'] .reference {
+  position: absolute;
+  z-index: 30;
+  right: 12px;
+  bottom: 100%;
+  width: min(600px, calc(100vw - 24px));
+  max-height: min(60vh, 450px);
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--surface-panel);
+}
+
 .toolbar,
 .range {
   display: flex;

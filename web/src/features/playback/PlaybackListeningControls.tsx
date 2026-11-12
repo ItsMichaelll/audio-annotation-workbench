@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   listeningGainDb,
   normalizeListeningRanges,
@@ -13,6 +14,7 @@ import {
 import styles from './PlaybackListeningControls.module.css'
 
 interface Props {
+  container?: HTMLElement | null
   audioBuffer: AudioBuffer | null
   mediaElement: HTMLMediaElement | null
   sourceId: string
@@ -25,12 +27,13 @@ interface Props {
 }
 
 export function PlaybackListeningControls(props: Props) {
-  return (
+  const controls = (
     <ListeningControls
       key={`${props.sourceId}/${props.audioIdentity ?? ''}`}
       {...props}
     />
   )
+  return props.container ? createPortal(controls, props.container) : controls
 }
 
 function setMediaPlaybackRate(
@@ -251,7 +254,20 @@ function ListeningControls(props: Props) {
   }
 
   return (
-    <section className={styles.root} aria-label="Listening controls">
+    <section
+      className={styles.root}
+      data-docked={Boolean(props.container)}
+      aria-label="Listening controls"
+      onKeyDown={(event) => {
+        if (event.key !== 'Escape' || !editing) return
+        event.preventDefault()
+        event.stopPropagation()
+        generation.current++
+        setDraft(confirmed)
+        setBusy(false)
+        setEditing(false)
+      }}
+    >
       <div className={styles.toolbar}>
         <label>
           Speed{' '}

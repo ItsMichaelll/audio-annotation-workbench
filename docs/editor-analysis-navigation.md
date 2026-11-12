@@ -38,6 +38,15 @@ Changing a setting disposes the old plugin and its worker before creating the
 replacement. The waveform, minimap, scrollbar, and spectrogram share full-content
 pixel width and horizontal scroll geometry.
 
+WaveSurfer is explicitly configured to decode analysis PCM at 48 kHz. Its
+default 8 kHz waveform decode would discard frequencies above 4 kHz and is
+unsuitable for the source spectrum, spectrogram, and offline loudness tools.
+Browser decoding resamples files at other rates to 48 kHz for these source
+inspection tools. The decoded rate and channel count are reported through
+`onAudioProperties`. A 96 kHz file therefore has a 24 kHz decoded Nyquist limit
+in this workspace. The original media element remains the playback source and
+the live analyzer uses its own AudioContext sample rate.
+
 Selection, playhead, speech-reference ranges, playback clipping, and optional
 inspection evidence are drawn as DOM overlays in the same time transform.
 Speech-reference and playback-clipping overlays remain separate from canonical
@@ -64,7 +73,8 @@ its selected response, FFT size, Freeze, and Peak Hold settings for that source.
 
 The loudness rail retains File/Selection scope and target controls when hidden.
 Hosts may supply an independent `activeRange` to expose an additional Range
-scope. Feedback evidence ranges stay separate from that reviewed range.
+scope and give Fit and boundary-jump controls explicit review bounds. Feedback
+evidence ranges stay separate from that reviewed range.
 Its optional target defaults to -23 ±2 LUFS and stays disabled until requested.
 All statistics describe source audio. Playback normalization does not feed the
 source measurement taps. Live values reflect samples at the current playback

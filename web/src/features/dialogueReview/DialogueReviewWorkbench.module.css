@@ -1,0 +1,227 @@
+.shell {
+  display: flex;
+  height: 100dvh;
+  flex-direction: column;
+  background: var(--surface-canvas);
+}
+
+.context,
+.toolbar,
+.transport,
+.lane > header,
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.context {
+  min-height: 64px;
+  justify-content: space-between;
+  padding: 10px 24px;
+  border-bottom: 1px solid var(--border-default);
+  background: var(--surface-panel);
+}
+
+.context h1 {
+  margin: 0 0 5px;
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.context span,
+.lane span {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.shell button,
+.shell select,
+.shell input,
+.shell textarea {
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--surface-panel);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 12px;
+}
+
+.shell button[aria-pressed='true'] {
+  border-color: var(--accent-primary);
+  background: var(--accent-muted);
+  color: var(--accent-ink);
+}
+
+.workspace {
+  display: grid;
+  min-height: 0;
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr) 340px;
+}
+
+.editor {
+  min-width: 0;
+  overflow: auto;
+}
+
+.toolbar {
+  position: sticky;
+  z-index: 10;
+  top: 0;
+  min-height: 56px;
+  flex-wrap: wrap;
+  padding: 8px 24px;
+  border-bottom: 1px solid var(--border-default);
+  background: var(--surface-canvas);
+}
+
+.toolbar label {
+  margin-left: auto;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.lane > header {
+  justify-content: space-between;
+  padding: 12px 24px 0;
+}
+
+.inspector {
+  overflow: auto;
+  padding: 20px;
+  border-left: 1px solid var(--border-default);
+  background: var(--surface-panel);
+}
+
+.inspector h2,
+.ledger h2 {
+  margin: 0 0 16px;
+  font-size: 13px;
+  font-weight: 550;
+}
+
+.inspector p {
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.inspector label {
+  display: grid;
+  gap: 6px;
+  margin-block: 18px;
+  font-size: 11px;
+}
+
+.inspector textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.inspector dl {
+  margin: 16px 0;
+  font-size: 11px;
+}
+
+.inspector dl > div {
+  padding-block: 7px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.inspector dt {
+  color: var(--text-secondary);
+}
+
+.inspector dd {
+  margin: 4px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.actions {
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.transport {
+  min-height: 56px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  padding: 8px 24px;
+  border-top: 1px solid var(--border-default);
+  background: var(--surface-panel);
+}
+
+.transport output {
+  min-width: 110px;
+  margin-inline: 12px;
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+.transport label {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.ledger {
+  margin-top: 12px;
+  padding: 20px 24px;
+  border-top: 1px solid var(--border-default);
+  background: var(--surface-panel);
+}
+
+.ledger > button {
+  display: grid;
+  width: 100%;
+  min-height: 42px;
+  grid-template-columns: 1fr 90px 90px;
+  text-align: left;
+}
+
+.load {
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.load h2 {
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.load p {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.error {
+  margin: 0;
+  padding: 12px 24px;
+  background: var(--surface-warning);
+  color: var(--text-warning);
+  font-size: 12px;
+}
+
+@media (max-width: 800px) {
+  .workspace {
+    display: block;
+    overflow: auto;
+  }
+
+  .editor,
+  .inspector {
+    overflow: visible;
+  }
+
+  .inspector {
+    border-top: 1px solid var(--border-default);
+    border-left: 0;
+  }
+
+  .context,
+  .transport {
+    padding-inline: 16px;
+  }
+}

@@ -1,5 +1,5 @@
 import { Icon } from './Icon'
-import type { ReactNode } from 'react'
+import type { ReactNode, Ref } from 'react'
 import { WaveformZoomControls } from './WaveformZoomControls'
 import { formatTime } from '../domain/transport'
 import styles from './TransportBar.module.css'
@@ -9,6 +9,7 @@ import {
 } from './EditorFocusControls'
 
 export interface TransportBarProps {
+  listeningRef?: Ref<HTMLDivElement>
   isLoaded: boolean
   isPlaying: boolean
   loopEnabled: boolean
@@ -102,6 +103,7 @@ export function WaveformToolbar(
 }
 
 export function TransportBar({
+  listeningRef,
   isLoaded,
   isPlaying,
   loopEnabled,
@@ -165,6 +167,7 @@ export function TransportBar({
           <span>Loop</span>
         </button>
       </div>
+      <div ref={listeningRef} data-listening-dock />
     </nav>
   )
 }
