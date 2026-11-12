@@ -34,13 +34,11 @@ test('120 second stereo source keeps analysis responsive across navigation and r
   const errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))
   await page.goto('/editor')
-  await page
-    .getByLabel('Select local audio file')
-    .setInputFiles({
-      name: 'synthetic-stereo.wav',
-      mimeType: 'audio/wav',
-      buffer: stereoWav(120),
-    })
+  await page.getByLabel('Select local audio file').setInputFiles({
+    name: 'synthetic-stereo.wav',
+    mimeType: 'audio/wav',
+    buffer: stereoWav(120),
+  })
   await expect(
     page.getByRole('button', { name: 'Play', exact: true }),
   ).toBeEnabled({ timeout: 30_000 })
@@ -60,6 +58,20 @@ test('120 second stereo source keeps analysis responsive across navigation and r
     .getByRole('button', { name: 'Zoom in', exact: true })
     .click({ clickCount: 3 })
   const waveform = page.getByRole('region', { name: /^Audio waveform/ })
+  const scroll = waveform.locator('[part~="scroll"]').first()
+  await waveform.hover({ position: { x: 250, y: 50 } })
+  const originalScroll = await scroll.evaluate((element) => element.scrollLeft)
+  await page.mouse.wheel(0, 180)
+  await expect
+    .poll(() => scroll.evaluate((element) => element.scrollLeft))
+    .toBeGreaterThan(originalScroll)
+  const originalWidth = await scroll.evaluate((element) => element.scrollWidth)
+  await page.keyboard.down('Control')
+  await page.mouse.wheel(0, -240)
+  await page.keyboard.up('Control')
+  await expect
+    .poll(() => scroll.evaluate((element) => element.scrollWidth))
+    .toBeGreaterThan(originalWidth)
   await waveform.click({ position: { x: 250, y: 50 } })
   await page.getByRole('button', { name: 'Play', exact: true }).click()
   await expect(
@@ -67,17 +79,16 @@ test('120 second stereo source keeps analysis responsive across navigation and r
   ).toBeVisible()
   await page.getByRole('button', { name: 'Jump to end' }).click()
   await page.getByRole('button', { name: 'Jump to start' }).click()
+  await expect(page.getByRole('alert')).toHaveCount(0)
   await page.screenshot({
     path: 'test-results/analysis-stereo-120s.png',
     fullPage: true,
   })
-  await page
-    .getByLabel('Select local audio file')
-    .setInputFiles({
-      name: 'replacement.wav',
-      mimeType: 'audio/wav',
-      buffer: stereoWav(3),
-    })
+  await page.getByLabel('Select local audio file').setInputFiles({
+    name: 'replacement.wav',
+    mimeType: 'audio/wav',
+    buffer: stereoWav(3),
+  })
   await expect(
     page.getByRole('button', { name: 'Play', exact: true }),
   ).toBeEnabled()
