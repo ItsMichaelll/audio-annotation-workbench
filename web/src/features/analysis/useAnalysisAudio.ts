@@ -282,7 +282,11 @@ export function useAnalysisAudio({
 
   const setPlaybackGain = useCallback(
     async (decibels: number) => {
-      if (!Number.isFinite(decibels) || Math.abs(decibels) > MAX_LISTENING_GAIN_DB) return false
+      if (
+        !Number.isFinite(decibels) ||
+        Math.abs(decibels) > MAX_LISTENING_GAIN_DB
+      )
+        return false
       const graph = await ensureGraph()
       if (!graph || graph.disposed) return false
       const now = graph.context.currentTime

@@ -229,6 +229,7 @@ interface WaveformEditorProps {
   selectedMarkerId: string | null
   loopEnabled: boolean
   meterEnabled: boolean
+  reserveMeterSpace?: boolean
   spectrumEnabled: boolean
   spectrogramEnabled: boolean
   isPlaying: boolean
@@ -325,6 +326,7 @@ export const WaveformEditor = forwardRef<
     selectedMarkerId,
     loopEnabled,
     meterEnabled,
+    reserveMeterSpace = false,
     spectrumEnabled,
     spectrogramEnabled,
     isPlaying,
@@ -2191,7 +2193,7 @@ export const WaveformEditor = forwardRef<
   return (
     <div
       data-region-selection
-      className={`${styles.root}${meterEnabled ? ` ${styles.withMeter}` : ''}`}
+      className={`${styles.root}${meterEnabled || reserveMeterSpace ? ` ${styles.withMeter}` : ''}`}
     >
       <div className={styles.stack}>
         <WaveformViewControls
