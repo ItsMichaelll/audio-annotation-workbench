@@ -97,7 +97,7 @@
 }
 
 .withInspector {
-  grid-template-columns: minmax(0, 1fr) var(--annotation-inspector-width, 310px);
+  grid-template-columns: minmax(0, 1fr) var(--annotation-inspector-width, 370px);
 }
 
 .shell[data-focus-mode='annotations'],

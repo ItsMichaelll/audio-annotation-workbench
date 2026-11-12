@@ -1,4 +1,4 @@
-export type LoudnessScope = 'file' | 'selection'
+export type LoudnessScope = 'file' | 'range' | 'selection'
 
 export interface LoudnessStatistics {
   integratedLoudness: number

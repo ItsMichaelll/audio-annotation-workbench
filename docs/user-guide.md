@@ -14,6 +14,24 @@ Zoom out, zoom in, Fit, and waveform amplitude reset live on the left side of
 that toolbar. Playback, boundary jumps, timecode, and Loop stay in the bottom
 transport in every focus mode.
 
+## Audio review tools
+
+The [navigation and analysis guide](editor-analysis-navigation.md) covers
+waveform display, follow modes, gap ruler, navigation presets, FFT settings,
+frequency scale, source inspection while paused, and active-range metering.
+The optional [listening controls](playback-listening.md) provide speed and a
+confirmed clean-speech reference for playback gain. The
+[local review panel](local-review.md) handles supplied proposals and separate
+feedback notes. Project inspectors also accept
+[local transcript and measurement JSON](local-inspection-evidence.md).
+
+Open `/editor/dialogue-review` for a generated paired-track timing review.
+Its Original/Proposed switch shares the listening position. Adjustment, notes,
+and Accept/Reject decisions persist locally. The
+[Windows integration guide](windows-dialogue-review-integration.md) documents
+how a host supplies its existing audio and saved decisions through the same
+components.
+
 This guide covers the local project workflow and the standalone editor included
 in Audio Annotation Workbench 0.1.0.
 

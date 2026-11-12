@@ -1,0 +1,83 @@
+.root {
+  border-bottom: 1px solid var(--border-default);
+  background: var(--surface-panel);
+  padding: 7px 24px;
+  font-size: 11px;
+}
+
+.root[data-docked='true'] {
+  padding: 0;
+  border: 0;
+}
+
+.root[data-docked='true'] .reference {
+  position: absolute;
+  z-index: 30;
+  right: 12px;
+  bottom: 100%;
+  width: min(600px, calc(100vw - 24px));
+  max-height: min(60vh, 450px);
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--surface-panel);
+}
+
+.toolbar,
+.range {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.root button,
+.root select,
+.root input {
+  min-height: 28px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--surface-panel);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.root button {
+  padding: 4px 8px;
+}
+
+.root button[aria-pressed='true'] {
+  background: var(--accent-muted);
+  color: var(--accent-ink);
+}
+
+.root output {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.root input {
+  width: 90px;
+  margin-inline: 5px;
+  padding: 4px;
+}
+
+.root label {
+  white-space: nowrap;
+}
+
+.reference {
+  display: grid;
+  gap: 10px;
+  padding-block: 10px;
+}
+
+.notice {
+  margin: 6px 0 0;
+  color: var(--text-secondary);
+}
+
+.error {
+  color: var(--text-danger);
+}

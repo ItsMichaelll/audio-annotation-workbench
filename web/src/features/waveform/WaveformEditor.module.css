@@ -26,6 +26,26 @@
     var(--surface-waveform);
 }
 
+.waveformDisplay {
+  position: relative;
+}
+
+.heightControl {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 5px;
+  color: var(--text-tertiary);
+  font-size: 9px;
+}
+
+.heightControl input {
+  width: 100px;
+  height: 12px;
+  accent-color: var(--accent-primary);
+}
+
 .surface:focus-visible,
 .surface:focus-within {
   outline: 2px solid var(--focus-ring-color);

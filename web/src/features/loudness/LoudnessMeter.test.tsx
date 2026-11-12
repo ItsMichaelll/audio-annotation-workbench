@@ -7,6 +7,19 @@ vi.mock('./useOfflineLoudness', () => ({
 }))
 
 describe('LoudnessMeter', () => {
+  it('offers an explicit Range scope only when the host supplies one', () => {
+    const html = renderToStaticMarkup(
+      <LoudnessMeter
+        audioBuffer={null}
+        live={null}
+        selectedRegion={null}
+        activeRange={{ start: 1, end: 4 }}
+        error={null}
+        onClose={vi.fn()}
+      />,
+    )
+    expect(html).toContain('>Range</button>')
+  })
   it('renders idle, error, scope, and disclosure states accessibly', () => {
     const html = renderToStaticMarkup(
       <LoudnessMeter
