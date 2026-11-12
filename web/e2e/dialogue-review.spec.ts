@@ -61,6 +61,29 @@ test('paired fixture preserves decisions and listening position across A/B switc
       .getByLabel('Loudness and true-peak meter')
       .getByText('Integrated', { exact: true }),
   ).toBeVisible()
+  const listening = page.locator(
+    'section[aria-label="Listening controls"]:visible',
+  )
+  await listening
+    .getByRole('button', { name: 'Speech reference', exact: true })
+    .click()
+  await listening
+    .getByRole('button', { name: 'Add range at playhead', exact: true })
+    .click()
+  await listening.getByLabel('Start 1', { exact: true }).fill('3.3')
+  await listening.getByLabel('End 1', { exact: true }).fill('4.3')
+  await listening
+    .getByRole('button', { name: 'Confirm reference', exact: true })
+    .click()
+  const normalized = listening.getByRole('button', {
+    name: 'Normalized listening',
+    exact: true,
+  })
+  await expect(normalized).toBeEnabled({ timeout: 20000 })
+  await normalized.click()
+  await expect(normalized).toHaveAttribute('aria-pressed', 'true')
+  await normalized.click()
+  await expect(normalized).toHaveAttribute('aria-pressed', 'false')
   await page.screenshot({
     path: 'test-results/dialogue-review-analysis.png',
     fullPage: true,
