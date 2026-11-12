@@ -239,15 +239,18 @@ export function useAnalysisAudio({
             target,
           )
           return null
-        } finally {
-          initializationRef.current = null
         }
       })()
       initializationRef.current = {
         mediaElement: target,
         promise: initialization,
       }
-      return initialization
+      try {
+        return await initialization
+      } finally {
+        if (initializationRef.current?.promise === initialization)
+          initializationRef.current = null
+      }
     },
     [reportError],
   )
