@@ -156,6 +156,7 @@ export function TransportBar({
           type="button"
           className={styles.control}
           aria-pressed={loopEnabled}
+          aria-label="Loop"
           onClick={onToggleLoop}
           disabled={!hasSelection}
           title="Loop selected region (L)"
